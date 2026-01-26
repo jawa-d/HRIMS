@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HRMS | Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../HRMS%20CSS/tokens.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/global.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/components.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/navbar.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/sidebar.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/modal.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/toast.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/dashboard.css" />
+</head>
+<body data-page="dashboard">
+  <div id="app" class="app-shell">
+    <div id="sidebar-root"></div>
+    <div class="main-content">
+      <div id="navbar-root"></div>
+      <main class="page">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title" data-i18n="nav.dashboard">Dashboard</h1>
+            <p class="text-muted">Overview of your HR operations</p>
+          </div>
+        </div>
+        <section class="kpi-grid" id="kpi-grid">
+          <a class="kpi-link" href="employees.html">
+            <div class="card kpi-card">
+              <span data-i18n="dashboard.kpi.employees">Employees</span>
+              <div class="kpi-value" id="kpi-employees">0</div>
+            </div>
+          </a>
+          <a class="kpi-link" href="leaves.html">
+            <div class="card kpi-card">
+              <span data-i18n="dashboard.kpi.leaves">Leave Requests</span>
+              <div class="kpi-value" id="kpi-leaves">0</div>
+            </div>
+          </a>
+          <a class="kpi-link" href="payroll.html">
+            <div class="card kpi-card">
+              <span data-i18n="dashboard.kpi.payroll">Payrolls</span>
+              <div class="kpi-value" id="kpi-payroll">0</div>
+            </div>
+          </a>
+          <a class="kpi-link" href="attendance.html">
+            <div class="card kpi-card">
+              <span data-i18n="dashboard.kpi.attendance">Attendance</span>
+              <div class="kpi-value" id="kpi-attendance">0</div>
+            </div>
+          </a>
+        </section>
+        <section class="dashboard-grid">
+          <div class="card chart-card">
+            <h3 class="section-title">Headcount Trend</h3>
+            <canvas id="headcount-chart"></canvas>
+          </div>
+          <div class="card chart-card">
+            <h3 class="section-title">Leave Status</h3>
+            <canvas id="leave-chart"></canvas>
+          </div>
+        </section>
+        <section class="grid-2">
+          <div class="card">
+            <h3 class="section-title">Recent Activity</h3>
+            <div id="activity-list" class="stack"></div>
+          </div>
+          <div class="card">
+            <h3 class="section-title" data-i18n="nav.notifications">Notifications</h3>
+            <div id="notifications-list" class="stack"></div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script type="module" src="../Page%20Controllers/dashboard.page.js"></script>
+</body>
+</html>

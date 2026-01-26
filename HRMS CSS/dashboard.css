@@ -1,0 +1,24 @@
+.dashboard-grid {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: 2fr 1fr;
+  margin: var(--space-5) 0;
+}
+
+.kpi-link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+
+.kpi-link:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 4px;
+  border-radius: var(--radius-lg);
+}
+
+@media (max-width: 1000px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}

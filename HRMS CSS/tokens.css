@@ -1,0 +1,52 @@
+:root {
+  --color-primary: #0038a8;
+  --color-accent: #00c2a8;
+  --color-dark: #0b1220;
+  --color-light: #f6f8ff;
+  --font-sans: "Cairo", "Manrope", "Segoe UI", sans-serif;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 40px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --shadow-sm: 0 8px 18px rgba(11, 18, 32, 0.12);
+  --shadow-md: 0 16px 32px rgba(11, 18, 32, 0.18);
+  --shadow-lg: 0 28px 60px rgba(11, 18, 32, 0.25);
+  --transition-fast: 150ms ease;
+  --transition-base: 220ms ease;
+  --transition-slow: 420ms ease;
+}
+
+html[data-theme="light"] {
+  --bg: var(--color-light);
+  --text: var(--color-dark);
+  --text-muted: rgba(11, 18, 32, 0.6);
+  --surface: rgba(246, 248, 255, 0.78);
+  --surface-strong: rgba(246, 248, 255, 0.95);
+  --border: rgba(11, 18, 32, 0.12);
+  --primary: var(--color-primary);
+  --accent: var(--color-accent);
+  --primary-soft: rgba(0, 56, 168, 0.12);
+  --accent-soft: rgba(0, 194, 168, 0.16);
+  --glass: rgba(246, 248, 255, 0.6);
+}
+
+html[data-theme="dark"] {
+  --bg: var(--color-dark);
+  --text: var(--color-light);
+  --text-muted: rgba(246, 248, 255, 0.6);
+  --surface: rgba(11, 18, 32, 0.88);
+  --surface-strong: rgba(11, 18, 32, 0.95);
+  --border: rgba(246, 248, 255, 0.12);
+  --primary: var(--color-primary);
+  --accent: var(--color-accent);
+  --primary-soft: rgba(0, 56, 168, 0.28);
+  --accent-soft: rgba(0, 194, 168, 0.2);
+  --glass: rgba(11, 18, 32, 0.6);
+}

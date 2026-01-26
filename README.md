@@ -1,93 +1,40 @@
-# HRMS – Human Resources Management System
+# HRMS - Human Resources Management System
 
-نظام موارد بشرية احترافي مبني باستخدام  
-**HTML, CSS, JavaScript (Vanilla JS)**  
-ومعتمد بشكل كامل على **Firebase** (Authentication + Firestore).
+Production-ready HRMS built with HTML, CSS, and Vanilla JS (ES Modules) on Firebase Authentication + Firestore.
 
----
+## Key Features
+- Role-based access control (super_admin, hr_admin, manager, employee)
+- RTL/LTR language toggle (Arabic/English)
+- Dark/Light theme toggle with persistence
+- Firestore-backed CRUD for core HR data
+- Notifications with unread count and mark-as-read
+- Dashboard KPIs and charts (Chart.js)
+- Responsive sidebar + navbar UI
 
-## 🚀 نبذة عن النظام
-HRMS هو نظام متكامل لإدارة شؤون الموظفين داخل الشركات، يوفّر واجهة حديثة وسهلة الاستخدام، مع صلاحيات مرنة وتقارير واضحة.
+## Pages
+- Dashboard, Employees, Employee Details, Leaves, Payroll, Attendance
+- Departments, Positions, Reports, Settings, Profile
 
----
+## How to Run
+Option A (recommended):
+```powershell
+cd "c:\Users\mohammed\Desktop\HR"
+node server.js
+```
+Then open: `http://localhost:5500`
 
-## ✨ المميزات الرئيسية
+Option B (VS Code Live Server):
+- Start Live Server from `HRMS Html/login.html`
 
-- ✅ إدارة الموظفين (إضافة / تعديل / حذف)
-- ✅ إدارة الإجازات والموافقات
-- ✅ نظام رواتب وبدلات
-- ✅ الحضور والدوام
-- ✅ الأقسام والمناصب الوظيفية
-- ✅ نظام صلاحيات مرن (4 أدوار)
-- ✅ تقارير وإحصائيات
-- ✅ إشعارات داخل النظام (Toast + Notifications)
-- ✅ واجهة حديثة ومتجاوبة (Desktop & Mobile)
-- ✅ دعم لغتين (العربية / الإنجليزية)
-- ✅ اعتماد كامل على Firebase
+## Checklist
+- [x] Firebase config + auth/guard modules
+- [x] Tokens-based design system (light/dark)
+- [x] Navbar + sidebar rendered via JS
+- [x] RBAC enforcement in UI and runtime
+- [x] CRUD services for all collections
+- [x] Notifications triggered on leave/payroll/attendance updates
+- [x] All pages wired with controllers and styles
 
----
-
-## 👥 الأدوار (Roles)
-
-1. **Super Admin**
-   - تحكم كامل بالنظام
-   - إدارة المستخدمين والصلاحيات
-
-2. **HR Admin**
-   - إدارة الموظفين
-   - الرواتب
-   - التقارير
-
-3. **Manager**
-   - الموافقة على الإجازات
-   - متابعة الفريق
-
-4. **Employee**
-   - الملف الشخصي
-   - طلب إجازة
-   - الحضور
-   - كشف الراتب
-
----
-
-## 🗂️ هيكل المشروع (Structure)
-
-
----
-
-## 🔧 التقنيات المستخدمة
-
-- HTML5
-- CSS3 (Modern UI / Responsive)
-- JavaScript (Vanilla JS)
-- Firebase Authentication
-- Firebase Firestore
-
----
-
-## ▶️ طريقة التشغيل
-
-1. افتح المشروع في **VS Code**
-2. شغّل Live Server أو افتح `login.html` مباشرة
-3. تأكد من إعداد Firebase داخل `firebase.js`
-
----
-
-## 🔐 ملاحظات أمنية
-- مفاتيح Firebase مستخدمة للويب فقط
-- يعتمد الأمان على **Firestore Security Rules**
-- يتم تقييد الوصول حسب الدور (Role)
-
----
-
-## 📌 ملاحظات
-- المشروع بدون Framework (Pure JS)
-- مناسب للتوسعة والربط لاحقًا مع Backend
-- هيكل احترافي جاهز للإنتاج
-
----
-
-## 👨‍💻 Developer
-**Jawad Kadhim**  
-IT & Front-End Developer  
-
+## Notes
+- Firebase config is already set in `Aman/firebase.js`
+- Security is enforced by Firestore rules and RBAC in the UI/guards
