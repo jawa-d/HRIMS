@@ -23,6 +23,7 @@ renderSidebar("positions");
 
 const canManage = ["super_admin", "hr_admin"].includes(role);
 const addButton = document.getElementById("add-position-btn");
+const searchInput = document.getElementById("position-search");
 const tbody = document.getElementById("positions-body");
 const emptyState = document.getElementById("positions-empty");
 
@@ -33,7 +34,12 @@ if (!canManage) {
 let positions = [];
 
 function renderPositions() {
-  tbody.innerHTML = positions
+  const query = (searchInput?.value || "").trim().toLowerCase();
+  const filtered = positions.filter((position) => {
+    return !query || (position.name || "").toLowerCase().includes(query);
+  });
+
+  tbody.innerHTML = filtered
     .map(
       (position) => `
       <tr>
@@ -53,7 +59,7 @@ function renderPositions() {
     )
     .join("");
 
-  emptyState.classList.toggle("hidden", positions.length > 0);
+  emptyState.classList.toggle("hidden", filtered.length > 0);
 
   if (canManage) {
     tbody.querySelectorAll("button[data-action]").forEach((button) => {
@@ -106,4 +112,11 @@ async function loadPositions() {
 }
 
 addButton.addEventListener("click", () => openPositionModal());
+if (searchInput) {
+  searchInput.addEventListener("input", renderPositions);
+}
+window.addEventListener("global-search", (event) => {
+  if (searchInput) searchInput.value = event.detail || "";
+  renderPositions();
+});
 loadPositions();

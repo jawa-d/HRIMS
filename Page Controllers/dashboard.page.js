@@ -1,5 +1,5 @@
 import { enforceAuth, getUserProfile, getRole } from "../Aman/guard.js";
-import { initI18n } from "../Languages/i18n.js";
+import { initI18n, getLanguage } from "../Languages/i18n.js";
 import { renderNavbar } from "../Collaboration interface/ui-navbar.js";
 import { renderSidebar } from "../Collaboration interface/ui-sidebar.js";
 import { listEmployees } from "../Services/employees.service.js";
@@ -19,6 +19,9 @@ const user = getUserProfile();
 const role = getRole();
 renderNavbar({ user, role });
 renderSidebar("dashboard");
+if (window.lucide?.createIcons) {
+  window.lucide.createIcons();
+}
 
 const kpiEmployees = document.getElementById("kpi-employees");
 const kpiDepartments = document.getElementById("kpi-departments");
@@ -28,9 +31,18 @@ const kpiPayroll = document.getElementById("kpi-payroll");
 const kpiAttendance = document.getElementById("kpi-attendance");
 const activityList = document.getElementById("activity-list");
 const notificationsList = document.getElementById("notifications-list");
+const welcomeName = document.getElementById("welcome-name");
+const welcomeDate = document.getElementById("welcome-date");
+const welcomeTotal = document.getElementById("welcome-total");
+const welcomeDepts = document.getElementById("welcome-depts");
+
+let activityItems = [];
+let notificationItems = [];
 
 function renderActivity(items) {
-  activityList.innerHTML = items
+  activityItems = items;
+  activityList.innerHTML = items.length
+    ? items
     .map(
       (item) => `
       <div class="activity-item">
@@ -39,10 +51,12 @@ function renderActivity(items) {
       </div>
     `
     )
-    .join("");
+    .join("")
+    : '<div class="empty-state">No activity found</div>';
 }
 
 function renderNotifications(items) {
+  notificationItems = items;
   if (!items.length) {
     notificationsList.innerHTML = '<div class="empty-state">No notifications</div>';
     return;
@@ -69,7 +83,44 @@ function renderNotifications(items) {
   });
 }
 
+function applyDashboardSearch(query) {
+  const q = (query || "").trim().toLowerCase();
+  if (!q) {
+    renderActivity(activityItems);
+    renderNotifications(notificationItems);
+    return;
+  }
+
+  const filteredActivity = activityItems.filter((item) => {
+    return (
+      (item.title || "").toLowerCase().includes(q) ||
+      (item.subtitle || "").toLowerCase().includes(q)
+    );
+  });
+
+  const filteredNotifications = notificationItems.filter((item) => {
+    return (
+      (item.title || "").toLowerCase().includes(q) ||
+      (item.body || "").toLowerCase().includes(q)
+    );
+  });
+
+  renderActivity(filteredActivity);
+  renderNotifications(filteredNotifications);
+}
+
 async function loadDashboard() {
+  if (welcomeName) {
+    welcomeName.textContent = user?.name || "Team";
+  }
+  if (welcomeDate) {
+    const today = new Date();
+    welcomeDate.textContent = today.toLocaleDateString(getLanguage() === "ar" ? "ar" : undefined, {
+      weekday: "long",
+      month: "short",
+      day: "numeric"
+    });
+  }
   const results = await Promise.allSettled([
     listEmployees(),
     listDepartments(),
@@ -101,6 +152,8 @@ async function loadDashboard() {
   kpiLeaves.textContent = leaves.length;
   kpiPayroll.textContent = payroll.length;
   kpiAttendance.textContent = attendance.length;
+  if (welcomeTotal) welcomeTotal.textContent = employees.length;
+  if (welcomeDepts) welcomeDepts.textContent = departments.length;
 
   renderActivity([
     ...employees.slice(0, 3).map((emp) => ({
@@ -230,6 +283,14 @@ async function loadDashboard() {
       options: chartDefaults
     });
   }
+
+  if (window.lucide?.createIcons) {
+    window.lucide.createIcons();
+  }
 }
 
 loadDashboard();
+
+window.addEventListener("global-search", (event) => {
+  applyDashboardSearch(event.detail);
+});

@@ -19,13 +19,27 @@ renderSidebar("leaves");
 
 const canApprove = ["super_admin", "hr_admin", "manager"].includes(role);
 const addButton = document.getElementById("add-leave-btn");
+const searchInput = document.getElementById("leave-search");
+const statusFilter = document.getElementById("leave-status-filter");
 const tbody = document.getElementById("leaves-body");
 const emptyState = document.getElementById("leaves-empty");
 
 let leaves = [];
 
 function renderLeaves() {
-  tbody.innerHTML = leaves
+  const query = (searchInput?.value || "").trim().toLowerCase();
+  const status = statusFilter?.value || "";
+  const filtered = leaves.filter((leave) => {
+    const matchesQuery =
+      !query ||
+      (leave.employeeId || "").toLowerCase().includes(query) ||
+      (leave.type || "").toLowerCase().includes(query) ||
+      (leave.status || "").toLowerCase().includes(query);
+    const matchesStatus = !status || leave.status === status;
+    return matchesQuery && matchesStatus;
+  });
+
+  tbody.innerHTML = filtered
     .map(
       (leave) => `
       <tr>
@@ -49,7 +63,7 @@ function renderLeaves() {
     )
     .join("");
 
-  emptyState.classList.toggle("hidden", leaves.length > 0);
+  emptyState.classList.toggle("hidden", filtered.length > 0);
 
   if (canApprove) {
     tbody.querySelectorAll("button[data-action]").forEach((button) => {
@@ -122,4 +136,14 @@ async function loadLeaves() {
 }
 
 addButton.addEventListener("click", openLeaveModal);
+if (searchInput) {
+  searchInput.addEventListener("input", renderLeaves);
+}
+if (statusFilter) {
+  statusFilter.addEventListener("change", renderLeaves);
+}
+window.addEventListener("global-search", (event) => {
+  if (searchInput) searchInput.value = event.detail || "";
+  renderLeaves();
+});
 loadLeaves();

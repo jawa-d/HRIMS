@@ -19,6 +19,8 @@ renderSidebar("attendance");
 
 const canManage = ["super_admin", "hr_admin", "manager"].includes(role);
 const addButton = document.getElementById("add-attendance-btn");
+const searchInput = document.getElementById("attendance-search");
+const statusFilter = document.getElementById("attendance-status-filter");
 const tbody = document.getElementById("attendance-body");
 const emptyState = document.getElementById("attendance-empty");
 
@@ -29,7 +31,19 @@ if (!canManage) {
 let records = [];
 
 function renderAttendance() {
-  tbody.innerHTML = records
+  const query = (searchInput?.value || "").trim().toLowerCase();
+  const status = statusFilter?.value || "";
+  const filtered = records.filter((record) => {
+    const matchesQuery =
+      !query ||
+      (record.employeeId || "").toLowerCase().includes(query) ||
+      (record.date || "").toLowerCase().includes(query) ||
+      (record.status || "").toLowerCase().includes(query);
+    const matchesStatus = !status || record.status === status;
+    return matchesQuery && matchesStatus;
+  });
+
+  tbody.innerHTML = filtered
     .map(
       (record) => `
       <tr>
@@ -50,7 +64,7 @@ function renderAttendance() {
     )
     .join("");
 
-  emptyState.classList.toggle("hidden", records.length > 0);
+  emptyState.classList.toggle("hidden", filtered.length > 0);
 
   if (canManage) {
     tbody.querySelectorAll("button[data-action]").forEach((button) => {
@@ -128,4 +142,14 @@ async function loadAttendance() {
 }
 
 addButton.addEventListener("click", () => openAttendanceModal());
+if (searchInput) {
+  searchInput.addEventListener("input", renderAttendance);
+}
+if (statusFilter) {
+  statusFilter.addEventListener("change", renderAttendance);
+}
+window.addEventListener("global-search", (event) => {
+  if (searchInput) searchInput.value = event.detail || "";
+  renderAttendance();
+});
 loadAttendance();

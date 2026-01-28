@@ -30,7 +30,10 @@ async function loadDetails() {
   }
   container.innerHTML = `
     <div class="card">
-      <h3 class="section-title">Contact</h3>
+      <h3 class="section-title">
+        <i data-lucide="id-card"></i>
+        Contact
+      </h3>
       <div class="stack">
         <div><strong>Name:</strong> ${emp.fullName || "-"}</div>
         <div><strong>Email:</strong> ${emp.email || "-"}</div>
@@ -38,7 +41,10 @@ async function loadDetails() {
       </div>
     </div>
     <div class="card">
-      <h3 class="section-title">Job</h3>
+      <h3 class="section-title">
+        <i data-lucide="briefcase"></i>
+        Job
+      </h3>
       <div class="stack">
         <div><strong>Department:</strong> ${emp.departmentId || "-"}</div>
         <div><strong>Position:</strong> ${emp.positionId || "-"}</div>
@@ -47,6 +53,10 @@ async function loadDetails() {
       </div>
     </div>
   `;
+
+  if (window.lucide?.createIcons) {
+    window.lucide.createIcons();
+  }
 }
 
 loadDetails();

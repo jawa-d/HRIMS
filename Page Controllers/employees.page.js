@@ -158,5 +158,9 @@ async function loadEmployees() {
 addButton.addEventListener("click", () => openEmployeeModal());
 searchInput.addEventListener("input", renderEmployees);
 statusFilter.addEventListener("change", renderEmployees);
+window.addEventListener("global-search", (event) => {
+  searchInput.value = event.detail || "";
+  renderEmployees();
+});
 
 loadEmployees();

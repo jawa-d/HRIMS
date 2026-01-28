@@ -13,9 +13,12 @@ export function renderNavbar({ user, role }) {
         <button class="navbar-icon-btn" id="sidebar-toggle" aria-label="Toggle sidebar">
           <i data-lucide="menu"></i>
         </button>
-        <div class="navbar-brand" data-i18n="app.name">${APP_NAME}</div>
+        <div class="navbar-brand">
+          <img src="../HRMS%20Html/assets/logo.jpg" alt="${APP_NAME} logo" class="navbar-logo" />
+          <span data-i18n="app.name">${APP_NAME}</span>
+        </div>
         <div class="navbar-search">
-          <input class="input" type="search" data-i18n-placeholder="nav.search" placeholder="${t("nav.search")}" />
+          <input class="input" id="global-search" type="search" data-i18n-placeholder="nav.search" placeholder="${t("nav.search")}" />
         </div>
       </div>
       <div class="navbar-actions">
@@ -70,6 +73,18 @@ export function renderNavbar({ user, role }) {
   root.querySelector("#sidebar-toggle").addEventListener("click", () => {
     document.body.classList.toggle("sidebar-open");
   });
+
+  const globalSearch = root.querySelector("#global-search");
+  if (globalSearch) {
+    let searchTimer;
+    globalSearch.addEventListener("input", () => {
+      clearTimeout(searchTimer);
+      const value = globalSearch.value.trim();
+      searchTimer = setTimeout(() => {
+        window.dispatchEvent(new CustomEvent("global-search", { detail: value }));
+      }, 120);
+    });
+  }
 
   if (window.lucide) {
     window.lucide.createIcons();

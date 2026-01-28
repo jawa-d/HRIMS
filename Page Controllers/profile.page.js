@@ -21,7 +21,10 @@ const form = document.getElementById("profile-form");
 
 function renderProfile() {
   profileCard.innerHTML = `
-    <h3 class="section-title">Profile Overview</h3>
+    <h3 class="section-title">
+      <i data-lucide="user-circle"></i>
+      Profile Overview
+    </h3>
     <div class="stack">
       <div><strong>Name:</strong> ${user.name || "-"}</div>
       <div><strong>Email:</strong> ${user.email || "-"}</div>
@@ -34,6 +37,10 @@ function renderProfile() {
   document.getElementById("profile-name").value = user.name || "";
   document.getElementById("profile-dept").value = user.departmentId || "";
   document.getElementById("profile-manager").value = user.managerId || "";
+
+  if (window.lucide?.createIcons) {
+    window.lucide.createIcons();
+  }
 }
 
 form.addEventListener("submit", async (event) => {

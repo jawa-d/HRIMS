@@ -8,6 +8,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+  animation: side-in 520ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
 
 .sidebar-logo {
@@ -61,9 +62,9 @@
     z-index: 110;
   }
 
-  body.sidebar-open .sidebar {
-    transform: translateX(0);
-  }
+body.sidebar-open .sidebar {
+  transform: translateX(0);
+}
 
   .sidebar-overlay {
     display: block;
@@ -89,4 +90,99 @@
 
 [dir="rtl"] .sidebar-link {
   justify-content: flex-end;
+}
+
+body[data-page="employees"] .sidebar {
+  animation: side-slide 560ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+body[data-page="leaves"] .sidebar {
+  animation: side-pop 560ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+body[data-page="payroll"] .sidebar {
+  animation: side-drop 560ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+body[data-page="attendance"] .sidebar {
+  animation: side-tilt 580ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+body[data-page="departments"] .sidebar {
+  animation: side-slide 560ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+body[data-page="positions"] .sidebar {
+  animation: side-tilt 560ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+body[data-page="reports"] .sidebar {
+  animation: side-drop 560ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+body[data-page="settings"] .sidebar {
+  animation: side-in 560ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+body[data-page="profile"] .sidebar {
+  animation: side-slide 560ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@keyframes side-in {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes side-slide {
+  from {
+    opacity: 0;
+    transform: translateX(-18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes side-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1.03);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes side-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes side-tilt {
+  from {
+    opacity: 0;
+    transform: translateY(8px) rotate(-0.6deg);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) rotate(0);
+  }
 }

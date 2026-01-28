@@ -1,16 +1,21 @@
 .card {
-  background: var(--surface);
+  background: linear-gradient(180deg, var(--surface), var(--surface-strong));
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: var(--space-5);
   box-shadow: var(--shadow-sm);
   backdrop-filter: blur(14px);
   transition: transform var(--transition-base), box-shadow var(--transition-base);
+  animation: card-in 600ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
 
 .card:hover {
   transform: translateY(-4px);
   box-shadow: var(--shadow-md);
+}
+
+.card:active {
+  transform: translateY(-1px);
 }
 
 .glass {
@@ -32,17 +37,21 @@
 .btn-primary {
   background: var(--primary);
   color: var(--color-light);
-  box-shadow: 0 10px 18px rgba(0, 56, 168, 0.3);
+  box-shadow: 0 10px 18px rgba(15, 118, 110, 0.3);
 }
 
 .btn-primary:hover {
   transform: translateY(-2px);
 }
 
+.btn:active {
+  transform: translateY(0);
+}
+
 .btn-accent {
   background: var(--accent);
   color: var(--color-dark);
-  box-shadow: 0 10px 18px rgba(0, 194, 168, 0.3);
+  box-shadow: 0 10px 18px rgba(163, 230, 53, 0.3);
 }
 
 .btn-ghost {
@@ -72,7 +81,7 @@
 .textarea:focus {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(0, 56, 168, 0.2);
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.25);
 }
 
 .toolbar {
@@ -170,6 +179,24 @@
   color: var(--text-muted);
 }
 
+.section-title i {
+  width: 18px;
+  height: 18px;
+  color: var(--primary);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.card-header .section-title {
+  margin-bottom: 0;
+}
+
 .stack {
   display: grid;
   gap: var(--space-3);
@@ -193,4 +220,129 @@
 .activity-item:last-child,
 .notification-item:last-child {
   border-bottom: none;
+}
+
+.grid-2 .card:nth-child(1),
+.grid-3 .card:nth-child(1),
+.kpi-grid .card:nth-child(1) {
+  animation-delay: 60ms;
+}
+
+.grid-2 .card:nth-child(2),
+.grid-3 .card:nth-child(2),
+.kpi-grid .card:nth-child(2) {
+  animation-delay: 120ms;
+}
+
+.grid-3 .card:nth-child(3),
+.kpi-grid .card:nth-child(3) {
+  animation-delay: 180ms;
+}
+
+.kpi-grid .card:nth-child(4) {
+  animation-delay: 240ms;
+}
+
+.kpi-grid .card:nth-child(5) {
+  animation-delay: 300ms;
+}
+
+.kpi-grid .card:nth-child(6) {
+  animation-delay: 360ms;
+}
+
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes card-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1.03);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes card-slide {
+  from {
+    opacity: 0;
+    transform: translateX(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes card-tilt {
+  from {
+    opacity: 0;
+    transform: translateY(10px) rotate(-0.6deg);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) rotate(0);
+  }
+}
+
+@keyframes card-flip {
+  from {
+    opacity: 0;
+    transform: rotateY(-6deg) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: rotateY(0) translateY(0);
+  }
+}
+
+body[data-page="employees"] .card {
+  animation: card-slide 620ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+body[data-page="leaves"] .card {
+  animation: card-pop 640ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+body[data-page="payroll"] .card {
+  animation: card-tilt 640ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+body[data-page="attendance"] .card {
+  animation: card-flip 680ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  transform-origin: 20% 20%;
+}
+
+body[data-page="departments"] .card {
+  animation: card-slide 620ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+body[data-page="positions"] .card {
+  animation: card-tilt 640ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+body[data-page="reports"] .card {
+  animation: card-pop 640ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+body[data-page="settings"] .card {
+  animation: card-in 640ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+body[data-page="profile"] .card {
+  animation: card-slide 620ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }

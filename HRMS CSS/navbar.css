@@ -9,6 +9,102 @@
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   backdrop-filter: blur(14px);
+  animation: nav-in 520ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+body[data-page="employees"] .navbar {
+  animation: nav-slide 560ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+body[data-page="leaves"] .navbar {
+  animation: nav-pop 560ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+body[data-page="payroll"] .navbar {
+  animation: nav-drop 560ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+body[data-page="attendance"] .navbar {
+  animation: nav-swing 580ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+body[data-page="departments"] .navbar {
+  animation: nav-slide 560ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+body[data-page="positions"] .navbar {
+  animation: nav-swing 560ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+body[data-page="reports"] .navbar {
+  animation: nav-drop 560ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+body[data-page="settings"] .navbar {
+  animation: nav-in 560ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+body[data-page="profile"] .navbar {
+  animation: nav-slide 560ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@keyframes nav-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes nav-slide {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes nav-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1.03);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes nav-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes nav-swing {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) rotate(-0.5deg);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) rotate(0);
+  }
 }
 
 .navbar-left {
@@ -18,8 +114,19 @@
 }
 
 .navbar-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   font-size: 1.2rem;
   font-weight: 700;
+}
+
+.navbar-logo {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  object-fit: cover;
+  box-shadow: 0 6px 14px rgba(11, 18, 32, 0.18);
 }
 
 .navbar-search {

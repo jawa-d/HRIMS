@@ -23,6 +23,7 @@ renderSidebar("departments");
 
 const canManage = ["super_admin", "hr_admin"].includes(role);
 const addButton = document.getElementById("add-department-btn");
+const searchInput = document.getElementById("department-search");
 const tbody = document.getElementById("departments-body");
 const emptyState = document.getElementById("departments-empty");
 
@@ -33,7 +34,12 @@ if (!canManage) {
 let departments = [];
 
 function renderDepartments() {
-  tbody.innerHTML = departments
+  const query = (searchInput?.value || "").trim().toLowerCase();
+  const filtered = departments.filter((dept) => {
+    return !query || (dept.name || "").toLowerCase().includes(query);
+  });
+
+  tbody.innerHTML = filtered
     .map(
       (dept) => `
       <tr>
@@ -53,7 +59,7 @@ function renderDepartments() {
     )
     .join("");
 
-  emptyState.classList.toggle("hidden", departments.length > 0);
+  emptyState.classList.toggle("hidden", filtered.length > 0);
 
   if (canManage) {
     tbody.querySelectorAll("button[data-action]").forEach((button) => {
@@ -106,4 +112,11 @@ async function loadDepartments() {
 }
 
 addButton.addEventListener("click", () => openDepartmentModal());
+if (searchInput) {
+  searchInput.addEventListener("input", renderDepartments);
+}
+window.addEventListener("global-search", (event) => {
+  if (searchInput) searchInput.value = event.detail || "";
+  renderDepartments();
+});
 loadDepartments();

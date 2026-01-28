@@ -29,7 +29,22 @@
           </div>
           <button class="btn btn-primary" id="add-leave-btn">Request Leave</button>
         </div>
+        <div class="toolbar">
+          <input class="input" id="leave-search" data-i18n-placeholder="common.search" placeholder="Search" />
+          <select class="select" id="leave-status-filter">
+            <option value="">All Status</option>
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+          </select>
+        </div>
         <div class="card">
+          <div class="card-header">
+            <h3 class="section-title">
+              <i data-lucide="calendar-check-2"></i>
+              Leave Requests
+            </h3>
+          </div>
           <table class="table">
             <thead>
               <tr>

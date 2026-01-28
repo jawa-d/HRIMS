@@ -19,6 +19,8 @@ renderSidebar("payroll");
 
 const canManage = ["super_admin", "hr_admin"].includes(role);
 const addButton = document.getElementById("add-payroll-btn");
+const searchInput = document.getElementById("payroll-search");
+const statusFilter = document.getElementById("payroll-status-filter");
 const tbody = document.getElementById("payroll-body");
 const emptyState = document.getElementById("payroll-empty");
 
@@ -29,7 +31,19 @@ if (!canManage) {
 let payroll = [];
 
 function renderPayroll() {
-  tbody.innerHTML = payroll
+  const query = (searchInput?.value || "").trim().toLowerCase();
+  const status = statusFilter?.value || "";
+  const filtered = payroll.filter((entry) => {
+    const matchesQuery =
+      !query ||
+      (entry.employeeId || "").toLowerCase().includes(query) ||
+      (entry.month || "").toLowerCase().includes(query) ||
+      String(entry.net || "").toLowerCase().includes(query);
+    const matchesStatus = !status || entry.status === status;
+    return matchesQuery && matchesStatus;
+  });
+
+  tbody.innerHTML = filtered
     .map(
       (entry) => `
       <tr>
@@ -50,7 +64,7 @@ function renderPayroll() {
     )
     .join("");
 
-  emptyState.classList.toggle("hidden", payroll.length > 0);
+  emptyState.classList.toggle("hidden", filtered.length > 0);
 
   tbody.querySelectorAll("button[data-action]").forEach((button) => {
     button.addEventListener("click", () => handleAction(button.dataset.action, button.dataset.id));
@@ -141,4 +155,14 @@ async function loadPayroll() {
 }
 
 addButton.addEventListener("click", openPayrollModal);
+if (searchInput) {
+  searchInput.addEventListener("input", renderPayroll);
+}
+if (statusFilter) {
+  statusFilter.addEventListener("change", renderPayroll);
+}
+window.addEventListener("global-search", (event) => {
+  if (searchInput) searchInput.value = event.detail || "";
+  renderPayroll();
+});
 loadPayroll();
