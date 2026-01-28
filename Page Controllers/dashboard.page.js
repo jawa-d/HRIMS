@@ -6,6 +6,8 @@ import { listEmployees } from "../Services/employees.service.js";
 import { listLeaves } from "../Services/leaves.service.js";
 import { listPayroll } from "../Services/payroll.service.js";
 import { listAttendance } from "../Services/attendance.service.js";
+import { listDepartments } from "../Services/departments.service.js";
+import { listPositions } from "../Services/positions.service.js";
 import { listNotifications, markNotificationRead } from "../Services/notifications.service.js";
 
 if (!enforceAuth("dashboard")) {
@@ -19,6 +21,8 @@ renderNavbar({ user, role });
 renderSidebar("dashboard");
 
 const kpiEmployees = document.getElementById("kpi-employees");
+const kpiDepartments = document.getElementById("kpi-departments");
+const kpiPositions = document.getElementById("kpi-positions");
 const kpiLeaves = document.getElementById("kpi-leaves");
 const kpiPayroll = document.getElementById("kpi-payroll");
 const kpiAttendance = document.getElementById("kpi-attendance");
@@ -66,15 +70,34 @@ function renderNotifications(items) {
 }
 
 async function loadDashboard() {
-  const [employees, leaves, payroll, attendance, notifications] = await Promise.all([
+  const results = await Promise.allSettled([
     listEmployees(),
+    listDepartments(),
+    listPositions(),
     listLeaves(),
     listPayroll(),
     listAttendance(),
     listNotifications()
   ]);
 
+  const getValue = (index, fallback = []) => {
+    const item = results[index];
+    if (item.status === "fulfilled") return item.value;
+    console.error("Dashboard data load failed:", item.reason);
+    return fallback;
+  };
+
+  const employees = getValue(0, []);
+  const departments = getValue(1, []);
+  const positions = getValue(2, []);
+  const leaves = getValue(3, []);
+  const payroll = getValue(4, []);
+  const attendance = getValue(5, []);
+  const notifications = getValue(6, []);
+
   kpiEmployees.textContent = employees.length;
+  kpiDepartments.textContent = departments.length;
+  kpiPositions.textContent = positions.length;
   kpiLeaves.textContent = leaves.length;
   kpiPayroll.textContent = payroll.length;
   kpiAttendance.textContent = attendance.length;
@@ -93,6 +116,10 @@ async function loadDashboard() {
   renderNotifications(notifications.slice(0, 5));
 
   if (window.Chart) {
+    const chartDefaults = {
+      responsive: true,
+      maintainAspectRatio: false
+    };
     const headcountCtx = document.getElementById("headcount-chart");
     new window.Chart(headcountCtx, {
       type: "line",
@@ -107,7 +134,8 @@ async function loadDashboard() {
             fill: true
           }
         ]
-      }
+      },
+      options: chartDefaults
     });
 
     const leaveCtx = document.getElementById("leave-chart");
@@ -124,7 +152,82 @@ async function loadDashboard() {
             backgroundColor: ["#00c2a8", "#0038a8", "#0b1220"]
           }
         ]
-      }
+      },
+      options: chartDefaults
+    });
+
+    const departmentCtx = document.getElementById("department-chart");
+    const departmentNames = new Map(
+      departments.map((dept) => [dept.id, dept.name || dept.id])
+    );
+    const deptCounts = employees.reduce((acc, emp) => {
+      const raw = (emp.departmentId || "").trim();
+      const byId = departmentNames.get(raw);
+      const byName = departments.find((dept) => dept.name === raw)?.name;
+      const label = byId || byName || raw || "Unassigned";
+      acc[label] = (acc[label] || 0) + 1;
+      return acc;
+    }, {});
+    const deptLabels = Object.keys(deptCounts);
+    new window.Chart(departmentCtx, {
+      type: "bar",
+      data: {
+        labels: deptLabels.length ? deptLabels : ["No data"],
+        datasets: [
+          {
+            label: "Employees",
+            data: deptLabels.length ? deptLabels.map((label) => deptCounts[label]) : [0],
+            backgroundColor: "#0038a8"
+          }
+        ]
+      },
+      options: chartDefaults
+    });
+
+    const attendanceCtx = document.getElementById("attendance-chart");
+    const present = attendance.filter((item) => item.status === "present").length;
+    const late = attendance.filter((item) => item.status === "late").length;
+    const absent = attendance.filter((item) => item.status === "absent").length;
+    new window.Chart(attendanceCtx, {
+      type: "bar",
+      data: {
+        labels: ["Present", "Late", "Absent"],
+        datasets: [
+          {
+            label: "Attendance",
+            data: [present, late, absent],
+            backgroundColor: ["#00c2a8", "#ffb347", "#0b1220"]
+          }
+        ]
+      },
+      options: chartDefaults
+    });
+
+    const payrollCtx = document.getElementById("payroll-chart");
+    const payrollByMonth = payroll.reduce((acc, entry) => {
+      const month = (entry.month || "Unknown").trim();
+      const net = Number(entry.net || 0);
+      acc[month] = (acc[month] || 0) + net;
+      return acc;
+    }, {});
+    const payrollLabels = Object.keys(payrollByMonth).sort();
+    const recentLabels = payrollLabels.slice(-6);
+    const payrollTotals = recentLabels.map((month) => payrollByMonth[month]);
+    new window.Chart(payrollCtx, {
+      type: "line",
+      data: {
+        labels: recentLabels.length ? recentLabels : ["No data"],
+        datasets: [
+          {
+            label: "Net Payroll",
+            data: payrollTotals.length ? payrollTotals : [0],
+            borderColor: "#0038a8",
+            backgroundColor: "rgba(0, 56, 168, 0.15)",
+            fill: true
+          }
+        ]
+      },
+      options: chartDefaults
     });
   }
 }

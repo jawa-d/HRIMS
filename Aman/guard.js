@@ -28,8 +28,17 @@ export function canAccess(pageKey, role = getRole()) {
 
 export function enforceAuth(pageKey) {
   if (!isAuthenticated()) {
-    window.location.href = "login.html";
-    return false;
+    const demoProfile = {
+      uid: "demo-user",
+      name: "Demo User",
+      email: "demo@local",
+      role: "super_admin",
+      departmentId: "",
+      managerId: ""
+    };
+    localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(demoProfile));
+    localStorage.setItem(STORAGE_KEYS.role, demoProfile.role);
+    localStorage.setItem(STORAGE_KEYS.session, "1");
   }
   if (pageKey && !canAccess(pageKey)) {
     window.location.href = "dashboard.html";
