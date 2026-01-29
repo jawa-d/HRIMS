@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>HRMS | Payroll</title>
+  <title>HRMS | Time Off Balance</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet" />
@@ -14,9 +14,9 @@
   <link rel="stylesheet" href="../HRMS%20CSS/sidebar.css" />
   <link rel="stylesheet" href="../HRMS%20CSS/modal.css" />
   <link rel="stylesheet" href="../HRMS%20CSS/toast.css" />
-  <link rel="stylesheet" href="../HRMS%20CSS/payroll.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/timeoff.css" />
 </head>
-<body data-page="payroll">
+<body data-page="timeoff">
   <div id="app" class="app-shell">
     <div id="sidebar-root"></div>
     <div class="main-content">
@@ -24,71 +24,67 @@
       <main class="page">
         <div class="page-header">
           <div>
-            <h1 class="page-title" data-i18n="payroll.title">Payroll</h1>
-            <p class="text-muted">Monthly payroll by employee with allowances and deductions.</p>
+            <h1 class="page-title" data-i18n="timeoff.title">Time Off Balance</h1>
+            <p class="text-muted">Annual leave balances and usage by employee.</p>
           </div>
-          <div class="payroll-actions">
-            <div class="payroll-month">
-              <label class="text-muted" for="payroll-month">Month</label>
-              <select class="select" id="payroll-month"></select>
+          <div class="timeoff-actions">
+            <div class="timeoff-search">
+              <label class="text-muted" for="timeoff-search">Search</label>
+              <input class="input" id="timeoff-search" data-i18n-placeholder="common.search" placeholder="Search" />
             </div>
-            <button class="btn btn-ghost" id="export-excel-btn">
+            <button class="btn btn-ghost" id="export-timeoff-btn">
               <i data-lucide="file-spreadsheet"></i>
               Export Excel
             </button>
-            <button class="btn btn-ghost" id="export-pdf-btn">
-              <i data-lucide="file-text"></i>
-              Export PDF
-            </button>
-            <button class="btn btn-primary" id="save-payroll-btn">Save Month</button>
           </div>
         </div>
-        <section class="payroll-summary grid-4">
+        <section class="timeoff-summary grid-4">
           <div class="card summary-card">
-            <div class="text-muted">Total Base</div>
-            <div class="summary-value" id="total-base">0</div>
+            <div class="text-muted">Employees</div>
+            <div class="summary-value" id="timeoff-total">0</div>
           </div>
           <div class="card summary-card">
-            <div class="text-muted">Total Allowances</div>
-            <div class="summary-value" id="total-allowances">0</div>
+            <div class="text-muted">Used Days</div>
+            <div class="summary-value" id="timeoff-used">0</div>
           </div>
           <div class="card summary-card">
-            <div class="text-muted">Total Deductions</div>
-            <div class="summary-value" id="total-deductions">0</div>
+            <div class="text-muted">Remaining Days</div>
+            <div class="summary-value" id="timeoff-remaining">0</div>
           </div>
           <div class="card summary-card">
-            <div class="text-muted">Total Net</div>
-            <div class="summary-value" id="total-net">0</div>
+            <div class="text-muted">Low Balance</div>
+            <div class="summary-value" id="timeoff-low">0</div>
           </div>
         </section>
         <div class="card">
           <div class="card-header">
             <h3 class="section-title">
-              <i data-lucide="wallet"></i>
-              Payroll Sheet
+              <i data-lucide="calendar"></i>
+              Time Off Ledger
             </h3>
           </div>
           <div class="table-scroll">
-            <table class="table payroll-table">
+            <table class="table timeoff-table">
               <thead>
                 <tr>
                   <th>Employee</th>
-                  <th>Base</th>
-                  <th>Allowances</th>
-                  <th>Deductions</th>
-                  <th>Net</th>
+                  <th>Annual</th>
+                  <th>Carryover</th>
+                  <th>Used</th>
+                  <th>Remaining</th>
                   <th>Status</th>
+                  <th data-i18n="common.actions">Actions</th>
                 </tr>
               </thead>
-              <tbody id="payroll-body"></tbody>
+              <tbody id="timeoff-body"></tbody>
             </table>
           </div>
-          <div id="payroll-empty" class="empty-state hidden">No payroll data for this month</div>
+          <div id="timeoff-empty" class="empty-state hidden">No balances found</div>
         </div>
       </main>
     </div>
   </div>
   <script src="https://unpkg.com/lucide@latest"></script>
-  <script type="module" src="../Page%20Controllers/payroll.page.js"></script>
+  <script type="module" src="../Page%20Controllers/timeoff.page.js"></script>
 </body>
 </html>

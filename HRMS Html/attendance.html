@@ -25,39 +25,69 @@
         <div class="page-header">
           <div>
             <h1 class="page-title" data-i18n="attendance.title">Attendance</h1>
-            <p class="text-muted">Monitor daily attendance logs</p>
+            <p class="text-muted">Daily attendance insights and punctuality tracking.</p>
           </div>
-          <button class="btn btn-primary" id="add-attendance-btn">Log Attendance</button>
+          <div class="attendance-actions">
+            <div class="attendance-search">
+              <label class="text-muted" for="attendance-search">Search</label>
+              <input class="input" id="attendance-search" data-i18n-placeholder="common.search" placeholder="Search" />
+            </div>
+            <div class="attendance-filter">
+              <label class="text-muted" for="attendance-status-filter">Status</label>
+              <select class="select" id="attendance-status-filter">
+                <option value="">All Status</option>
+                <option value="present">Present</option>
+                <option value="late">Late</option>
+                <option value="absent">Absent</option>
+              </select>
+            </div>
+            <button class="btn btn-primary" id="add-attendance-btn">
+              <i data-lucide="plus"></i>
+              Log Attendance
+            </button>
+          </div>
         </div>
-        <div class="toolbar">
-          <input class="input" id="attendance-search" data-i18n-placeholder="common.search" placeholder="Search" />
-          <select class="select" id="attendance-status-filter">
-            <option value="">All Status</option>
-            <option value="present">Present</option>
-            <option value="late">Late</option>
-            <option value="absent">Absent</option>
-          </select>
-        </div>
+        <section class="attendance-summary grid-4">
+          <div class="card summary-card">
+            <div class="text-muted">Total Logs</div>
+            <div class="summary-value" id="attendance-total">0</div>
+          </div>
+          <div class="card summary-card">
+            <div class="text-muted">Present</div>
+            <div class="summary-value" id="attendance-present">0</div>
+          </div>
+          <div class="card summary-card">
+            <div class="text-muted">Late</div>
+            <div class="summary-value" id="attendance-late">0</div>
+          </div>
+          <div class="card summary-card">
+            <div class="text-muted">Absent</div>
+            <div class="summary-value" id="attendance-absent">0</div>
+          </div>
+        </section>
         <div class="card">
           <div class="card-header">
             <h3 class="section-title">
               <i data-lucide="clock-3"></i>
-              Attendance Log
+              Attendance Ledger
             </h3>
           </div>
-          <table class="table">
-            <thead>
-              <tr>
-                <th>Employee</th>
-                <th>Date</th>
-                <th>Check In</th>
-                <th>Check Out</th>
-                <th>Status</th>
-                <th data-i18n="common.actions">Actions</th>
-              </tr>
-            </thead>
-            <tbody id="attendance-body"></tbody>
-          </table>
+          <div class="table-scroll">
+            <table class="table attendance-table">
+              <thead>
+                <tr>
+                  <th>Employee</th>
+                  <th>Date</th>
+                  <th>Check In</th>
+                  <th>Check Out</th>
+                  <th>Hours</th>
+                  <th>Status</th>
+                  <th data-i18n="common.actions">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="attendance-body"></tbody>
+            </table>
+          </div>
           <div id="attendance-empty" class="empty-state hidden">No attendance records</div>
         </div>
       </main>

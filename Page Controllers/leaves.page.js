@@ -16,6 +16,9 @@ const user = getUserProfile();
 const role = getRole();
 renderNavbar({ user, role });
 renderSidebar("leaves");
+if (window.lucide?.createIcons) {
+  window.lucide.createIcons();
+}
 
 const canApprove = ["super_admin", "hr_admin", "manager"].includes(role);
 const addButton = document.getElementById("add-leave-btn");
@@ -23,6 +26,10 @@ const searchInput = document.getElementById("leave-search");
 const statusFilter = document.getElementById("leave-status-filter");
 const tbody = document.getElementById("leaves-body");
 const emptyState = document.getElementById("leaves-empty");
+const totalEl = document.getElementById("leave-total");
+const pendingEl = document.getElementById("leave-pending");
+const approvedEl = document.getElementById("leave-approved");
+const rejectedEl = document.getElementById("leave-rejected");
 
 let leaves = [];
 
@@ -43,11 +50,22 @@ function renderLeaves() {
     .map(
       (leave) => `
       <tr>
-        <td>${leave.employeeId}</td>
-        <td>${leave.type}</td>
-        <td>${leave.from}</td>
-        <td>${leave.to}</td>
-        <td><span class="badge">${leave.status}</span></td>
+        <td>
+          <div class="employee-cell">
+            <div>${leave.employeeName || leave.employeeId}</div>
+            <div class="employee-meta">ID: ${leave.employeeId}</div>
+          </div>
+        </td>
+        <td><span class="chip">${leave.type || "General"}</span></td>
+        <td>
+          <div class="date-range">
+            <span>${leave.from || "-"}</span>
+            <span class="text-muted">to</span>
+            <span>${leave.to || "-"}</span>
+          </div>
+        </td>
+        <td>${leave.days || 1}</td>
+        <td><span class="badge status-${leave.status || "pending"}">${leave.status}</span></td>
         <td>
           ${
             canApprove
@@ -55,7 +73,7 @@ function renderLeaves() {
             <button class="btn btn-ghost" data-action="approve" data-id="${leave.id}">Approve</button>
             <button class="btn btn-ghost" data-action="reject" data-id="${leave.id}">Reject</button>
           `
-              : "<span class=\"text-muted\">Pending</span>"
+              : "<span class=\"text-muted\">View only</span>"
           }
         </td>
       </tr>
@@ -64,6 +82,10 @@ function renderLeaves() {
     .join("");
 
   emptyState.classList.toggle("hidden", filtered.length > 0);
+  if (totalEl) totalEl.textContent = leaves.length;
+  if (pendingEl) pendingEl.textContent = leaves.filter((l) => l.status === "pending").length;
+  if (approvedEl) approvedEl.textContent = leaves.filter((l) => l.status === "approved").length;
+  if (rejectedEl) rejectedEl.textContent = leaves.filter((l) => l.status === "rejected").length;
 
   if (canApprove) {
     tbody.querySelectorAll("button[data-action]").forEach((button) => {
@@ -85,6 +107,7 @@ function leaveFormContent() {
 function collectLeaveForm() {
   return {
     employeeId: user.uid,
+    employeeName: user.name || user.email || user.uid,
     type: document.getElementById("leave-type").value.trim(),
     from: document.getElementById("leave-from").value,
     to: document.getElementById("leave-to").value,

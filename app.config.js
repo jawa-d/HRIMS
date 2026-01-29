@@ -22,6 +22,9 @@ export const MENU_ITEMS = [
   { key: "leaves", labelKey: "nav.leaves", href: "leaves.html", icon: "calendar-check" },
   { key: "payroll", labelKey: "nav.payroll", href: "payroll.html", icon: "wallet" },
   { key: "attendance", labelKey: "nav.attendance", href: "attendance.html", icon: "timer" },
+  { key: "assets", labelKey: "nav.assets", href: "assets.html", icon: "laptop" },
+  { key: "timeoff", labelKey: "nav.timeoff", href: "timeoff.html", icon: "calendar" },
+  { key: "orgchart", labelKey: "nav.orgchart", href: "org-chart.html", icon: "git-branch" },
   { key: "departments", labelKey: "nav.departments", href: "departments.html", icon: "building" },
   { key: "positions", labelKey: "nav.positions", href: "positions.html", icon: "briefcase" },
   { key: "reports", labelKey: "nav.reports", href: "reports.html", icon: "bar-chart" },
@@ -37,6 +40,9 @@ export const ROLE_PERMISSIONS = {
     "leaves",
     "payroll",
     "attendance",
+    "assets",
+    "timeoff",
+    "orgchart",
     "departments",
     "positions",
     "reports",
@@ -48,6 +54,9 @@ export const ROLE_PERMISSIONS = {
     "employees",
     "leaves",
     "attendance",
+    "assets",
+    "timeoff",
+    "orgchart",
     "reports",
     "profile"
   ],
@@ -56,6 +65,9 @@ export const ROLE_PERMISSIONS = {
     "leaves",
     "attendance",
     "payroll",
+    "assets",
+    "timeoff",
+    "orgchart",
     "profile"
   ]
 };

@@ -16,8 +16,8 @@ export function renderSidebar(activeKey) {
       <nav class="sidebar-nav">
         ${items
           .map(
-            (item) => `
-          <a class="sidebar-link ${activeKey === item.key ? "active" : ""}" href="${item.href}">
+            (item, index) => `
+          <a class="sidebar-link ${activeKey === item.key ? "active" : ""}" href="${item.href}" style="--i:${index}">
             <i data-lucide="${item.icon}"></i>
             <span data-i18n="${item.labelKey}">${t(item.labelKey)}</span>
           </a>

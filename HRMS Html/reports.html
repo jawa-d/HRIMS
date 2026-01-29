@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="../HRMS%20CSS/navbar.css" />
   <link rel="stylesheet" href="../HRMS%20CSS/sidebar.css" />
   <link rel="stylesheet" href="../HRMS%20CSS/toast.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/reports.css" />
 </head>
 <body data-page="reports">
   <div id="app" class="app-shell">
@@ -23,11 +24,53 @@
         <div class="page-header">
           <div>
             <h1 class="page-title" data-i18n="reports.title">Reports</h1>
-            <p class="text-muted">Aggregated HR insights</p>
+            <p class="text-muted">Unified HR analytics across the entire system.</p>
           </div>
-          <button class="btn btn-ghost" id="export-reports-btn">Export (Coming Soon)</button>
+          <div class="reports-actions">
+            <button class="btn btn-ghost" id="export-excel-btn">
+              <i data-lucide="file-spreadsheet"></i>
+              Export Excel
+            </button>
+            <button class="btn btn-ghost" id="export-pdf-btn">
+              <i data-lucide="file-text"></i>
+              Export PDF
+            </button>
+          </div>
         </div>
+        <section class="reports-summary grid-6">
+          <div class="card summary-card">
+            <div class="text-muted">Employees</div>
+            <div class="summary-value" id="report-employees">0</div>
+          </div>
+          <div class="card summary-card">
+            <div class="text-muted">Departments</div>
+            <div class="summary-value" id="report-departments">0</div>
+          </div>
+          <div class="card summary-card">
+            <div class="text-muted">Positions</div>
+            <div class="summary-value" id="report-positions">0</div>
+          </div>
+          <div class="card summary-card">
+            <div class="text-muted">Leaves</div>
+            <div class="summary-value" id="report-leaves">0</div>
+          </div>
+          <div class="card summary-card">
+            <div class="text-muted">Attendance</div>
+            <div class="summary-value" id="report-attendance">0</div>
+          </div>
+          <div class="card summary-card">
+            <div class="text-muted">Payroll</div>
+            <div class="summary-value" id="report-payroll">0</div>
+          </div>
+        </section>
         <section class="grid-2">
+          <div class="card chart-card wide">
+            <h3 class="section-title">
+              <i data-lucide="line-chart"></i>
+              Headcount Trend
+            </h3>
+            <canvas id="headcount-trend-chart"></canvas>
+          </div>
           <div class="card chart-card">
             <h3 class="section-title">
               <i data-lucide="network"></i>
@@ -37,10 +80,45 @@
           </div>
           <div class="card chart-card">
             <h3 class="section-title">
-              <i data-lucide="pie-chart"></i>
-              Leave Overview
+              <i data-lucide="layers"></i>
+              Position Distribution
             </h3>
-            <canvas id="report-leave-chart"></canvas>
+            <canvas id="position-chart"></canvas>
+          </div>
+          <div class="card chart-card">
+            <h3 class="section-title">
+              <i data-lucide="pie-chart"></i>
+              Leave Status
+            </h3>
+            <canvas id="leave-status-chart"></canvas>
+          </div>
+          <div class="card chart-card">
+            <h3 class="section-title">
+              <i data-lucide="calendar-range"></i>
+              Leave Types
+            </h3>
+            <canvas id="leave-type-chart"></canvas>
+          </div>
+          <div class="card chart-card">
+            <h3 class="section-title">
+              <i data-lucide="clock-3"></i>
+              Attendance Status
+            </h3>
+            <canvas id="attendance-chart"></canvas>
+          </div>
+          <div class="card chart-card">
+            <h3 class="section-title">
+              <i data-lucide="wallet"></i>
+              Payroll Trend
+            </h3>
+            <canvas id="payroll-chart"></canvas>
+          </div>
+          <div class="card chart-card">
+            <h3 class="section-title">
+              <i data-lucide="user-check"></i>
+              Employee Status
+            </h3>
+            <canvas id="employee-status-chart"></canvas>
           </div>
         </section>
       </main>

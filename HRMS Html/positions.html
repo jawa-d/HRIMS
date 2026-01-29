@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="../HRMS%20CSS/sidebar.css" />
   <link rel="stylesheet" href="../HRMS%20CSS/modal.css" />
   <link rel="stylesheet" href="../HRMS%20CSS/toast.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/positions.css" />
 </head>
 <body data-page="positions">
   <div id="app" class="app-shell">
@@ -24,24 +25,52 @@
         <div class="page-header">
           <div>
             <h1 class="page-title" data-i18n="positions.title">Positions</h1>
-            <p class="text-muted">Maintain role catalog</p>
+            <p class="text-muted">Define roles, seniority, and compensation bands.</p>
           </div>
-          <button class="btn btn-primary" id="add-position-btn">Add Position</button>
+          <div class="positions-actions">
+            <div class="positions-search">
+              <label class="text-muted" for="position-search">Search</label>
+              <input class="input" id="position-search" data-i18n-placeholder="common.search" placeholder="Search" />
+            </div>
+            <div class="positions-filter">
+              <label class="text-muted" for="position-sort">Sort</label>
+              <select class="select" id="position-sort">
+                <option value="az">A to Z</option>
+                <option value="za">Z to A</option>
+              </select>
+            </div>
+            <button class="btn btn-primary" id="add-position-btn">
+              <i data-lucide="plus"></i>
+              Add Position
+            </button>
+          </div>
         </div>
-        <div class="toolbar">
-          <input class="input" id="position-search" data-i18n-placeholder="common.search" placeholder="Search" />
-        </div>
+        <section class="positions-summary grid-3">
+          <div class="card summary-card">
+            <div class="text-muted">Total Positions</div>
+            <div class="summary-value" id="positions-total">0</div>
+          </div>
+          <div class="card summary-card">
+            <div class="text-muted">Visible Results</div>
+            <div class="summary-value" id="positions-visible">0</div>
+          </div>
+          <div class="card summary-card">
+            <div class="text-muted">Access Level</div>
+            <div class="summary-meta" id="positions-role">View only</div>
+          </div>
+        </section>
         <div class="card">
           <div class="card-header">
             <h3 class="section-title">
               <i data-lucide="briefcase"></i>
-              Positions List
+              Position Directory
             </h3>
           </div>
           <table class="table">
             <thead>
               <tr>
                 <th>Name</th>
+                <th>Code</th>
                 <th data-i18n="common.actions">Actions</th>
               </tr>
             </thead>

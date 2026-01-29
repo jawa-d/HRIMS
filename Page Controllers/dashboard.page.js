@@ -169,6 +169,14 @@ async function loadDashboard() {
   renderNotifications(notifications.slice(0, 5));
 
   if (window.Chart) {
+    window.Chart.defaults.font.family = "Manrope, Cairo, sans-serif";
+    window.Chart.defaults.color = "#1f2937";
+    window.Chart.defaults.interaction = { mode: "index", intersect: false };
+    window.Chart.defaults.hover = { mode: "index", intersect: false };
+    window.Chart.defaults.elements.line.tension = 0.35;
+    window.Chart.defaults.elements.point.radius = 3;
+    window.Chart.defaults.elements.point.hoverRadius = 6;
+    window.Chart.defaults.elements.point.hitRadius = 12;
     const chartDefaults = {
       responsive: true,
       maintainAspectRatio: false

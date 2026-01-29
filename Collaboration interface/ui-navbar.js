@@ -71,7 +71,12 @@ export function renderNavbar({ user, role }) {
   root.querySelector("#logout-btn").addEventListener("click", () => logout());
 
   root.querySelector("#sidebar-toggle").addEventListener("click", () => {
-    document.body.classList.toggle("sidebar-open");
+    if (window.innerWidth <= 1100) {
+      document.body.classList.toggle("sidebar-open");
+      document.body.classList.remove("sidebar-collapsed");
+      return;
+    }
+    document.body.classList.toggle("sidebar-collapsed");
   });
 
   const globalSearch = root.querySelector("#global-search");

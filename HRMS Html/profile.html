@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="../HRMS%20CSS/navbar.css" />
   <link rel="stylesheet" href="../HRMS%20CSS/sidebar.css" />
   <link rel="stylesheet" href="../HRMS%20CSS/toast.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/profile.css" />
 </head>
 <body data-page="profile">
   <div id="app" class="app-shell">
@@ -34,6 +35,12 @@
               Update Profile
             </h3>
             <form id="profile-form" class="stack">
+              <div class="profile-photo-field">
+                <label>
+                  <span>Profile Photo</span>
+                  <input class="input" id="profile-photo-input" type="file" accept="image/*" />
+                </label>
+              </div>
               <label>
                 <span>Name</span>
                 <input class="input" id="profile-name" />

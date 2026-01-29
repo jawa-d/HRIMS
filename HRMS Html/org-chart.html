@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HRMS | Org Chart</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../HRMS%20CSS/tokens.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/global.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/components.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/navbar.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/sidebar.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/org-chart.css" />
+</head>
+<body data-page="orgchart">
+  <div id="app" class="app-shell">
+    <div id="sidebar-root"></div>
+    <div class="main-content">
+      <div id="navbar-root"></div>
+      <main class="page">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title" data-i18n="orgchart.title">Org Chart</h1>
+            <p class="text-muted">Interactive organizational structure with reporting lines.</p>
+          </div>
+          <div class="org-actions">
+            <div class="org-search">
+              <label class="text-muted" for="org-search">Search</label>
+              <input class="input" id="org-search" data-i18n-placeholder="common.search" placeholder="Search" />
+            </div>
+            <button class="btn btn-ghost" id="org-collapse-btn">
+              <i data-lucide="fold-vertical"></i>
+              Collapse All
+            </button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <h3 class="section-title">
+              <i data-lucide="git-branch"></i>
+              Organization Tree
+            </h3>
+          </div>
+          <div id="org-tree" class="org-tree"></div>
+          <div id="org-empty" class="empty-state hidden">No employees found</div>
+        </div>
+      </main>
+    </div>
+  </div>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script type="module" src="../Page%20Controllers/org-chart.page.js"></script>
+</body>
+</html>

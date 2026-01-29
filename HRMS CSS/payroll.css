@@ -1,3 +1,85 @@
-#payroll-body .btn {
-  margin-inline-end: var(--space-2);
+.payroll-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: flex-end;
+}
+
+.payroll-actions .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.payroll-month {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 180px;
+}
+
+.grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.summary-card {
+  padding: var(--space-4);
+}
+
+.summary-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-top: var(--space-2);
+}
+
+.table-scroll {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.payroll-table th,
+.payroll-table td {
+  vertical-align: middle;
+}
+
+.employee-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.employee-meta {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.payroll-input {
+  min-width: 120px;
+}
+
+.net-value {
+  font-weight: 700;
+}
+
+@media (max-width: 1100px) {
+  .grid-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .grid-4 {
+    grid-template-columns: 1fr;
+  }
+
+  .payroll-actions {
+    align-items: stretch;
+  }
+
+  .payroll-actions .btn {
+    justify-content: center;
+  }
 }

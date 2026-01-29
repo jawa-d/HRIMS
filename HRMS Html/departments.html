@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="../HRMS%20CSS/sidebar.css" />
   <link rel="stylesheet" href="../HRMS%20CSS/modal.css" />
   <link rel="stylesheet" href="../HRMS%20CSS/toast.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/departments.css" />
 </head>
 <body data-page="departments">
   <div id="app" class="app-shell">
@@ -24,24 +25,52 @@
         <div class="page-header">
           <div>
             <h1 class="page-title" data-i18n="departments.title">Departments</h1>
-            <p class="text-muted">Maintain department catalog</p>
+            <p class="text-muted">Organize teams, owners, and internal structure.</p>
           </div>
-          <button class="btn btn-primary" id="add-department-btn">Add Department</button>
+          <div class="departments-actions">
+            <div class="departments-search">
+              <label class="text-muted" for="department-search">Search</label>
+              <input class="input" id="department-search" data-i18n-placeholder="common.search" placeholder="Search" />
+            </div>
+            <div class="departments-filter">
+              <label class="text-muted" for="department-sort">Sort</label>
+              <select class="select" id="department-sort">
+                <option value="az">A to Z</option>
+                <option value="za">Z to A</option>
+              </select>
+            </div>
+            <button class="btn btn-primary" id="add-department-btn">
+              <i data-lucide="plus"></i>
+              Add Department
+            </button>
+          </div>
         </div>
-        <div class="toolbar">
-          <input class="input" id="department-search" data-i18n-placeholder="common.search" placeholder="Search" />
-        </div>
+        <section class="dept-summary grid-3">
+          <div class="card summary-card">
+            <div class="text-muted">Total Departments</div>
+            <div class="summary-value" id="departments-total">0</div>
+          </div>
+          <div class="card summary-card">
+            <div class="text-muted">Visible Results</div>
+            <div class="summary-value" id="departments-visible">0</div>
+          </div>
+          <div class="card summary-card">
+            <div class="text-muted">Access Level</div>
+            <div class="summary-meta" id="departments-role">View only</div>
+          </div>
+        </section>
         <div class="card">
           <div class="card-header">
             <h3 class="section-title">
               <i data-lucide="building-2"></i>
-              Departments List
+              Department Directory
             </h3>
           </div>
           <table class="table">
             <thead>
               <tr>
                 <th>Name</th>
+                <th>Code</th>
                 <th data-i18n="common.actions">Actions</th>
               </tr>
             </thead>

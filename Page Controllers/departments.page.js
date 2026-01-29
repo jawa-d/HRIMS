@@ -20,12 +20,19 @@ const user = getUserProfile();
 const role = getRole();
 renderNavbar({ user, role });
 renderSidebar("departments");
+if (window.lucide?.createIcons) {
+  window.lucide.createIcons();
+}
 
 const canManage = ["super_admin", "hr_admin"].includes(role);
 const addButton = document.getElementById("add-department-btn");
 const searchInput = document.getElementById("department-search");
+const sortSelect = document.getElementById("department-sort");
 const tbody = document.getElementById("departments-body");
 const emptyState = document.getElementById("departments-empty");
+const totalEl = document.getElementById("departments-total");
+const visibleEl = document.getElementById("departments-visible");
+const roleEl = document.getElementById("departments-role");
 
 if (!canManage) {
   addButton.classList.add("hidden");
@@ -33,17 +40,30 @@ if (!canManage) {
 
 let departments = [];
 
+function getDeptCode(dept) {
+  if (dept.code) return dept.code;
+  if (dept.name) return dept.name.replace(/[^A-Za-z0-9]/g, "").slice(0, 3).toUpperCase();
+  return (dept.id || "").slice(0, 3).toUpperCase();
+}
+
 function renderDepartments() {
   const query = (searchInput?.value || "").trim().toLowerCase();
   const filtered = departments.filter((dept) => {
     return !query || (dept.name || "").toLowerCase().includes(query);
   });
+  const sorted = [...filtered].sort((a, b) => {
+    const nameA = (a.name || "").toLowerCase();
+    const nameB = (b.name || "").toLowerCase();
+    if (sortSelect?.value === "za") return nameB.localeCompare(nameA);
+    return nameA.localeCompare(nameB);
+  });
 
-  tbody.innerHTML = filtered
+  tbody.innerHTML = sorted
     .map(
       (dept) => `
       <tr>
         <td>${dept.name}</td>
+        <td><span class="chip">${getDeptCode(dept) || "-"}</span></td>
         <td>
           ${
             canManage
@@ -59,7 +79,9 @@ function renderDepartments() {
     )
     .join("");
 
-  emptyState.classList.toggle("hidden", filtered.length > 0);
+  emptyState.classList.toggle("hidden", sorted.length > 0);
+  if (totalEl) totalEl.textContent = departments.length;
+  if (visibleEl) visibleEl.textContent = sorted.length;
 
   if (canManage) {
     tbody.querySelectorAll("button[data-action]").forEach((button) => {
@@ -115,8 +137,12 @@ addButton.addEventListener("click", () => openDepartmentModal());
 if (searchInput) {
   searchInput.addEventListener("input", renderDepartments);
 }
+if (sortSelect) {
+  sortSelect.addEventListener("change", renderDepartments);
+}
 window.addEventListener("global-search", (event) => {
   if (searchInput) searchInput.value = event.detail || "";
   renderDepartments();
 });
+if (roleEl) roleEl.textContent = canManage ? "Manage departments" : "View only";
 loadDepartments();

@@ -25,39 +25,68 @@
         <div class="page-header">
           <div>
             <h1 class="page-title" data-i18n="leaves.title">Leave Requests</h1>
-            <p class="text-muted">Track and approve leave applications</p>
+            <p class="text-muted">Track, approve, and monitor team leave activity.</p>
           </div>
-          <button class="btn btn-primary" id="add-leave-btn">Request Leave</button>
+          <div class="leaves-actions">
+            <div class="leaves-search">
+              <label class="text-muted" for="leave-search">Search</label>
+              <input class="input" id="leave-search" data-i18n-placeholder="common.search" placeholder="Search" />
+            </div>
+            <div class="leaves-filter">
+              <label class="text-muted" for="leave-status-filter">Status</label>
+              <select class="select" id="leave-status-filter">
+                <option value="">All Status</option>
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            </div>
+            <button class="btn btn-primary" id="add-leave-btn">
+              <i data-lucide="plus"></i>
+              Request Leave
+            </button>
+          </div>
         </div>
-        <div class="toolbar">
-          <input class="input" id="leave-search" data-i18n-placeholder="common.search" placeholder="Search" />
-          <select class="select" id="leave-status-filter">
-            <option value="">All Status</option>
-            <option value="pending">Pending</option>
-            <option value="approved">Approved</option>
-            <option value="rejected">Rejected</option>
-          </select>
-        </div>
+        <section class="leave-summary grid-4">
+          <div class="card summary-card">
+            <div class="text-muted">Total Requests</div>
+            <div class="summary-value" id="leave-total">0</div>
+          </div>
+          <div class="card summary-card">
+            <div class="text-muted">Pending</div>
+            <div class="summary-value" id="leave-pending">0</div>
+          </div>
+          <div class="card summary-card">
+            <div class="text-muted">Approved</div>
+            <div class="summary-value" id="leave-approved">0</div>
+          </div>
+          <div class="card summary-card">
+            <div class="text-muted">Rejected</div>
+            <div class="summary-value" id="leave-rejected">0</div>
+          </div>
+        </section>
         <div class="card">
           <div class="card-header">
             <h3 class="section-title">
               <i data-lucide="calendar-check-2"></i>
-              Leave Requests
+              Leave Ledger
             </h3>
           </div>
-          <table class="table">
+          <div class="table-scroll">
+            <table class="table leave-table">
             <thead>
               <tr>
                 <th>Employee</th>
                 <th>Type</th>
-                <th>From</th>
-                <th>To</th>
+                <th>Dates</th>
+                <th>Days</th>
                 <th>Status</th>
                 <th data-i18n="common.actions">Actions</th>
               </tr>
             </thead>
             <tbody id="leaves-body"></tbody>
-          </table>
+            </table>
+          </div>
           <div id="leaves-empty" class="empty-state hidden">No leave requests found</div>
         </div>
       </main>

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HRMS | Assets</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../HRMS%20CSS/tokens.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/global.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/components.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/navbar.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/sidebar.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/modal.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/toast.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/assets.css" />
+</head>
+<body data-page="assets">
+  <div id="app" class="app-shell">
+    <div id="sidebar-root"></div>
+    <div class="main-content">
+      <div id="navbar-root"></div>
+      <main class="page">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title" data-i18n="assets.title">Assets</h1>
+            <p class="text-muted">Track company equipment issuance and returns.</p>
+          </div>
+          <div class="assets-actions">
+            <div class="assets-search">
+              <label class="text-muted" for="asset-search">Search</label>
+              <input class="input" id="asset-search" data-i18n-placeholder="common.search" placeholder="Search" />
+            </div>
+            <div class="assets-filter">
+              <label class="text-muted" for="asset-status-filter">Status</label>
+              <select class="select" id="asset-status-filter">
+                <option value="">All Status</option>
+                <option value="available">Available</option>
+                <option value="assigned">Assigned</option>
+                <option value="maintenance">Maintenance</option>
+              </select>
+            </div>
+            <button class="btn btn-primary" id="add-asset-btn">
+              <i data-lucide="plus"></i>
+              Add Asset
+            </button>
+          </div>
+        </div>
+        <section class="assets-summary grid-4">
+          <div class="card summary-card">
+            <div class="text-muted">Total Assets</div>
+            <div class="summary-value" id="assets-total">0</div>
+          </div>
+          <div class="card summary-card">
+            <div class="text-muted">Assigned</div>
+            <div class="summary-value" id="assets-assigned">0</div>
+          </div>
+          <div class="card summary-card">
+            <div class="text-muted">Available</div>
+            <div class="summary-value" id="assets-available">0</div>
+          </div>
+          <div class="card summary-card">
+            <div class="text-muted">Maintenance</div>
+            <div class="summary-value" id="assets-maintenance">0</div>
+          </div>
+        </section>
+        <div class="card">
+          <div class="card-header">
+            <h3 class="section-title">
+              <i data-lucide="laptop"></i>
+              Asset Register
+            </h3>
+          </div>
+          <div class="table-scroll">
+            <table class="table assets-table">
+              <thead>
+                <tr>
+                  <th>Asset</th>
+                  <th>Tag</th>
+                  <th>Category</th>
+                  <th>Assigned To</th>
+                  <th>Status</th>
+                  <th data-i18n="common.actions">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="assets-body"></tbody>
+            </table>
+          </div>
+          <div id="assets-empty" class="empty-state hidden">No assets found</div>
+        </div>
+      </main>
+    </div>
+  </div>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script type="module" src="../Page%20Controllers/assets.page.js"></script>
+</body>
+</html>

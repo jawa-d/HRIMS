@@ -16,6 +16,9 @@ const user = getUserProfile();
 const role = getRole();
 renderNavbar({ user, role });
 renderSidebar("attendance");
+if (window.lucide?.createIcons) {
+  window.lucide.createIcons();
+}
 
 const canManage = ["super_admin", "hr_admin", "manager"].includes(role);
 const addButton = document.getElementById("add-attendance-btn");
@@ -23,12 +26,28 @@ const searchInput = document.getElementById("attendance-search");
 const statusFilter = document.getElementById("attendance-status-filter");
 const tbody = document.getElementById("attendance-body");
 const emptyState = document.getElementById("attendance-empty");
+const totalEl = document.getElementById("attendance-total");
+const presentEl = document.getElementById("attendance-present");
+const lateEl = document.getElementById("attendance-late");
+const absentEl = document.getElementById("attendance-absent");
 
 if (!canManage) {
   addButton.classList.add("hidden");
 }
 
 let records = [];
+
+function calcHours(record) {
+  if (!record.checkIn || !record.checkOut) return "-";
+  const [inH, inM] = record.checkIn.split(":").map(Number);
+  const [outH, outM] = record.checkOut.split(":").map(Number);
+  if (Number.isNaN(inH) || Number.isNaN(outH)) return "-";
+  const start = inH * 60 + (inM || 0);
+  const end = outH * 60 + (outM || 0);
+  if (end <= start) return "-";
+  const hours = (end - start) / 60;
+  return hours.toFixed(1);
+}
 
 function renderAttendance() {
   const query = (searchInput?.value || "").trim().toLowerCase();
@@ -47,11 +66,17 @@ function renderAttendance() {
     .map(
       (record) => `
       <tr>
-        <td>${record.employeeId}</td>
+        <td>
+          <div class="employee-cell">
+            <div>${record.employeeName || record.employeeId}</div>
+            <div class="employee-meta">ID: ${record.employeeId}</div>
+          </div>
+        </td>
         <td>${record.date}</td>
         <td>${record.checkIn || "-"}</td>
         <td>${record.checkOut || "-"}</td>
-        <td><span class="badge">${record.status}</span></td>
+        <td>${calcHours(record)}</td>
+        <td><span class="badge status-${record.status || "present"}">${record.status}</span></td>
         <td>
           ${
             canManage
@@ -65,6 +90,10 @@ function renderAttendance() {
     .join("");
 
   emptyState.classList.toggle("hidden", filtered.length > 0);
+  if (totalEl) totalEl.textContent = records.length;
+  if (presentEl) presentEl.textContent = records.filter((r) => r.status === "present").length;
+  if (lateEl) lateEl.textContent = records.filter((r) => r.status === "late").length;
+  if (absentEl) absentEl.textContent = records.filter((r) => r.status === "absent").length;
 
   if (canManage) {
     tbody.querySelectorAll("button[data-action]").forEach((button) => {
@@ -93,6 +122,7 @@ function attendanceFormContent(record = {}) {
 function collectAttendanceForm() {
   return {
     employeeId: document.getElementById("att-employee").value.trim(),
+    employeeName: user.name || user.email || user.uid,
     date: document.getElementById("att-date").value,
     checkIn: document.getElementById("att-in").value,
     checkOut: document.getElementById("att-out").value,
