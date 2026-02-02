@@ -66,6 +66,23 @@ export function watchUnreadCount(callback) {
   return onSnapshot(q, (snap) => callback(snap.size || 0));
 }
 
+export function watchNotifications(callback) {
+  const uid = currentUid();
+  if (!uid) {
+    callback([]);
+    return () => {};
+  }
+  const q = query(
+    notificationsRef,
+    where("toUid", "==", uid),
+    orderBy("createdAt", "desc")
+  );
+  return onSnapshot(q, (snap) => {
+    const items = snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+    callback(items);
+  });
+}
+
 export async function markNotificationRead(id) {
   await updateDoc(doc(db, "notifications", id), { isRead: true });
 }

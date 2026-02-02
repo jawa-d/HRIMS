@@ -38,6 +38,14 @@ let balances = [];
 
 const DEFAULT_ANNUAL = 24;
 
+function matchesEmployee(leave, emp) {
+  if (!leave || !emp) return false;
+  if (leave.employeeId === emp.id) return true;
+  if (emp.empId && leave.employeeCode === emp.empId) return true;
+  if (emp.email && leave.employeeEmail === emp.email) return true;
+  return false;
+}
+
 function calcLeaveDays(leave) {
   if (leave.days) return Number(leave.days) || 0;
   if (!leave.from || !leave.to) return 0;
@@ -65,7 +73,8 @@ function buildRows() {
     const carryover = Number(balance.carryover ?? 0);
     const adjustment = Number(balance.adjustment ?? 0);
     const used = leaves
-      .filter((leave) => leave.employeeId === emp.id && leave.status === "approved")
+      .filter((leave) => leave.status === "approved")
+      .filter((leave) => matchesEmployee(leave, emp))
       .filter((leave) => {
         if (!leave.from) return true;
         return new Date(leave.from).getFullYear() === currentYear;

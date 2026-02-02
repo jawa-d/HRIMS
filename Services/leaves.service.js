@@ -36,6 +36,7 @@ export async function createLeave(payload) {
     updatedAt: ts()
   };
   const ref = await addDoc(leavesRef, data);
+  await updateDoc(ref, { requestId: payload.requestId || ref.id });
   return ref.id;
 }
 
