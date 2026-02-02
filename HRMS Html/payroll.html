@@ -24,26 +24,51 @@
       <main class="page">
         <div class="page-header">
           <div>
-            <h1 class="page-title" data-i18n="payroll.title">Payroll</h1>
-            <p class="text-muted">Monthly payroll by employee with allowances and deductions.</p>
+            <h1 class="page-title" data-i18n="payroll.title">Payroll Center</h1>
+            <p class="text-muted">Monthly payroll synced from employee records with controlled save and approval flow.</p>
           </div>
+        </div>
+
+        <section class="card payroll-hero">
+          <div class="month-status-row">
+            <div class="month-status-main">
+              <span class="month-chip" id="payroll-month-label">-</span>
+              <span class="status-pill status-pill-draft" id="month-status-badge">Draft</span>
+            </div>
+            <p class="text-muted" id="month-status-text">Select a month to start payroll.</p>
+          </div>
+
           <div class="payroll-actions">
             <div class="payroll-month">
               <label class="text-muted" for="payroll-month">Month</label>
               <select class="select" id="payroll-month"></select>
             </div>
+            <div class="payroll-search">
+              <label class="text-muted" for="payroll-search">Search Employee</label>
+              <input class="input" id="payroll-search" type="search" placeholder="Name, ID, Email" />
+            </div>
             <button class="btn btn-ghost" id="export-excel-btn">
               <i data-lucide="file-spreadsheet"></i>
-              Export Excel
+              Export CSV
             </button>
             <button class="btn btn-ghost" id="export-pdf-btn">
               <i data-lucide="file-text"></i>
               Export PDF
             </button>
-            <button class="btn btn-primary" id="save-payroll-btn">Save Month</button>
+            <button class="btn btn-primary" id="save-payroll-btn">Save Draft</button>
+            <button class="btn btn-outline" id="approve-payroll-btn">Approve Month</button>
           </div>
-        </div>
-        <section class="payroll-summary grid-4">
+        </section>
+
+        <section class="payroll-summary grid-5">
+          <div class="card summary-card">
+            <div class="text-muted">Employees</div>
+            <div class="summary-value" id="total-employees">0</div>
+          </div>
+          <div class="card summary-card">
+            <div class="text-muted">Completed</div>
+            <div class="summary-value" id="total-completed">0</div>
+          </div>
           <div class="card summary-card">
             <div class="text-muted">Total Base</div>
             <div class="summary-value" id="total-base">0</div>
@@ -56,16 +81,17 @@
             <div class="text-muted">Total Deductions</div>
             <div class="summary-value" id="total-deductions">0</div>
           </div>
-          <div class="card summary-card">
+          <div class="card summary-card summary-card-net">
             <div class="text-muted">Total Net</div>
             <div class="summary-value" id="total-net">0</div>
           </div>
         </section>
+
         <div class="card">
           <div class="card-header">
             <h3 class="section-title">
               <i data-lucide="wallet"></i>
-              Payroll Sheet
+              Monthly Payroll Sheet
             </h3>
           </div>
           <div class="table-scroll">
@@ -77,13 +103,13 @@
                   <th>Allowances</th>
                   <th>Deductions</th>
                   <th>Net</th>
-                  <th>Status</th>
+                  <th>Entry Status</th>
                 </tr>
               </thead>
               <tbody id="payroll-body"></tbody>
             </table>
           </div>
-          <div id="payroll-empty" class="empty-state hidden">No payroll data for this month</div>
+          <div id="payroll-empty" class="empty-state hidden">No employees available for payroll in this month.</div>
         </div>
       </main>
     </div>
