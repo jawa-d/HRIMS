@@ -3,6 +3,7 @@ import { initI18n } from "../Languages/i18n.js";
 import { renderNavbar } from "../Collaboration interface/ui-navbar.js";
 import { renderSidebar } from "../Collaboration interface/ui-sidebar.js";
 import { showToast } from "../Collaboration interface/ui-toast.js";
+import { showTableSkeleton } from "../Collaboration interface/ui-skeleton.js";
 import { listPayroll, createPayroll, updatePayroll } from "../Services/payroll.service.js";
 import { listEmployees } from "../Services/employees.service.js";
 
@@ -397,6 +398,7 @@ async function loadEmployees() {
 }
 
 async function loadPayroll() {
+  showTableSkeleton(tbody, { rows: 6, cols: 6 });
   const filter = isEmployee ? { employeeId: user.uid, month: currentMonth } : { month: currentMonth };
   payrollEntries = await listPayroll(filter);
   renderPayroll();
@@ -412,6 +414,10 @@ saveBtn.addEventListener("click", () => savePayroll("draft"));
 approveBtn.addEventListener("click", () => savePayroll("approved"));
 exportExcelBtn.addEventListener("click", exportToCsv);
 exportPdfBtn.addEventListener("click", exportToPdf);
+window.addEventListener("global-search", (event) => {
+  searchInput.value = event.detail || "";
+  renderPayroll();
+});
 
 (async () => {
   await loadEmployees();

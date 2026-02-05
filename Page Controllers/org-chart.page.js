@@ -190,5 +190,9 @@ if (searchInput) {
 if (collapseBtn) {
   collapseBtn.addEventListener("click", collapseAll);
 }
+window.addEventListener("global-search", (event) => {
+  if (searchInput) searchInput.value = event.detail || "";
+  applySearch();
+});
 
 loadData();

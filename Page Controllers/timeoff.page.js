@@ -4,6 +4,7 @@ import { renderNavbar } from "../Collaboration interface/ui-navbar.js";
 import { renderSidebar } from "../Collaboration interface/ui-sidebar.js";
 import { openModal } from "../Collaboration interface/ui-modal.js";
 import { showToast } from "../Collaboration interface/ui-toast.js";
+import { showTableSkeleton } from "../Collaboration interface/ui-skeleton.js";
 import { listEmployees } from "../Services/employees.service.js";
 import { listLeaves } from "../Services/leaves.service.js";
 import { listTimeoffBalances, upsertTimeoffBalance } from "../Services/timeoff.service.js";
@@ -198,6 +199,7 @@ function exportToCsv() {
 }
 
 async function loadBalances() {
+  showTableSkeleton(tbody, { rows: 6, cols: 7 });
   balances = await listTimeoffBalances();
   renderTable();
 }

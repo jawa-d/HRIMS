@@ -4,6 +4,7 @@ import { renderNavbar } from "../Collaboration interface/ui-navbar.js";
 import { renderSidebar } from "../Collaboration interface/ui-sidebar.js";
 import { openModal } from "../Collaboration interface/ui-modal.js";
 import { showToast } from "../Collaboration interface/ui-toast.js";
+import { showTableSkeleton } from "../Collaboration interface/ui-skeleton.js";
 import { listLeaves, createLeave, updateLeave } from "../Services/leaves.service.js";
 import { createNotification } from "../Services/notifications.service.js";
 import { listEmployees } from "../Services/employees.service.js";
@@ -306,6 +307,7 @@ async function handleAction(action, id) {
 }
 
 async function loadLeaves() {
+  showTableSkeleton(tbody, { rows: 6, cols: 7 });
   const [leavesData, employeesData, balancesData] = await Promise.all([
     listLeaves(),
     listEmployees(),

@@ -1,6 +1,9 @@
 import { t, toggleLanguage, toggleTheme, translateDom, getLanguage, getTheme } from "../Languages/i18n.js";
 import { ROLE_LABELS, APP_NAME } from "../app.config.js";
 import { logout } from "../Aman/auth.js";
+import { showToast } from "./ui-toast.js";
+import { trackActivity, listRecentActivities, formatActivityTime } from "../Services/activity.service.js";
+import { searchGlobal } from "../Services/global-search.service.js";
 import {
   getUnreadCount,
   watchUnreadCount,
@@ -23,8 +26,9 @@ export function renderNavbar({ user, role }) {
           <img src="../HRMS%20Html/assets/logo.jpg" alt="${APP_NAME} logo" class="navbar-logo" />
           <span data-i18n="app.name">${APP_NAME}</span>
         </div>
-        <div class="navbar-search">
+        <div class="navbar-search" id="navbar-search-wrap">
           <input class="input" id="global-search" type="search" data-i18n-placeholder="nav.search" placeholder="${t("nav.search")}" />
+          <div class="global-search-results" id="global-search-results" aria-hidden="true"></div>
         </div>
       </div>
       <div class="navbar-actions">
@@ -54,6 +58,7 @@ export function renderNavbar({ user, role }) {
         <button class="btn btn-outline" id="logout-btn" data-i18n="nav.logout">${t("nav.logout")}</button>
       </div>
     </nav>
+    <div class="recent-activity-bar" id="recent-activity-bar"></div>
   `;
 
   translateDom(root);
@@ -62,14 +67,15 @@ export function renderNavbar({ user, role }) {
   const dropdown = root.querySelector("#notifications-dropdown");
   const listEl = root.querySelector("#notifications-list");
   const countLabel = root.querySelector("#notifications-count-label");
+  const searchResultsEl = root.querySelector("#global-search-results");
+  const activityBarEl = root.querySelector("#recent-activity-bar");
   let dropdownOpen = false;
   let notificationItems = [];
+  let searchResults = [];
 
   const renderNotifications = (items) => {
     notificationItems = items;
-    if (countLabel) {
-      countLabel.textContent = items.length ? `${items.length}` : "";
-    }
+    if (countLabel) countLabel.textContent = items.length ? `${items.length}` : "";
     if (!listEl) return;
     if (!items.length) {
       listEl.innerHTML = `<div class="empty-state">${t("notifications.empty")}</div>`;
@@ -98,14 +104,95 @@ export function renderNavbar({ user, role }) {
       });
     });
   };
+
   const updateCount = async () => {
     const count = await getUnreadCount();
     countEl.textContent = String(count);
     countEl.style.display = count > 0 ? "grid" : "none";
   };
 
-  updateCount();
-  watchUnreadCount(updateCount);
+  const renderRecentActivityBar = () => {
+    if (!activityBarEl) return;
+    const items = listRecentActivities(6);
+    if (!items.length) {
+      activityBarEl.innerHTML = `<span class="activity-pill is-empty">No recent activity yet</span>`;
+      return;
+    }
+    const pills = items
+      .map(
+        (item) => `
+        <a class="activity-pill" href="${item.href || "#"}" title="${item.subtitle || ""}">
+          <span>${item.title}</span>
+          <small>${formatActivityTime(item.at)}</small>
+        </a>
+      `
+      )
+      .join("");
+    activityBarEl.innerHTML = `
+      <div class="recent-activity-marquee">
+        <div class="recent-activity-track">${pills}</div>
+        <div class="recent-activity-track" aria-hidden="true">${pills}</div>
+      </div>
+    `;
+  };
+
+  const trackPageVisit = () => {
+    const pageKey = document.body?.dataset?.page;
+    if (!pageKey) return;
+    const guardKey = `__page_activity_${pageKey}`;
+    if (window[guardKey]) return;
+    window[guardKey] = true;
+    const navLabel = t(`nav.${pageKey}`);
+    const pageLabel = navLabel !== `nav.${pageKey}` ? navLabel : pageKey;
+    trackActivity({
+      title: `Visited ${pageLabel}`,
+      subtitle: window.location.pathname.split("/").pop() || "",
+      pageKey,
+      href: window.location.pathname.split("/").pop() || ""
+    });
+  };
+
+  const showWelcomeToast = () => {
+    const pageKey = document.body?.dataset?.page;
+    if (!pageKey) return;
+    const welcomeGuardKey = `__welcome_toast_${pageKey}`;
+    if (window[welcomeGuardKey]) return;
+    window[welcomeGuardKey] = true;
+
+    const navLabel = t(`nav.${pageKey}`);
+    const pageLabel = navLabel !== `nav.${pageKey}` ? navLabel : t(`${pageKey}.title`);
+    const firstName = (user?.name || "").trim().split(/\s+/)[0];
+    const displayName = firstName || "there";
+
+    setTimeout(() => {
+      showToast("info", `Glad to have you on the ${pageLabel} page.`, `Welcome ${displayName}`, {
+        trackActivity: false
+      });
+    }, 280);
+  };
+
+  const renderGlobalResults = (items) => {
+    if (!searchResultsEl) return;
+    searchResults = items;
+    if (!items.length) {
+      searchResultsEl.classList.remove("open");
+      searchResultsEl.setAttribute("aria-hidden", "true");
+      searchResultsEl.innerHTML = "";
+      return;
+    }
+    searchResultsEl.innerHTML = items
+      .map(
+        (item) => `
+        <a class="global-result-item" href="${item.href}">
+          <strong>${item.title}</strong>
+          <span>${item.subtitle || item.type}</span>
+        </a>
+      `
+      )
+      .join("");
+    searchResultsEl.classList.add("open");
+    searchResultsEl.setAttribute("aria-hidden", "false");
+  };
 
   const openNotifications = async () => {
     dropdownOpen = !dropdownOpen;
@@ -119,43 +206,48 @@ export function renderNavbar({ user, role }) {
     }
   };
 
-  watchNotifications((items) => {
-    renderNotifications(items);
-  });
+  updateCount();
+  watchUnreadCount(updateCount);
+  watchNotifications((items) => renderNotifications(items));
 
   root.querySelector("#lang-toggle").addEventListener("click", () => {
     toggleLanguage();
     root.querySelector("#lang-label").textContent = getLanguage() === "ar" ? "EN" : "AR";
     translateDom();
+    renderRecentActivityBar();
   });
 
   root.querySelector("#theme-toggle").addEventListener("click", () => {
     toggleTheme();
     const icon = root.querySelector("#theme-toggle i");
     icon.setAttribute("data-lucide", getTheme() === "dark" ? "sun" : "moon");
-    if (window.lucide) {
-      window.lucide.createIcons();
-    }
+    if (window.lucide) window.lucide.createIcons();
   });
 
   root.querySelector("#logout-btn").addEventListener("click", () => logout());
-
   root.querySelector("#notifications-btn").addEventListener("click", openNotifications);
 
   document.addEventListener("click", (event) => {
-    if (!dropdownOpen) return;
-    const wrapper = root.querySelector("#navbar-notifications");
-    if (!wrapper || wrapper.contains(event.target)) return;
-    dropdownOpen = false;
-    dropdown?.classList.remove("open");
-    dropdown?.setAttribute("aria-hidden", "true");
+    if (dropdownOpen) {
+      const wrapper = root.querySelector("#navbar-notifications");
+      if (wrapper && !wrapper.contains(event.target)) {
+        dropdownOpen = false;
+        dropdown?.classList.remove("open");
+        dropdown?.setAttribute("aria-hidden", "true");
+      }
+    }
+
+    const searchWrap = root.querySelector("#navbar-search-wrap");
+    if (!searchWrap || searchWrap.contains(event.target)) return;
+    renderGlobalResults([]);
   });
 
   document.addEventListener("keydown", (event) => {
-    if (event.key !== "Escape" || !dropdownOpen) return;
-    dropdownOpen = false;
-    dropdown?.classList.remove("open");
-    dropdown?.setAttribute("aria-hidden", "true");
+    if (event.key === "Escape" && dropdownOpen) {
+      dropdownOpen = false;
+      dropdown?.classList.remove("open");
+      dropdown?.setAttribute("aria-hidden", "true");
+    }
   });
 
   root.querySelector("#sidebar-toggle").addEventListener("click", () => {
@@ -169,17 +261,46 @@ export function renderNavbar({ user, role }) {
 
   const globalSearch = root.querySelector("#global-search");
   if (globalSearch) {
+    let filterTimer;
     let searchTimer;
-    globalSearch.addEventListener("input", () => {
+
+    globalSearch.addEventListener("input", async () => {
+      clearTimeout(filterTimer);
       clearTimeout(searchTimer);
       const value = globalSearch.value.trim();
-      searchTimer = setTimeout(() => {
+
+      filterTimer = setTimeout(() => {
         window.dispatchEvent(new CustomEvent("global-search", { detail: value }));
       }, 120);
+
+      if (!value) {
+        renderGlobalResults([]);
+        return;
+      }
+
+      if (searchResultsEl) {
+        searchResultsEl.innerHTML = `<div class="global-result-item muted">Searching...</div>`;
+        searchResultsEl.classList.add("open");
+        searchResultsEl.setAttribute("aria-hidden", "false");
+      }
+
+      searchTimer = setTimeout(async () => {
+        const results = await searchGlobal(value, 7);
+        renderGlobalResults(results);
+      }, 200);
+    });
+
+    globalSearch.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" && searchResults.length) {
+        event.preventDefault();
+        window.location.href = searchResults[0].href;
+      }
     });
   }
 
-  if (window.lucide) {
-    window.lucide.createIcons();
-  }
+  if (window.lucide) window.lucide.createIcons();
+
+  trackPageVisit();
+  renderRecentActivityBar();
+  showWelcomeToast();
 }

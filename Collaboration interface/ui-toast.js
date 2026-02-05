@@ -1,3 +1,4 @@
+import { trackActivity } from "../Services/activity.service.js";
 let toastRoot;
 
 function ensureToastRoot() {
@@ -8,7 +9,7 @@ function ensureToastRoot() {
   }
 }
 
-export function showToast(type, message, title = "") {
+export function showToast(type, message, title = "", options = {}) {
   ensureToastRoot();
   const icons = {
     success: "check-circle-2",
@@ -32,6 +33,16 @@ export function showToast(type, message, title = "") {
     <div class="toast-progress"></div>
   `;
   toastRoot.appendChild(toast);
+
+  const shouldTrack = options.trackActivity !== false && type !== "info";
+  if (shouldTrack) {
+    trackActivity({
+      title: title || message || "Activity",
+      subtitle: title ? message : "",
+      pageKey: document.body?.dataset?.page || "",
+      href: window.location.pathname.split("/").pop() || ""
+    });
+  }
 
   const removeToast = () => {
     toast.classList.add("toast-exit");

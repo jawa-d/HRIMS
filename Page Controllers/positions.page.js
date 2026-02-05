@@ -4,6 +4,7 @@ import { renderNavbar } from "../Collaboration interface/ui-navbar.js";
 import { renderSidebar } from "../Collaboration interface/ui-sidebar.js";
 import { openModal } from "../Collaboration interface/ui-modal.js";
 import { showToast } from "../Collaboration interface/ui-toast.js";
+import { showTableSkeleton } from "../Collaboration interface/ui-skeleton.js";
 import {
   listPositions,
   createPosition,
@@ -129,6 +130,7 @@ async function handleAction(action, id) {
 }
 
 async function loadPositions() {
+  showTableSkeleton(tbody, { rows: 6, cols: 3 });
   positions = await listPositions();
   renderPositions();
 }

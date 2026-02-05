@@ -4,6 +4,7 @@ import { renderNavbar } from "../Collaboration interface/ui-navbar.js";
 import { renderSidebar } from "../Collaboration interface/ui-sidebar.js";
 import { openModal } from "../Collaboration interface/ui-modal.js";
 import { showToast } from "../Collaboration interface/ui-toast.js";
+import { showTableSkeleton } from "../Collaboration interface/ui-skeleton.js";
 import { listAttendance, createAttendance, updateAttendance } from "../Services/attendance.service.js";
 import { createNotification } from "../Services/notifications.service.js";
 
@@ -166,6 +167,7 @@ function openAttendanceModal(id) {
 }
 
 async function loadAttendance() {
+  showTableSkeleton(tbody, { rows: 6, cols: 7 });
   const data = await listAttendance();
   records = role === "employee" ? data.filter((item) => item.employeeId === user.uid) : data;
   renderAttendance();
