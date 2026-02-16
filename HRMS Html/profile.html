@@ -24,26 +24,40 @@
         <div class="page-header">
           <div>
             <h1 class="page-title" data-i18n="profile.title">Profile</h1>
-            <p class="text-muted">Manage your personal details</p>
+            <p class="text-muted">Manage your account, contact details, and work profile.</p>
           </div>
         </div>
-        <section class="grid-2">
-          <div class="card" id="profile-card"></div>
-          <div class="card">
-            <h3 class="section-title">
-              <i data-lucide="edit-3"></i>
-              Update Profile
-            </h3>
-            <form id="profile-form" class="stack">
-              <div class="profile-photo-field">
+        <section class="profile-layout">
+          <div class="card profile-overview-card" id="profile-card"></div>
+          <div class="card profile-form-card">
+            <div class="card-header">
+              <h3 class="section-title">
+                <i data-lucide="edit-3"></i>
+                Update Profile
+              </h3>
+            </div>
+            <form id="profile-form" class="profile-form-grid">
+              <div class="profile-photo-field profile-field-span">
                 <label>
                   <span>Profile Photo</span>
                   <input class="input" id="profile-photo-input" type="file" accept="image/*" />
                 </label>
               </div>
               <label>
-                <span>Name</span>
+                <span>Full Name</span>
                 <input class="input" id="profile-name" />
+              </label>
+              <label>
+                <span>Email</span>
+                <input class="input" id="profile-email" type="email" readonly />
+              </label>
+              <label>
+                <span>Phone</span>
+                <input class="input" id="profile-phone" />
+              </label>
+              <label>
+                <span>Job Title</span>
+                <input class="input" id="profile-title" />
               </label>
               <label>
                 <span>Department ID</span>
@@ -53,8 +67,29 @@
                 <span>Manager ID</span>
                 <input class="input" id="profile-manager" />
               </label>
-              <button class="btn btn-primary" type="submit">Save</button>
+              <label>
+                <span>Position ID</span>
+                <input class="input" id="profile-position" />
+              </label>
+              <label>
+                <span>Role</span>
+                <input class="input" id="profile-role" readonly />
+              </label>
+              <label class="profile-field-span">
+                <span>Bio</span>
+                <textarea class="textarea" id="profile-bio" rows="4"></textarea>
+              </label>
+              <div class="profile-field-span">
+                <button class="btn btn-primary" type="submit">Save Changes</button>
+              </div>
             </form>
+          </div>
+          <div class="card profile-security-card">
+            <h3 class="section-title">
+              <i data-lucide="shield-check"></i>
+              Access Snapshot
+            </h3>
+            <div class="stack" id="profile-access-list"></div>
           </div>
         </section>
       </main>

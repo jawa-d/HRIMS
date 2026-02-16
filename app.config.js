@@ -4,7 +4,10 @@ export const STORAGE_KEYS = {
   theme: "hrms_theme",
   session: "hrms_session",
   role: "hrms_role",
-  user: "hrms_user"
+  user: "hrms_user",
+  roleVisibility: "hrms_role_visibility",
+  userPermissions: "hrms_user_permissions",
+  usersDraft: "hrms_users_draft"
 };
 
 export const ROLES = ["super_admin", "hr_admin", "manager", "employee"];

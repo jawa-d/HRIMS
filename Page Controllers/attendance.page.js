@@ -5,7 +5,7 @@ import { renderSidebar } from "../Collaboration interface/ui-sidebar.js";
 import { openModal } from "../Collaboration interface/ui-modal.js";
 import { showToast } from "../Collaboration interface/ui-toast.js";
 import { showTableSkeleton } from "../Collaboration interface/ui-skeleton.js";
-import { listAttendance, createAttendance, updateAttendance } from "../Services/attendance.service.js";
+import { listAttendance, createAttendance, updateAttendance, deleteAttendance } from "../Services/attendance.service.js";
 import { createNotification } from "../Services/notifications.service.js";
 
 if (!enforceAuth("attendance")) {
@@ -81,7 +81,10 @@ function renderAttendance() {
         <td>
           ${
             canManage
-              ? `<button class="btn btn-ghost" data-action="edit" data-id="${record.id}">Edit</button>`
+              ? `
+                <button class="btn btn-ghost" data-action="edit" data-id="${record.id}">Edit</button>
+                <button class="btn btn-ghost" data-action="delete" data-id="${record.id}">Delete</button>
+              `
               : "-"
           }
         </td>
@@ -98,7 +101,7 @@ function renderAttendance() {
 
   if (canManage) {
     tbody.querySelectorAll("button[data-action]").forEach((button) => {
-      button.addEventListener("click", () => openAttendanceModal(button.dataset.id));
+      button.addEventListener("click", () => handleAttendanceAction(button.dataset.action, button.dataset.id));
     });
   }
 }
@@ -164,6 +167,18 @@ function openAttendanceModal(id) {
       { label: "Cancel", className: "btn btn-ghost" }
     ]
   });
+}
+
+async function handleAttendanceAction(action, id) {
+  if (action === "edit") {
+    openAttendanceModal(id);
+    return;
+  }
+  if (action === "delete") {
+    await deleteAttendance(id);
+    showToast("success", "Attendance deleted");
+    await loadAttendance();
+  }
 }
 
 async function loadAttendance() {

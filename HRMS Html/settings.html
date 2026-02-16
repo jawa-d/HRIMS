@@ -12,7 +12,9 @@
   <link rel="stylesheet" href="../HRMS%20CSS/components.css" />
   <link rel="stylesheet" href="../HRMS%20CSS/navbar.css" />
   <link rel="stylesheet" href="../HRMS%20CSS/sidebar.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/modal.css" />
   <link rel="stylesheet" href="../HRMS%20CSS/toast.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/settings.css" />
 </head>
 <body data-page="settings">
   <div id="app" class="app-shell">
@@ -23,26 +25,53 @@
         <div class="page-header">
           <div>
             <h1 class="page-title" data-i18n="settings.title">Settings</h1>
-            <p class="text-muted">Control system preferences and role access</p>
+            <p class="text-muted">Control system preferences, RBAC templates, and user access definitions.</p>
           </div>
         </div>
-        <section class="grid-2">
-          <div class="card">
-            <h3 class="section-title">
-              <i data-lucide="sliders-horizontal"></i>
-              Preferences
-            </h3>
-            <div class="stack">
+        <section class="settings-grid">
+          <div class="card settings-pref-card">
+            <div class="card-header">
+              <h3 class="section-title">
+                <i data-lucide="sliders-horizontal"></i>
+                Preferences
+              </h3>
+            </div>
+            <div class="settings-actions">
               <button class="btn btn-outline" id="settings-theme-toggle">Toggle Theme</button>
               <button class="btn btn-outline" id="settings-lang-toggle">Toggle Language</button>
             </div>
           </div>
-          <div class="card">
-            <h3 class="section-title">
-              <i data-lucide="shield-check"></i>
-              Role Visibility
-            </h3>
-            <table class="table" id="roles-table"></table>
+          <div class="card settings-users-card">
+            <div class="card-header">
+              <h3 class="section-title">
+                <i data-lucide="users"></i>
+                User Access Directory
+              </h3>
+              <div class="settings-toolbar">
+                <input class="input" id="settings-user-search" placeholder="Search user" />
+                <button class="btn btn-primary" id="settings-add-user-btn">
+                  <i data-lucide="user-plus"></i>
+                  Add User
+                </button>
+              </div>
+            </div>
+            <div class="table-scroll">
+              <table class="table" id="users-table"></table>
+            </div>
+            <p class="text-muted settings-note">
+              User definitions are ready for Firebase sync later through the same `users` payload.
+            </p>
+          </div>
+          <div class="card settings-roles-card">
+            <div class="card-header">
+              <h3 class="section-title">
+                <i data-lucide="shield-check"></i>
+                Role Permissions Template
+              </h3>
+            </div>
+            <div class="table-scroll">
+              <table class="table" id="roles-table"></table>
+            </div>
           </div>
         </section>
       </main>

@@ -2,9 +2,10 @@ import { enforceAuth, getUserProfile, getRole } from "../Aman/guard.js";
 import { initI18n } from "../Languages/i18n.js";
 import { renderNavbar } from "../Collaboration interface/ui-navbar.js";
 import { renderSidebar } from "../Collaboration interface/ui-sidebar.js";
-import { listEmployees } from "../Services/employees.service.js";
-import { listDepartments } from "../Services/departments.service.js";
-import { listPositions } from "../Services/positions.service.js";
+import { showToast } from "../Collaboration interface/ui-toast.js";
+import { watchEmployees } from "../Services/employees.service.js";
+import { watchDepartments } from "../Services/departments.service.js";
+import { watchPositions } from "../Services/positions.service.js";
 
 if (!enforceAuth("orgchart")) {
   throw new Error("Unauthorized");
@@ -28,6 +29,12 @@ let employees = [];
 let departments = [];
 let positions = [];
 let parentMap = new Map();
+let unsubscribers = [];
+let dataReady = {
+  employees: false,
+  departments: false,
+  positions: false
+};
 
 function buildMaps() {
   const deptMap = new Map(departments.map((dept) => [dept.id, dept.name || dept.id]));
@@ -75,16 +82,18 @@ function createNode(id, nodes, childrenMap, maps) {
   const children = childrenMap.get(id) || [];
   const deptName = maps.deptMap.get(emp.departmentId) || emp.departmentId || "Unassigned";
   const positionName = maps.posMap.get(emp.positionId) || emp.positionId || "Role";
+  const displayName = emp.fullName || emp.email || emp.empId || emp.id;
+  const searchText = `${displayName} ${positionName} ${deptName}`.toLowerCase();
 
   const node = document.createElement("div");
   node.className = "org-node";
   node.dataset.id = id;
-  node.dataset.name = `${emp.fullName || emp.email || emp.empId || emp.id}`.toLowerCase();
+  node.dataset.name = searchText;
 
   node.innerHTML = `
     <div class="org-card">
       <div class="org-info">
-        <div class="org-name">${emp.fullName || emp.email || emp.empId || emp.id}</div>
+        <div class="org-name">${displayName}</div>
         <div class="org-meta">${positionName} • ${deptName}</div>
       </div>
       <div class="org-actions-inline">
@@ -172,16 +181,44 @@ function collapseAll() {
   });
 }
 
-async function loadData() {
-  const [employeesData, departmentsData, positionsData] = await Promise.all([
-    listEmployees(),
-    listDepartments(),
-    listPositions()
-  ]);
-  employees = employeesData;
-  departments = departmentsData;
-  positions = positionsData;
+function renderWhenReady() {
+  if (!dataReady.employees || !dataReady.departments || !dataReady.positions) return;
   renderTree();
+  applySearch();
+}
+
+function onRealtimeError(error) {
+  console.error("Org chart realtime sync failed", error);
+  showToast("error", "Could not sync org chart data from Firebase");
+}
+
+function initRealtimeSync() {
+  unsubscribers = [
+    watchEmployees(
+      (data) => {
+        employees = data;
+        dataReady.employees = true;
+        renderWhenReady();
+      },
+      onRealtimeError
+    ),
+    watchDepartments(
+      (data) => {
+        departments = data;
+        dataReady.departments = true;
+        renderWhenReady();
+      },
+      onRealtimeError
+    ),
+    watchPositions(
+      (data) => {
+        positions = data;
+        dataReady.positions = true;
+        renderWhenReady();
+      },
+      onRealtimeError
+    )
+  ];
 }
 
 if (searchInput) {
@@ -194,5 +231,10 @@ window.addEventListener("global-search", (event) => {
   if (searchInput) searchInput.value = event.detail || "";
   applySearch();
 });
+window.addEventListener("beforeunload", () => {
+  unsubscribers.forEach((unsubscribe) => {
+    if (typeof unsubscribe === "function") unsubscribe();
+  });
+});
 
-loadData();
+initRealtimeSync();

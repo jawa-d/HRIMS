@@ -34,8 +34,16 @@ const server = http.createServer((req, res) => {
 
   fs.readFile(filePath, (err, data) => {
     if (err) {
-      res.writeHead(404);
-      res.end("Not found");
+      const errorPage = path.join(htmlRoot, "error.html");
+      fs.readFile(errorPage, (errorPageErr, errorData) => {
+        if (errorPageErr) {
+          res.writeHead(404);
+          res.end("Not found");
+          return;
+        }
+        res.writeHead(404, { "Content-Type": "text/html" });
+        res.end(errorData);
+      });
       return;
     }
     res.writeHead(200, { "Content-Type": mime[path.extname(filePath)] || "text/plain" });

@@ -25,7 +25,7 @@
 }
 
 .org-node {
-  border-left: 2px solid var(--border);
+  border-left: 3px solid #94a3b8;
   padding-left: var(--space-4);
   margin-left: var(--space-2);
 }
@@ -35,11 +35,11 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  background: var(--surface-strong);
-  border: 1px solid var(--border);
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid #cbd5e1;
   border-radius: var(--radius-lg);
   padding: var(--space-3) var(--space-4);
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
 }
 
 .org-info {
@@ -50,11 +50,12 @@
 
 .org-name {
   font-weight: 700;
+  color: #0f172a;
 }
 
 .org-meta {
   font-size: 0.85rem;
-  color: var(--text-muted);
+  color: #334155;
 }
 
 .org-actions-inline {
@@ -64,14 +65,22 @@
 }
 
 .org-toggle {
-  border: 1px solid var(--border);
-  background: transparent;
+  border: 1px solid #94a3b8;
+  background: #ffffff;
+  color: #0f172a;
   border-radius: 999px;
   width: 32px;
   height: 32px;
   display: grid;
   place-items: center;
   cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.org-toggle:hover {
+  border-color: #0f766e;
+  color: #0f766e;
+  transform: translateY(-1px);
 }
 
 .org-children {
@@ -84,9 +93,42 @@
   display: none;
 }
 
+.org-actions-inline .chip {
+  background: #e0f2fe;
+  color: #075985;
+  border: 1px solid #7dd3fc;
+}
+
+.org-tree > .org-node {
+  border-left-color: #0f766e;
+}
+
+.org-tree > .org-node > .org-card {
+  border-color: #2dd4bf;
+  background: linear-gradient(180deg, #f0fdfa 0%, #ccfbf1 100%);
+}
+
+.org-tree > .org-node > .org-children > .org-node {
+  border-left-color: #0284c7;
+}
+
+.org-tree > .org-node > .org-children > .org-node > .org-card {
+  border-color: #38bdf8;
+  background: linear-gradient(180deg, #eff6ff 0%, #dbeafe 100%);
+}
+
+.org-tree > .org-node > .org-children > .org-node > .org-children > .org-node {
+  border-left-color: #7c3aed;
+}
+
+.org-tree > .org-node > .org-children > .org-node > .org-children > .org-node > .org-card {
+  border-color: #a78bfa;
+  background: linear-gradient(180deg, #f5f3ff 0%, #ede9fe 100%);
+}
+
 .org-highlight .org-card {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.2);
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.35);
 }
 
 @media (max-width: 720px) {

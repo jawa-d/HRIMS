@@ -12,6 +12,16 @@
   <link rel="stylesheet" href="../HRMS%20CSS/components.css" />
   <link rel="stylesheet" href="../HRMS%20CSS/toast.css" />
   <style>
+    :root {
+      --login-bg-a: #dff7f2;
+      --login-bg-b: #e8f4ff;
+      --login-bg-c: #f4f7e9;
+      --orb-teal: rgba(16, 185, 129, 0.34);
+      --orb-cyan: rgba(14, 165, 233, 0.3);
+      --orb-lime: rgba(132, 204, 22, 0.24);
+      --orb-sky: rgba(56, 189, 248, 0.22);
+    }
+
     .auth-layout {
       min-height: 100vh;
       display: grid;
@@ -19,30 +29,122 @@
       padding: 32px;
       position: relative;
       overflow: hidden;
+      background:
+        radial-gradient(1200px 760px at 8% 12%, var(--login-bg-a), transparent 65%),
+        radial-gradient(900px 680px at 92% 4%, var(--login-bg-b), transparent 72%),
+        radial-gradient(1000px 820px at 55% 100%, var(--login-bg-c), transparent 74%),
+        #eef2f6;
+      animation: skyShift 16s ease-in-out infinite alternate;
     }
 
     .auth-layout::before,
     .auth-layout::after {
       content: "";
       position: absolute;
-      width: 420px;
-      height: 420px;
+      width: 520px;
+      height: 520px;
       border-radius: 999px;
-      background: radial-gradient(circle at 30% 30%, rgba(15, 118, 110, 0.32), transparent 60%);
-      filter: blur(10px);
+      filter: blur(20px);
       z-index: 0;
+      animation: orbFloat 15s ease-in-out infinite;
     }
 
     .auth-layout::before {
-      top: -160px;
-      left: -120px;
+      top: -190px;
+      left: -160px;
+      background: radial-gradient(circle at 28% 28%, var(--orb-teal), transparent 64%);
     }
 
     .auth-layout::after {
-      bottom: -180px;
-      right: -140px;
-      background: radial-gradient(circle at 30% 30%, rgba(163, 230, 53, 0.28), transparent 60%);
+      bottom: -220px;
+      right: -180px;
+      background: radial-gradient(circle at 30% 30%, var(--orb-lime), transparent 62%);
+      animation-delay: -5s;
     }
+
+    .auth-layout .aurora {
+      position: absolute;
+      inset: -14% -8% auto auto;
+      width: 560px;
+      height: 560px;
+      border-radius: 999px;
+      background: radial-gradient(circle at 45% 45%, var(--orb-cyan), transparent 65%);
+      filter: blur(22px);
+      transform: translate3d(0, 0, 0);
+      animation: auroraMove 18s cubic-bezier(0.25, 0.65, 0.3, 1) infinite;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .auth-layout .aurora::after {
+      content: "";
+      position: absolute;
+      inset: 40% auto auto -40%;
+      width: 480px;
+      height: 480px;
+      border-radius: 999px;
+      background: radial-gradient(circle at 40% 40%, var(--orb-sky), transparent 68%);
+      filter: blur(18px);
+      animation: orbFloat 20s ease-in-out infinite reverse;
+    }
+
+    .shape-cloud {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .shape {
+      position: absolute;
+      width: var(--size, 28px);
+      height: var(--size, 28px);
+      opacity: 0.35;
+      background: linear-gradient(145deg, rgba(255, 255, 255, 0.7), rgba(148, 163, 184, 0.16));
+      border: 1px solid rgba(255, 255, 255, 0.45);
+      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+      animation: shapeDrift var(--dur, 16s) linear infinite;
+      animation-delay: var(--delay, 0s);
+      transform: translate3d(0, 0, 0);
+    }
+
+    .shape-circle {
+      border-radius: 999px;
+    }
+
+    .shape-square {
+      border-radius: 8px;
+      transform: rotate(18deg);
+    }
+
+    .shape-diamond {
+      border-radius: 7px;
+      transform: rotate(45deg);
+    }
+
+    .shape-triangle {
+      width: 0;
+      height: 0;
+      border-left: calc(var(--size, 28px) / 2) solid transparent;
+      border-right: calc(var(--size, 28px) / 2) solid transparent;
+      border-bottom: var(--size, 28px) solid rgba(148, 163, 184, 0.36);
+      background: transparent;
+      box-shadow: none;
+      border-radius: 0;
+      border-top: 0;
+      border-bottom-left-radius: 6px;
+      border-bottom-right-radius: 6px;
+    }
+
+    .shape-1 { left: 8%; top: 16%; --size: 24px; --dur: 15s; }
+    .shape-2 { left: 18%; top: 74%; --size: 34px; --dur: 21s; --delay: -6s; }
+    .shape-3 { left: 34%; top: 22%; --size: 20px; --dur: 14s; --delay: -2s; }
+    .shape-4 { left: 62%; top: 14%; --size: 32px; --dur: 19s; --delay: -10s; }
+    .shape-5 { left: 76%; top: 70%; --size: 22px; --dur: 13s; --delay: -3s; }
+    .shape-6 { left: 88%; top: 28%; --size: 30px; --dur: 22s; --delay: -8s; }
+    .shape-7 { left: 48%; top: 80%; --size: 26px; --dur: 17s; --delay: -12s; }
+    .shape-8 { left: 56%; top: 36%; --size: 18px; --dur: 12s; --delay: -4s; }
 
     .auth-card {
       width: min(420px, 92vw);
@@ -50,6 +152,11 @@
       gap: 16px;
       position: relative;
       z-index: 1;
+      backdrop-filter: blur(8px);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(248, 250, 252, 0.92));
+      border-color: rgba(148, 163, 184, 0.35);
+      box-shadow: 0 20px 42px rgba(15, 23, 42, 0.14);
+      animation: cardEntrance 0.8s cubic-bezier(0.2, 0.7, 0.2, 1) both;
     }
 
     .auth-card p {
@@ -84,10 +191,83 @@
     .auth-form .btn-primary {
       margin-top: 6px;
     }
+
+    @keyframes skyShift {
+      0% {
+        filter: saturate(1) brightness(1);
+      }
+      100% {
+        filter: saturate(1.08) brightness(1.03);
+      }
+    }
+
+    @keyframes orbFloat {
+      0% {
+        transform: translate3d(0, 0, 0) scale(1);
+      }
+      50% {
+        transform: translate3d(26px, 18px, 0) scale(1.06);
+      }
+      100% {
+        transform: translate3d(-18px, 12px, 0) scale(0.98);
+      }
+    }
+
+    @keyframes auroraMove {
+      0% {
+        transform: translate3d(0, 0, 0) rotate(0deg);
+      }
+      50% {
+        transform: translate3d(-30px, 24px, 0) rotate(8deg);
+      }
+      100% {
+        transform: translate3d(14px, -12px, 0) rotate(-4deg);
+      }
+    }
+
+    @keyframes cardEntrance {
+      from {
+        opacity: 0;
+        transform: translateY(16px) scale(0.98);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    @keyframes shapeDrift {
+      0% {
+        transform: translate3d(0, 0, 0) rotate(0deg);
+      }
+      25% {
+        transform: translate3d(16px, -18px, 0) rotate(60deg);
+      }
+      50% {
+        transform: translate3d(-10px, -34px, 0) rotate(130deg);
+      }
+      75% {
+        transform: translate3d(-24px, 10px, 0) rotate(220deg);
+      }
+      100% {
+        transform: translate3d(0, 0, 0) rotate(360deg);
+      }
+    }
   </style>
 </head>
 <body data-page="login">
   <div class="auth-layout">
+    <div class="aurora"></div>
+    <div class="shape-cloud">
+      <span class="shape shape-circle shape-1"></span>
+      <span class="shape shape-square shape-2"></span>
+      <span class="shape shape-diamond shape-3"></span>
+      <span class="shape shape-circle shape-4"></span>
+      <span class="shape shape-triangle shape-5"></span>
+      <span class="shape shape-square shape-6"></span>
+      <span class="shape shape-diamond shape-7"></span>
+      <span class="shape shape-circle shape-8"></span>
+    </div>
     <div class="card auth-card">
       <span class="auth-badge">HRMS</span>
       <div>
@@ -99,20 +279,7 @@
           <span data-i18n="login.email">Email</span>
           <input class="input" type="email" id="login-email" required />
         </label>
-        <label>
-          <span data-i18n="login.password">Password</span>
-          <input class="input" type="password" id="login-password" required />
-        </label>
         <button class="btn btn-primary" type="submit" data-i18n="login.submit">Sign In</button>
-        <button
-          class="btn btn-ghost"
-          type="button"
-          id="direct-login-btn"
-          data-i18n="login.direct"
-        >
-          Direct Login
-        </button>
-        <small data-i18n="login.direct_note">Login without email or password</small>
         <small data-i18n="login.helper">Use your company account</small>
       </form>
     </div>

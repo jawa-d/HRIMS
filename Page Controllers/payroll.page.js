@@ -4,7 +4,7 @@ import { renderNavbar } from "../Collaboration interface/ui-navbar.js";
 import { renderSidebar } from "../Collaboration interface/ui-sidebar.js";
 import { showToast } from "../Collaboration interface/ui-toast.js";
 import { showTableSkeleton } from "../Collaboration interface/ui-skeleton.js";
-import { listPayroll, createPayroll, updatePayroll } from "../Services/payroll.service.js";
+import { listPayroll, createPayroll, updatePayroll, deletePayroll } from "../Services/payroll.service.js";
 import { listEmployees } from "../Services/employees.service.js";
 
 if (!enforceAuth("payroll")) {
@@ -226,6 +226,13 @@ function renderPayroll() {
           <td><input class="input payroll-input" data-field="deductions" type="number" min="0" step="0.01" value="${deductions}" ${!canManage ? "disabled" : ""} /></td>
           <td class="net-value">${formatter.format(net)}</td>
           <td><span class="badge ${statusClass}">${status}</span></td>
+          <td>
+            ${
+              canManage && entry?.id
+                ? `<button class="btn btn-ghost" data-action="delete" data-id="${entry.id}">Delete</button>`
+                : "-"
+            }
+          </td>
         </tr>
       `;
     })
@@ -235,7 +242,20 @@ function renderPayroll() {
   monthLabelEl.textContent = monthLabelFromKey(currentMonth);
   renderMonthStatus(visibleEmployees.length);
   attachRowEvents();
+  attachActionEvents();
   updateTotals();
+}
+
+function attachActionEvents() {
+  tbody.querySelectorAll('button[data-action="delete"]').forEach((button) => {
+    button.addEventListener("click", async () => {
+      const entryId = button.dataset.id;
+      if (!entryId || !canManage) return;
+      await deletePayroll(entryId);
+      showToast("success", "Payroll entry deleted");
+      await loadPayroll();
+    });
+  });
 }
 
 async function savePayroll(status = "draft") {
@@ -398,7 +418,7 @@ async function loadEmployees() {
 }
 
 async function loadPayroll() {
-  showTableSkeleton(tbody, { rows: 6, cols: 6 });
+  showTableSkeleton(tbody, { rows: 6, cols: 7 });
   const filter = isEmployee ? { employeeId: user.uid, month: currentMonth } : { month: currentMonth };
   payrollEntries = await listPayroll(filter);
   renderPayroll();

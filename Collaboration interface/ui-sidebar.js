@@ -1,6 +1,6 @@
-import { MENU_ITEMS, ROLE_PERMISSIONS, APP_NAME } from "../app.config.js";
+import { MENU_ITEMS, APP_NAME } from "../app.config.js";
 import { t, translateDom } from "../Languages/i18n.js";
-import { getRole } from "../Aman/guard.js";
+import { getRole, getUserProfile, getAllowedPages } from "../Aman/guard.js";
 
 let lastRole = null;
 let lastItemsKey = null;
@@ -12,7 +12,8 @@ export function renderSidebar(activeKey) {
   if (!root) return;
 
   const role = getRole();
-  const allowed = ROLE_PERMISSIONS[role] || [];
+  const profile = getUserProfile();
+  const allowed = getAllowedPages(role, profile);
   const items = MENU_ITEMS.filter((item) => allowed.includes(item.key));
   const itemsKey = items.map((item) => item.key).join("|");
 

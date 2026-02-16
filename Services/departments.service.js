@@ -8,7 +8,8 @@ import {
   updateDoc,
   deleteDoc,
   query,
-  orderBy
+  orderBy,
+  onSnapshot
 } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
 const departmentsRef = collection(db, "departments");
@@ -16,6 +17,17 @@ const departmentsRef = collection(db, "departments");
 export async function listDepartments() {
   const snap = await getDocs(query(departmentsRef, orderBy("createdAt", "desc")));
   return snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+}
+
+export function watchDepartments(onChange, onError) {
+  const departmentsQuery = query(departmentsRef, orderBy("createdAt", "desc"));
+  return onSnapshot(
+    departmentsQuery,
+    (snap) => {
+      onChange(snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() })));
+    },
+    onError
+  );
 }
 
 export async function getDepartment(id) {

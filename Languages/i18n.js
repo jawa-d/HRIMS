@@ -1,4 +1,5 @@
 ﻿import { STORAGE_KEYS, DEFAULT_LANGUAGE, DEFAULT_THEME } from "../app.config.js";
+import { initErrorRouter } from "../Collaboration interface/ui-error-router.js";
 
 const dictionaries = {
   en: {
@@ -226,9 +227,12 @@ export function applyTheme() {
 }
 
 export function initI18n() {
+  initErrorRouter();
   applyLanguage();
   applyTheme();
 }
+
+
 
 
 

@@ -7,7 +7,7 @@ import { showToast } from "../Collaboration interface/ui-toast.js";
 import { showTableSkeleton } from "../Collaboration interface/ui-skeleton.js";
 import { listEmployees } from "../Services/employees.service.js";
 import { listLeaves } from "../Services/leaves.service.js";
-import { listTimeoffBalances, upsertTimeoffBalance } from "../Services/timeoff.service.js";
+import { listTimeoffBalances, upsertTimeoffBalance, deleteTimeoffBalance } from "../Services/timeoff.service.js";
 
 if (!enforceAuth("timeoff")) {
   throw new Error("Unauthorized");
@@ -24,6 +24,7 @@ if (window.lucide?.createIcons) {
 
 const canManage = ["super_admin", "hr_admin"].includes(role);
 const isEmployee = role === "employee";
+const addButton = document.getElementById("add-timeoff-btn");
 const searchInput = document.getElementById("timeoff-search");
 const exportBtn = document.getElementById("export-timeoff-btn");
 const tbody = document.getElementById("timeoff-body");
@@ -38,6 +39,10 @@ let leaves = [];
 let balances = [];
 
 const DEFAULT_ANNUAL = 24;
+
+if (addButton && !canManage) {
+  addButton.classList.add("hidden");
+}
 
 function matchesEmployee(leave, emp) {
   if (!leave || !emp) return false;
@@ -118,7 +123,10 @@ function renderTable() {
         <td>
           ${
             canManage
-              ? `<button class="btn btn-ghost" data-action="edit" data-id="${row.id}">Adjust</button>`
+              ? `
+                <button class="btn btn-ghost" data-action="edit" data-id="${row.id}">Edit</button>
+                <button class="btn btn-ghost" data-action="delete" data-id="${row.id}">Delete</button>
+              `
               : "-"
           }
         </td>
@@ -135,7 +143,7 @@ function renderTable() {
 
   if (canManage) {
     tbody.querySelectorAll("button[data-action]").forEach((button) => {
-      button.addEventListener("click", () => openBalanceModal(button.dataset.id));
+      button.addEventListener("click", () => handleBalanceAction(button.dataset.action, button.dataset.id));
     });
   }
 }
@@ -170,6 +178,58 @@ function openBalanceModal(employeeId) {
       { label: "Cancel", className: "btn btn-ghost" }
     ]
   });
+}
+
+function openCreateBalanceModal() {
+  const options = employees
+    .map((emp) => {
+      const label = `${emp.fullName || emp.email || emp.empId || emp.id} (${emp.empId || emp.id})`;
+      return `<option value="${emp.id}">${label}</option>`;
+    })
+    .join("");
+
+  openModal({
+    title: "Add Balance",
+    content: `
+      <label>Employee
+        <select class="select" id="new-balance-employee">${options}</select>
+      </label>
+      <label>Annual Allowance<input class="input" id="new-balance-annual" type="number" value="${DEFAULT_ANNUAL}" /></label>
+      <label>Carryover<input class="input" id="new-balance-carry" type="number" value="0" /></label>
+      <label>Adjustment<input class="input" id="new-balance-adjust" type="number" value="0" /></label>
+    `,
+    actions: [
+      {
+        label: "Save",
+        className: "btn btn-primary",
+        onClick: async () => {
+          const employeeId = document.getElementById("new-balance-employee").value;
+          if (!employeeId) return;
+          const payload = {
+            annual: Number(document.getElementById("new-balance-annual").value || DEFAULT_ANNUAL),
+            carryover: Number(document.getElementById("new-balance-carry").value || 0),
+            adjustment: Number(document.getElementById("new-balance-adjust").value || 0)
+          };
+          await upsertTimeoffBalance(employeeId, payload);
+          showToast("success", "Balance added");
+          await loadBalances();
+        }
+      },
+      { label: "Cancel", className: "btn btn-ghost" }
+    ]
+  });
+}
+
+async function handleBalanceAction(action, employeeId) {
+  if (action === "edit") {
+    openBalanceModal(employeeId);
+    return;
+  }
+  if (action === "delete") {
+    await deleteTimeoffBalance(employeeId);
+    showToast("success", "Balance deleted");
+    await loadBalances();
+  }
 }
 
 function exportToCsv() {
@@ -212,6 +272,9 @@ async function loadData() {
 
 if (searchInput) {
   searchInput.addEventListener("input", renderTable);
+}
+if (addButton) {
+  addButton.addEventListener("click", openCreateBalanceModal);
 }
 exportBtn.addEventListener("click", exportToCsv);
 window.addEventListener("global-search", (event) => {

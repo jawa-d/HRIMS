@@ -5,7 +5,7 @@ import { renderSidebar } from "../Collaboration interface/ui-sidebar.js";
 import { openModal } from "../Collaboration interface/ui-modal.js";
 import { showToast } from "../Collaboration interface/ui-toast.js";
 import { showTableSkeleton } from "../Collaboration interface/ui-skeleton.js";
-import { listLeaves, createLeave, updateLeave } from "../Services/leaves.service.js";
+import { listLeaves, createLeave, updateLeave, deleteLeave } from "../Services/leaves.service.js";
 import { createNotification } from "../Services/notifications.service.js";
 import { listEmployees } from "../Services/employees.service.js";
 import { listTimeoffBalances } from "../Services/timeoff.service.js";
@@ -24,6 +24,7 @@ if (window.lucide?.createIcons) {
 }
 
 const canApprove = ["super_admin", "hr_admin", "manager"].includes(role);
+const canManageAll = ["super_admin", "hr_admin", "manager"].includes(role);
 const addButton = document.getElementById("add-leave-btn");
 const searchInput = document.getElementById("leave-search");
 const statusFilter = document.getElementById("leave-status-filter");
@@ -87,6 +88,17 @@ function matchesEmployee(leave, emp, profile) {
   if (emp?.empId && leave.employeeCode === emp.empId) return true;
   if (emp?.email && leave.employeeEmail === emp.email) return true;
   return false;
+}
+
+function canEditLeave(leave) {
+  if (!leave) return false;
+  if (canManageAll) return true;
+  if (role !== "employee") return false;
+  return leave.status === "pending" && matchesEmployee(leave, currentEmployee, user);
+}
+
+function canDeleteLeave(leave) {
+  return canEditLeave(leave);
 }
 
 function getRemainingBalance(employeeId, leaveDate, extraDays = 0, emp = null, profile = null) {
@@ -167,13 +179,14 @@ function renderLeaves() {
         <td>${leave.days || 1}</td>
         <td><span class="badge status-${leave.status || "pending"}">${leave.status}</span></td>
         <td>
+          ${canEditLeave(leave) ? `<button class="btn btn-ghost" data-action="edit" data-id="${leave.id}">Edit</button>` : ""}
+          ${canDeleteLeave(leave) ? `<button class="btn btn-ghost" data-action="delete" data-id="${leave.id}">Delete</button>` : ""}
+          ${canApprove ? `<button class="btn btn-ghost" data-action="approve" data-id="${leave.id}">Approve</button>` : ""}
+          ${canApprove ? `<button class="btn btn-ghost" data-action="reject" data-id="${leave.id}">Reject</button>` : ""}
           ${
-            canApprove
-              ? `
-            <button class="btn btn-ghost" data-action="approve" data-id="${leave.id}">Approve</button>
-            <button class="btn btn-ghost" data-action="reject" data-id="${leave.id}">Reject</button>
-          `
-              : "<span class=\"text-muted\">View only</span>"
+            !canEditLeave(leave) && !canDeleteLeave(leave) && !canApprove
+              ? "<span class=\"text-muted\">View only</span>"
+              : ""
           }
         </td>
       </tr>
@@ -187,43 +200,48 @@ function renderLeaves() {
   if (approvedEl) approvedEl.textContent = leaves.filter((l) => l.status === "approved").length;
   if (rejectedEl) rejectedEl.textContent = leaves.filter((l) => l.status === "rejected").length;
 
-  if (canApprove) {
-    tbody.querySelectorAll("button[data-action]").forEach((button) => {
-      button.addEventListener("click", () => handleAction(button.dataset.action, button.dataset.id));
-    });
-  }
+  tbody.querySelectorAll("button[data-action]").forEach((button) => {
+    button.addEventListener("click", () => handleLeaveAction(button.dataset.action, button.dataset.id));
+  });
 }
 
-function leaveFormContent() {
-  const employeeName = currentEmployee?.fullName || user.name || user.email || user.uid;
-  const employeeCode = currentEmployee?.empId || user.uid;
-  const remaining = getRemainingBalance(currentEmployee?.id || user.uid, null, 0, currentEmployee, user);
+function leaveFormContent(leave = null) {
+  const isEdit = Boolean(leave);
+  const employeeName = leave?.employeeName || currentEmployee?.fullName || user.name || user.email || user.uid;
+  const employeeCode = leave?.employeeCode || currentEmployee?.empId || user.uid;
+  const remaining = getRemainingBalance(
+    leave?.employeeId || currentEmployee?.id || user.uid,
+    leave?.from || null,
+    0,
+    currentEmployee,
+    user
+  );
   return `
     <label>Employee Name<input class="input" value="${employeeName}" readonly /></label>
     <label>Employee ID<input class="input" value="${employeeCode}" readonly /></label>
     <label>Remaining Balance<input class="input" value="${remaining}" readonly /></label>
     <label>Type
       <select class="select" id="leave-type">
-        <option value="Annual">Annual</option>
-        <option value="Sick">Sick</option>
-        <option value="Emergency">Emergency</option>
-        <option value="Unpaid">Unpaid</option>
-        <option value="Maternity">Maternity</option>
+        <option value="Annual" ${isEdit && leave?.type === "Annual" ? "selected" : ""}>Annual</option>
+        <option value="Sick" ${isEdit && leave?.type === "Sick" ? "selected" : ""}>Sick</option>
+        <option value="Emergency" ${isEdit && leave?.type === "Emergency" ? "selected" : ""}>Emergency</option>
+        <option value="Unpaid" ${isEdit && leave?.type === "Unpaid" ? "selected" : ""}>Unpaid</option>
+        <option value="Maternity" ${isEdit && leave?.type === "Maternity" ? "selected" : ""}>Maternity</option>
       </select>
     </label>
-    <label>From<input class="input" id="leave-from" type="date" /></label>
-    <label>To<input class="input" id="leave-to" type="date" /></label>
-    <label>Days<input class="input" id="leave-days" type="number" value="1" /></label>
+    <label>From<input class="input" id="leave-from" type="date" value="${leave?.from || ""}" /></label>
+    <label>To<input class="input" id="leave-to" type="date" value="${leave?.to || ""}" /></label>
+    <label>Days<input class="input" id="leave-days" type="number" value="${leave?.days || 1}" /></label>
     <label>Reason Category
       <select class="select" id="leave-category">
-        <option value="Personal">Personal</option>
-        <option value="Medical">Medical</option>
-        <option value="Family">Family</option>
-        <option value="Travel">Travel</option>
-        <option value="Other">Other</option>
+        <option value="Personal" ${isEdit && leave?.category === "Personal" ? "selected" : ""}>Personal</option>
+        <option value="Medical" ${isEdit && leave?.category === "Medical" ? "selected" : ""}>Medical</option>
+        <option value="Family" ${isEdit && leave?.category === "Family" ? "selected" : ""}>Family</option>
+        <option value="Travel" ${isEdit && leave?.category === "Travel" ? "selected" : ""}>Travel</option>
+        <option value="Other" ${isEdit && leave?.category === "Other" ? "selected" : ""}>Other</option>
       </select>
     </label>
-    <label>Reason<textarea class="textarea" id="leave-reason"></textarea></label>
+    <label>Reason<textarea class="textarea" id="leave-reason">${leave?.reason || ""}</textarea></label>
   `;
 }
 
@@ -245,16 +263,25 @@ function collectLeaveForm() {
   };
 }
 
-function openLeaveModal() {
+function openLeaveModal(existingLeave = null) {
+  const isEdit = Boolean(existingLeave);
   openModal({
-    title: "Request Leave",
-    content: leaveFormContent(),
+    title: isEdit ? "Edit Leave Request" : "Request Leave",
+    content: leaveFormContent(existingLeave),
     actions: [
       {
-        label: "Submit",
+        label: isEdit ? "Save" : "Submit",
         className: "btn btn-primary",
         onClick: async () => {
           const payload = collectLeaveForm();
+          if (isEdit) {
+            payload.employeeId = existingLeave.employeeId;
+            payload.employeeCode = existingLeave.employeeCode;
+            payload.employeeEmail = existingLeave.employeeEmail || "";
+            payload.employeeName = existingLeave.employeeName || payload.employeeName;
+            payload.status = existingLeave.status || "pending";
+            payload.approverId = existingLeave.approverId || "";
+          }
           const remaining = getRemainingBalance(
             payload.employeeId,
             payload.from,
@@ -266,8 +293,13 @@ function openLeaveModal() {
             showToast("error", "Insufficient leave balance");
             return;
           }
-          await createLeave(payload);
-          showToast("success", "Leave requested");
+          if (isEdit) {
+            await updateLeave(existingLeave.id, payload);
+            showToast("success", "Leave updated");
+          } else {
+            await createLeave(payload);
+            showToast("success", "Leave requested");
+          }
           await loadLeaves();
         }
       },
@@ -276,9 +308,21 @@ function openLeaveModal() {
   });
 }
 
-async function handleAction(action, id) {
+async function handleLeaveAction(action, id) {
   const leave = leaves.find((item) => item.id === id);
   if (!leave) return;
+  if (action === "edit") {
+    if (!canEditLeave(leave)) return;
+    openLeaveModal(leave);
+    return;
+  }
+  if (action === "delete") {
+    if (!canDeleteLeave(leave)) return;
+    await deleteLeave(id);
+    showToast("success", "Leave deleted");
+    await loadLeaves();
+    return;
+  }
   const status = action === "approve" ? "approved" : "rejected";
   if (status === "approved") {
     const leaveEmployee = resolveEmployeeForLeave(leave);

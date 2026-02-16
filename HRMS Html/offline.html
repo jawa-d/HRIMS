@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HRMS | Offline</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #0f172a;
+      --muted: #475569;
+      --primary: #0f766e;
+      --border: #cbd5e1;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Manrope", "Cairo", sans-serif;
+      background: radial-gradient(900px 400px at 10% -10%, rgba(15, 118, 110, 0.18), transparent 60%), var(--bg);
+      color: var(--text);
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+    .card {
+      width: min(720px, 100%);
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      box-shadow: 0 20px 45px rgba(15, 23, 42, 0.08);
+    }
+    h1 { margin: 0 0 10px; font-size: 1.6rem; }
+    p { margin: 0 0 12px; color: var(--muted); }
+    .meta {
+      background: #f1f5f9;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      margin: 14px 0 22px;
+      font-size: 0.95rem;
+    }
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    button, a {
+      border: 0;
+      text-decoration: none;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .primary { background: var(--primary); color: #fff; }
+    .ghost { background: #fff; color: var(--text); border: 1px solid var(--border); }
+  </style>
+</head>
+<body>
+  <section class="card">
+    <h1>Connection Lost</h1>
+    <p>Internet connection is unavailable. The page could not continue safely.</p>
+    <div class="meta" id="offline-meta"></div>
+    <div class="actions">
+      <button class="primary" id="retry-btn">Retry</button>
+      <a class="ghost" href="dashboard.html">Go to Dashboard</a>
+    </div>
+  </section>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const reason = params.get("reason") || "offline";
+    const from = params.get("from") || "unknown";
+    const returnTo = sessionStorage.getItem("hrms_offline_return_to") || "dashboard.html";
+
+    document.getElementById("offline-meta").textContent = `Reason: ${reason} | Source: ${from}`;
+
+    document.getElementById("retry-btn").addEventListener("click", () => {
+      if (navigator.onLine) {
+        window.location.replace(returnTo);
+        return;
+      }
+      alert("Still offline. Please reconnect to the internet and retry.");
+    });
+
+    window.addEventListener("online", () => {
+      window.location.replace(returnTo);
+    });
+  </script>
+</body>
+</html>

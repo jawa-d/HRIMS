@@ -4,7 +4,8 @@ import {
   doc,
   getDoc,
   getDocs,
-  setDoc
+  setDoc,
+  deleteDoc
 } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
 const timeoffRef = collection(db, "timeoff_balances");
@@ -26,4 +27,8 @@ export async function upsertTimeoffBalance(employeeId, payload) {
     updatedAt: ts()
   };
   await setDoc(doc(db, "timeoff_balances", employeeId), data, { merge: true });
+}
+
+export async function deleteTimeoffBalance(employeeId) {
+  await deleteDoc(doc(db, "timeoff_balances", employeeId));
 }

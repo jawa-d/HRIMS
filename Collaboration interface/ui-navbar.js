@@ -2,6 +2,7 @@ import { t, toggleLanguage, toggleTheme, translateDom, getLanguage, getTheme } f
 import { ROLE_LABELS, APP_NAME } from "../app.config.js";
 import { logout } from "../Aman/auth.js";
 import { showToast } from "./ui-toast.js";
+import { initNavigationEnhancements } from "./ui-navigation.js";
 import { trackActivity, listRecentActivities, formatActivityTime } from "../Services/activity.service.js";
 import { searchGlobal } from "../Services/global-search.service.js";
 import {
@@ -13,6 +14,8 @@ import {
 } from "../Services/notifications.service.js";
 
 export function renderNavbar({ user, role }) {
+  initNavigationEnhancements();
+
   const root = document.getElementById("navbar-root");
   if (!root) return;
 

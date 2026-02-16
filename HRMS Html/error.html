@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HRMS | Error</title>
+  <style>
+    :root {
+      --bg: #fff7ed;
+      --card: #ffffff;
+      --text: #7c2d12;
+      --muted: #9a3412;
+      --danger: #c2410c;
+      --border: #fdba74;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Manrope", "Cairo", sans-serif;
+      background: radial-gradient(900px 400px at 0% -10%, rgba(194, 65, 12, 0.2), transparent 60%), var(--bg);
+      color: var(--text);
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+    .card {
+      width: min(760px, 100%);
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      box-shadow: 0 20px 45px rgba(124, 45, 18, 0.12);
+    }
+    h1 { margin: 0 0 10px; font-size: 1.6rem; }
+    p { margin: 0 0 12px; color: var(--muted); }
+    pre {
+      white-space: pre-wrap;
+      margin: 14px 0 22px;
+      background: #fff;
+      border: 1px dashed var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      color: #7c2d12;
+      font-size: 0.9rem;
+    }
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    button, a {
+      border: 0;
+      text-decoration: none;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .primary { background: var(--danger); color: #fff; }
+    .ghost { background: #fff; color: #7c2d12; border: 1px solid var(--border); }
+  </style>
+</head>
+<body>
+  <section class="card">
+    <h1>Application Error</h1>
+    <p>The app detected a runtime issue and redirected to this safe page.</p>
+    <pre id="error-details">No error details found.</pre>
+    <div class="actions">
+      <button class="primary" id="back-btn">Try Previous Page</button>
+      <a class="ghost" href="dashboard.html">Open Dashboard</a>
+    </div>
+  </section>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("code") || "unknown";
+    const raw = localStorage.getItem("hrms_last_error");
+    let parsed = null;
+    try { parsed = raw ? JSON.parse(raw) : null; } catch (_) { parsed = null; }
+
+    const details = {
+      code,
+      type: parsed?.type || "runtime",
+      message: parsed?.message || "Unknown error",
+      page: parsed?.page || "unknown",
+      file: parsed?.file || "-",
+      line: parsed?.line || 0,
+      col: parsed?.col || 0,
+      time: parsed?.at || new Date().toISOString()
+    };
+
+    document.getElementById("error-details").textContent =
+`Code: ${details.code}
+Type: ${details.type}
+Message: ${details.message}
+Page: ${details.page}
+File: ${details.file}
+Line: ${details.line}
+Column: ${details.col}
+Time: ${details.time}`;
+
+    document.getElementById("back-btn").addEventListener("click", () => {
+      history.length > 1 ? history.back() : window.location.replace("dashboard.html");
+    });
+  </script>
+</body>
+</html>
