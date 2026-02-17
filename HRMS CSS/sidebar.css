@@ -209,7 +209,7 @@ body.sidebar-collapsed .sidebar {
     max-width: 300px;
     transform: translateX(-100%);
     transition: transform var(--transition-base);
-    z-index: 110;
+    z-index: 150;
     padding: var(--space-4) var(--space-3);
   }
 
@@ -231,7 +231,7 @@ body.sidebar-collapsed .sidebar {
     opacity: 0;
     pointer-events: none;
     transition: opacity var(--transition-base);
-    z-index: 105;
+    z-index: 130;
   }
 
   body.sidebar-open .sidebar-overlay {
