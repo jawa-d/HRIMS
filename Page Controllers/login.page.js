@@ -96,8 +96,8 @@ function initNetworkBackground() {
   let rafId = 0;
   const points = [];
   const DPR = Math.min(window.devicePixelRatio || 1, 2);
-  const MAX_DISTANCE = 130;
-  const SPEED = 0.22;
+  const MAX_DISTANCE = 170;
+  const SPEED = 0.18;
 
   function resize() {
     const rect = canvas.getBoundingClientRect();
@@ -112,7 +112,7 @@ function initNetworkBackground() {
   function buildPoints() {
     points.length = 0;
     const area = width * height;
-    const count = Math.max(26, Math.min(70, Math.floor(area / 24000)));
+    const count = Math.max(42, Math.min(110, Math.floor(area / 16000)));
     for (let i = 0; i < count; i += 1) {
       points.push({
         x: Math.random() * width,
@@ -142,7 +142,7 @@ function initNetworkBackground() {
         const dist = Math.hypot(dx, dy);
         if (dist > MAX_DISTANCE) continue;
         const alpha = 1 - dist / MAX_DISTANCE;
-        ctx.strokeStyle = `rgba(99, 102, 168, ${0.22 * alpha})`;
+        ctx.strokeStyle = `rgba(84, 96, 170, ${0.34 * alpha})`;
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(a.x, a.y);
@@ -152,9 +152,9 @@ function initNetworkBackground() {
     }
 
     for (const p of points) {
-      ctx.fillStyle = "rgba(99, 102, 168, 0.65)";
+      ctx.fillStyle = "rgba(72, 86, 166, 0.9)";
       ctx.beginPath();
-      ctx.arc(p.x, p.y, 1.8, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, 2.1, 0, Math.PI * 2);
       ctx.fill();
     }
 
