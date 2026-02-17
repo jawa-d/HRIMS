@@ -69,15 +69,8 @@ function prefetchVisibleLinks() {
 }
 
 function transitionNavigate(href) {
-  if (document.body.classList.contains("page-transition-out")) {
-    window.location.href = href;
-    return;
-  }
-
-  document.body.classList.add("page-transition-out");
-  window.setTimeout(() => {
-    window.location.href = href;
-  }, 180);
+  // Navigate immediately to avoid white flash and delay between pages.
+  window.location.assign(href);
 }
 
 function getAnchorFromEvent(event) {
