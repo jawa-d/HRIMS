@@ -4,7 +4,7 @@ const path = require("path");
 
 const base = __dirname;
 const htmlRoot = path.join(base, "HRMS Html");
-const port = 3000;
+const port = Number(process.env.PORT || 3000);
 
 const mime = {
   ".html": "text/html",

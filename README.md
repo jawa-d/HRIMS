@@ -19,9 +19,9 @@ Production-ready HRMS built with HTML, CSS, and Vanilla JS (ES Modules) on Fireb
 Option A (recommended):
 ```powershell
 cd "c:\Users\mohammed\Desktop\HR"
-node server.js
+npm start
 ```
-Then open: `http://localhost:5500`
+Then open: `http://localhost:3000`
 
 Option B (VS Code Live Server):
 - Start Live Server from `HRMS Html/login.html`
@@ -38,3 +38,10 @@ Option B (VS Code Live Server):
 ## Notes
 - Firebase config is already set in `Aman/firebase.js`
 - Security is enforced by Firestore rules and RBAC in the UI/guards
+
+## Deploy Online (Render)
+1. Push this repository to GitHub (already configured).
+2. Go to Render dashboard and click `New +` -> `Blueprint`.
+3. Connect the GitHub repository and select this project.
+4. Render will read `render.yaml` and deploy automatically.
+5. Open the generated Render URL after build succeeds.
