@@ -359,6 +359,53 @@ body[data-page="departments"] .card {
   animation: card-slide 620ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
 
+@media (max-width: 900px) {
+  .card {
+    padding: var(--space-4);
+  }
+
+  .toolbar {
+    align-items: stretch;
+  }
+
+  .toolbar > * {
+    width: 100%;
+  }
+
+  .card-header {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 720px) {
+  .table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+    border-radius: var(--radius-md);
+  }
+
+  .table th,
+  .table td {
+    padding: 10px 11px;
+    font-size: 0.86rem;
+  }
+
+  .kpi-value {
+    font-size: 1.4rem;
+  }
+
+  .activity-item,
+  .notification-item {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}
+
 body[data-page="positions"] .card {
   animation: card-tilt 640ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }

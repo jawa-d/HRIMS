@@ -186,10 +186,12 @@ body.sidebar-collapsed .sidebar {
     position: fixed;
     left: 0;
     top: 0;
-    width: 260px;
+    width: min(86vw, 300px);
+    max-width: 300px;
     transform: translateX(-100%);
     transition: transform var(--transition-base);
     z-index: 110;
+    padding: var(--space-4) var(--space-3);
   }
 
 body.sidebar-open .sidebar {
@@ -216,6 +218,35 @@ body.sidebar-collapsed .sidebar {
   body.sidebar-open .sidebar-overlay {
     opacity: 1;
     pointer-events: all;
+  }
+}
+
+@media (max-width: 640px) {
+  .sidebar-logo {
+    font-size: 1.2rem;
+    padding: 0 4px;
+  }
+
+  .sidebar-nav {
+    max-height: calc(100vh - 170px);
+    gap: 6px;
+    padding-inline-end: 2px;
+  }
+
+  .sidebar-section-title {
+    padding: 7px 8px;
+    font-size: 0.72rem;
+  }
+
+  .sidebar-link {
+    padding: 9px 10px;
+    gap: 10px;
+    font-size: 0.9rem;
+  }
+
+  .sidebar-footer {
+    padding: var(--space-2);
+    font-size: 0.72rem;
   }
 }
 

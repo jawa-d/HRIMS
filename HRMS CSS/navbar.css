@@ -417,13 +417,89 @@ body[data-page="profile"] .navbar {
 @media (max-width: 900px) {
   .navbar {
     padding: var(--space-4);
+    gap: var(--space-3);
+    flex-wrap: wrap;
+    align-items: stretch;
+  }
+
+  .navbar-left,
+  .navbar-actions {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .navbar-left {
+    gap: var(--space-2);
+    flex-wrap: wrap;
+  }
+
+  .navbar-search {
+    flex: 1 1 100%;
   }
 
   .navbar-search input {
-    width: 160px;
+    width: 100%;
+  }
+
+  .navbar-actions {
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  .navbar-user {
+    order: 10;
+    width: 100%;
+    font-size: 0.8rem;
+    padding-top: 2px;
+  }
+
+  .notifications-dropdown {
+    right: 0;
+    width: min(96vw, 360px);
+    max-height: 62vh;
   }
 
   .recent-activity-bar {
     padding: 8px var(--space-4);
+  }
+}
+
+@media (max-width: 560px) {
+  .navbar {
+    padding: 10px;
+  }
+
+  .navbar-brand span {
+    display: none;
+  }
+
+  .navbar-logo {
+    width: 28px;
+    height: 28px;
+  }
+
+  .navbar-icon-btn {
+    width: 34px;
+    height: 34px;
+  }
+
+  .navbar .btn-outline {
+    padding: 8px 12px;
+    font-size: 0.8rem;
+  }
+
+  .notifications-dropdown {
+    width: 95vw;
+    right: -8px;
+  }
+
+  [dir="rtl"] .notifications-dropdown {
+    right: auto;
+    left: -8px;
+  }
+
+  .recent-activity-bar {
+    padding: 8px 10px;
   }
 }

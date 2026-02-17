@@ -23,6 +23,7 @@ body {
     linear-gradient(180deg, var(--bg-glow-3), transparent 40%),
     var(--bg);
   min-height: 100vh;
+  overflow-x: hidden;
   transition: background var(--transition-slow), color var(--transition-base);
 }
 
@@ -63,10 +64,13 @@ body.sidebar-collapsed .app-shell {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  min-width: 0;
 }
 
 .page {
   padding: calc(var(--space-6) + 64px) var(--space-6) var(--space-6);
+  width: 100%;
+  min-width: 0;
 }
 
 body[data-page="dashboard"] .page {
@@ -312,6 +316,36 @@ body.page-transition-out button {
   }
 
   .page {
-    padding: calc(var(--space-6) + 64px) var(--space-4) var(--space-5);
+    padding: calc(var(--space-5) + 58px) var(--space-4) var(--space-5);
+  }
+}
+
+@media (max-width: 720px) {
+  html {
+    font-size: 15px;
+  }
+
+  .page {
+    padding: calc(var(--space-4) + 56px) var(--space-3) var(--space-4);
+  }
+
+  .page-header {
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+    align-items: flex-start;
+  }
+
+  .page-title {
+    font-size: 1.35rem;
+  }
+}
+
+@media (max-width: 520px) {
+  html {
+    font-size: 14.5px;
+  }
+
+  .page {
+    padding: calc(var(--space-4) + 52px) 10px var(--space-3);
   }
 }
