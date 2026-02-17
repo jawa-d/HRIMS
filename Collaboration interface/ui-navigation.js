@@ -65,12 +65,18 @@ function transitionNavigate(href) {
   }, 180);
 }
 
+function getAnchorFromEvent(event) {
+  const target = event?.target;
+  if (!(target instanceof Element)) return null;
+  return target.closest("a[href]");
+}
+
 export function initNavigationEnhancements() {
   if (window.__hrmsNavEnhanceReady) return;
   window.__hrmsNavEnhanceReady = true;
 
   document.addEventListener("click", (event) => {
-    const anchor = event.target.closest("a[href]");
+    const anchor = getAnchorFromEvent(event);
     if (!canNavigateWithTransition(anchor, event)) return;
     event.preventDefault();
     const href = normalizeHref(anchor.getAttribute("href"));
@@ -79,7 +85,7 @@ export function initNavigationEnhancements() {
   });
 
   const eagerPrefetch = (event) => {
-    const anchor = event.target.closest("a[href]");
+    const anchor = getAnchorFromEvent(event);
     if (!anchor) return;
     prefetchPage(anchor.getAttribute("href"));
   };
