@@ -209,6 +209,11 @@ body[data-page="profile"] .navbar {
   transform: translateY(-2px);
 }
 
+.navbar-icon-btn.is-active {
+  background: var(--primary-soft);
+  border-color: rgba(15, 118, 110, 0.35);
+}
+
 .navbar-user {
   display: flex;
   flex-direction: column;
@@ -487,6 +492,10 @@ body[data-page="profile"] .navbar {
   .navbar .btn-outline {
     padding: 8px 12px;
     font-size: 0.8rem;
+  }
+
+  .navbar-user {
+    display: none;
   }
 
   .notifications-dropdown {

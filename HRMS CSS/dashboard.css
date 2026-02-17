@@ -409,3 +409,33 @@ body[data-page="dashboard"] #notifications-list .notification-item:nth-child(5) 
     grid-template-columns: 1fr;
   }
 }
+
+@media (max-width: 720px) {
+  .welcome-banner {
+    padding: var(--space-4);
+    gap: var(--space-4);
+  }
+
+  .welcome-content h2 {
+    font-size: 1.45rem;
+  }
+
+  .welcome-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .welcome-actions .btn {
+    width: 100%;
+    text-align: center;
+  }
+
+  .welcome-art {
+    min-height: 150px;
+  }
+
+  .welcome-art .pulse {
+    width: 92px;
+    height: 92px;
+  }
+}

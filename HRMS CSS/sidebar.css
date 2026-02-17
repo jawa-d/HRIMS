@@ -25,6 +25,25 @@
   gap: var(--space-2);
 }
 
+.sidebar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.sidebar-close-btn {
+  display: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-strong);
+  color: var(--text);
+  cursor: pointer;
+  place-items: center;
+}
+
 .sidebar-nav {
   display: flex;
   flex-direction: column;
@@ -218,6 +237,10 @@ body.sidebar-collapsed .sidebar {
   body.sidebar-open .sidebar-overlay {
     opacity: 1;
     pointer-events: all;
+  }
+
+  .sidebar-close-btn {
+    display: grid;
   }
 }
 

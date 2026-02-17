@@ -72,6 +72,7 @@ export function renderNavbar({ user, role }) {
   const countLabel = root.querySelector("#notifications-count-label");
   const searchResultsEl = root.querySelector("#global-search-results");
   const activityBarEl = root.querySelector("#recent-activity-bar");
+  const sidebarToggleBtn = root.querySelector("#sidebar-toggle");
   let dropdownOpen = false;
   let notificationItems = [];
   let searchResults = [];
@@ -256,14 +257,38 @@ export function renderNavbar({ user, role }) {
     }
   });
 
-  root.querySelector("#sidebar-toggle").addEventListener("click", () => {
+  const syncSidebarToggleState = () => {
+    if (!sidebarToggleBtn) return;
+    const isMobile = window.innerWidth <= 1100;
+    const isOpen = isMobile
+      ? document.body.classList.contains("sidebar-open")
+      : !document.body.classList.contains("sidebar-collapsed");
+    sidebarToggleBtn.classList.toggle("is-active", isOpen);
+    sidebarToggleBtn.setAttribute("aria-expanded", String(isOpen));
+    const icon = sidebarToggleBtn.querySelector("i, svg");
+    if (icon) icon.setAttribute("data-lucide", isOpen ? "x" : "menu");
+    if (window.lucide) window.lucide.createIcons();
+  };
+
+  sidebarToggleBtn?.addEventListener("click", () => {
     if (window.innerWidth <= 1100) {
       document.body.classList.toggle("sidebar-open");
       document.body.classList.remove("sidebar-collapsed");
+      syncSidebarToggleState();
       return;
     }
     document.body.classList.toggle("sidebar-collapsed");
+    syncSidebarToggleState();
   });
+
+  window.addEventListener("resize", syncSidebarToggleState);
+
+  if (window.__hrmsSidebarObserver) {
+    window.__hrmsSidebarObserver.disconnect();
+  }
+  const sidebarObserver = new MutationObserver(syncSidebarToggleState);
+  sidebarObserver.observe(document.body, { attributes: true, attributeFilter: ["class"] });
+  window.__hrmsSidebarObserver = sidebarObserver;
 
   const globalSearch = root.querySelector("#global-search");
   if (globalSearch) {
@@ -305,6 +330,7 @@ export function renderNavbar({ user, role }) {
   }
 
   if (window.lucide) window.lucide.createIcons();
+  syncSidebarToggleState();
 
   trackPageVisit();
   renderRecentActivityBar();

@@ -116,7 +116,12 @@ export function renderSidebar(activeKey) {
 
   root.innerHTML = `
     <aside class="sidebar">
-      <div class="sidebar-logo">${APP_NAME}</div>
+      <div class="sidebar-head">
+        <div class="sidebar-logo">${APP_NAME}</div>
+        <button class="sidebar-close-btn" id="sidebar-close-btn" aria-label="Close sidebar">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
       <nav class="sidebar-nav">
         ${buildSidebarSections(items, activeKey)}
       </nav>
@@ -130,6 +135,13 @@ export function renderSidebar(activeKey) {
   const overlay = root.querySelector("#sidebar-overlay");
   if (overlay) {
     overlay.addEventListener("click", () => {
+      document.body.classList.remove("sidebar-open");
+    });
+  }
+
+  const closeBtn = root.querySelector("#sidebar-close-btn");
+  if (closeBtn) {
+    closeBtn.addEventListener("click", () => {
       document.body.classList.remove("sidebar-open");
     });
   }
