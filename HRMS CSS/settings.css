@@ -2,6 +2,8 @@
   display: grid;
   gap: var(--space-4);
   grid-template-columns: 1fr;
+  width: 100%;
+  min-width: 0;
 }
 
 .settings-pref-card {
@@ -19,10 +21,37 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
+  align-items: center;
+  width: min(100%, 560px);
+  margin-inline-start: auto;
 }
 
 .settings-toolbar .input {
   min-width: 220px;
+  flex: 1 1 220px;
+}
+
+.settings-users-card,
+.settings-roles-card {
+  min-width: 0;
+}
+
+.settings-users-card .card-header,
+.settings-roles-card .card-header {
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.table-scroll {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.settings-users-card .table,
+.settings-roles-card .table {
+  min-width: 760px;
 }
 
 .settings-users-card .table td,
@@ -61,9 +90,39 @@
 @media (max-width: 860px) {
   .settings-toolbar {
     width: 100%;
+    margin-inline-start: 0;
   }
 
   .settings-toolbar .input {
     min-width: 100%;
+    flex-basis: 100%;
+  }
+
+  .settings-toolbar .btn {
+    width: 100%;
+  }
+
+  .settings-users-card .table,
+  .settings-roles-card .table {
+    min-width: 620px;
+  }
+}
+
+@media (max-width: 560px) {
+  .settings-actions .btn {
+    width: 100%;
+  }
+
+  .settings-users-card .table,
+  .settings-roles-card .table {
+    min-width: 520px;
+  }
+
+  .settings-users-card .table td,
+  .settings-users-card .table th,
+  .settings-roles-card .table td,
+  .settings-roles-card .table th {
+    white-space: normal;
+    word-break: break-word;
   }
 }
