@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HRMS | My Leave Requests</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../HRMS%20CSS/tokens.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/global.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/components.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/navbar.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/sidebar.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/toast.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/employee-leaves.css" />
+</head>
+<body data-page="my-leaves">
+  <div id="app" class="app-shell">
+    <div id="sidebar-root"></div>
+    <div class="main-content">
+      <div id="navbar-root"></div>
+      <main class="page">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title" data-i18n="my_leaves.title">My Leave Requests</h1>
+            <p class="text-muted">Submit your leave request and track approval status from your section.</p>
+          </div>
+        </div>
+
+        <section class="my-leaves-grid">
+          <div class="card">
+            <div class="card-header">
+              <h3 class="section-title">
+                <i data-lucide="calendar-plus"></i>
+                Submit Request
+              </h3>
+            </div>
+            <div class="form-grid">
+              <label>Type
+                <select class="select" id="my-leave-type">
+                  <option value="Annual">Annual</option>
+                  <option value="Sick">Sick</option>
+                  <option value="Emergency">Emergency</option>
+                  <option value="Unpaid">Unpaid</option>
+                  <option value="Maternity">Maternity</option>
+                </select>
+              </label>
+              <label>From<input class="input" id="my-leave-from" type="date" /></label>
+              <label>To<input class="input" id="my-leave-to" type="date" /></label>
+              <label>Days<input class="input" id="my-leave-days" type="number" min="1" value="1" /></label>
+              <label>Category
+                <select class="select" id="my-leave-category">
+                  <option value="Personal">Personal</option>
+                  <option value="Medical">Medical</option>
+                  <option value="Family">Family</option>
+                  <option value="Travel">Travel</option>
+                  <option value="Other">Other</option>
+                </select>
+              </label>
+              <label>Reason<textarea class="textarea" id="my-leave-reason" placeholder="Write your reason"></textarea></label>
+            </div>
+            <div class="submit-row">
+              <button class="btn btn-primary" id="my-leave-submit-btn">
+                <i data-lucide="send"></i>
+                Submit to Department
+              </button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h3 class="section-title">
+                <i data-lucide="list-checks"></i>
+                Request Status
+              </h3>
+            </div>
+            <div class="status-grid">
+              <div class="status-tile">
+                <div class="text-muted">Pending</div>
+                <div class="status-value" id="my-pending-count">0</div>
+              </div>
+              <div class="status-tile">
+                <div class="text-muted">Approved</div>
+                <div class="status-value" id="my-approved-count">0</div>
+              </div>
+              <div class="status-tile">
+                <div class="text-muted">Rejected</div>
+                <div class="status-value" id="my-rejected-count">0</div>
+              </div>
+            </div>
+            <div class="decision-box" id="my-last-decision">No final decision yet.</div>
+          </div>
+        </section>
+
+        <div class="card">
+          <div class="card-header">
+            <h3 class="section-title">
+              <i data-lucide="calendar-check-2"></i>
+              My Requests History
+            </h3>
+            <div class="filters-row">
+              <input class="input" id="my-leave-search" placeholder="Search request" />
+              <select class="select" id="my-leave-status-filter">
+                <option value="">All Status</option>
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            </div>
+          </div>
+          <div class="table-scroll">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Request ID</th>
+                  <th>Type</th>
+                  <th>Dates</th>
+                  <th>Days</th>
+                  <th>Status</th>
+                  <th data-i18n="common.actions">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="my-leaves-body"></tbody>
+            </table>
+          </div>
+          <div id="my-leaves-empty" class="empty-state hidden">No requests found</div>
+        </div>
+      </main>
+    </div>
+  </div>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script type="module" src="../Page%20Controllers/employee-leaves.page.js"></script>
+</body>
+</html>

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HRMS | Professional Page</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../HRMS%20CSS/tokens.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/global.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/components.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/navbar.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/sidebar.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/toast.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/workspace.css" />
+</head>
+<body data-page="workspace">
+  <div id="app" class="app-shell">
+    <div id="sidebar-root"></div>
+    <div class="main-content">
+      <div id="navbar-root"></div>
+      <main class="page pro-page-shell">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title" id="pro-page-title">Professional View</h1>
+            <p class="text-muted" id="pro-page-subtitle">Enterprise-ready workflow view.</p>
+          </div>
+          <a href="workspace.html" class="btn btn-outline">Back to Workspace</a>
+        </div>
+
+        <section class="card">
+          <div class="card-header">
+            <h3 class="section-title">
+              <i data-lucide="compass"></i>
+              Quick Navigation
+            </h3>
+          </div>
+          <div class="pro-toolbar" id="pro-page-nav"></div>
+        </section>
+
+        <section class="pro-kpis" id="pro-kpis"></section>
+
+        <section class="pro-sections">
+          <article class="card">
+            <div class="card-header">
+              <h3 class="section-title">
+                <i data-lucide="sparkles"></i>
+                Highlights
+              </h3>
+            </div>
+            <ul class="pro-list" id="pro-highlights"></ul>
+          </article>
+
+          <article class="card">
+            <div class="card-header">
+              <h3 class="section-title">
+                <i data-lucide="activity"></i>
+                Activity Feed
+              </h3>
+            </div>
+            <div class="pro-rail" id="pro-activities"></div>
+          </article>
+        </section>
+
+        <section class="card">
+          <div class="card-header">
+            <h3 class="section-title">
+              <i data-lucide="table-2"></i>
+              Operational Records
+            </h3>
+            <input class="input" id="pro-table-search" placeholder="Filter records" />
+          </div>
+          <div class="pro-table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Owner</th>
+                  <th>Status</th>
+                  <th>Last Update</th>
+                </tr>
+              </thead>
+              <tbody id="pro-table-body"></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script type="module" src="../Page%20Controllers/professional-page.page.js"></script>
+</body>
+</html>

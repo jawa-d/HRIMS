@@ -81,7 +81,10 @@ export function renderNavbar({ user, role }) {
     if (countLabel) countLabel.textContent = items.length ? `${items.length}` : "";
     if (!listEl) return;
     if (!items.length) {
-      listEl.innerHTML = `<div class="empty-state">${t("notifications.empty")}</div>`;
+      listEl.innerHTML = `
+        <div class="empty-state">${t("notifications.empty")}</div>
+        <a class="btn btn-ghost btn-xs" href="notifications-center.html">Open Notification Center</a>
+      `;
       return;
     }
     listEl.innerHTML = items
@@ -98,7 +101,7 @@ export function renderNavbar({ user, role }) {
         </div>
       `
       )
-      .join("");
+      .join("") + `<a class="btn btn-ghost btn-xs" href="notifications-center.html">Open Notification Center</a>`;
 
     listEl.querySelectorAll("button[data-id]").forEach((button) => {
       button.addEventListener("click", async () => {
@@ -222,8 +225,8 @@ export function renderNavbar({ user, role }) {
 
   root.querySelector("#theme-toggle").addEventListener("click", () => {
     toggleTheme();
-    const icon = root.querySelector("#theme-toggle i");
-    icon.setAttribute("data-lucide", getTheme() === "dark" ? "sun" : "moon");
+    const icon = root.querySelector("#theme-toggle [data-lucide], #theme-toggle i, #theme-toggle svg");
+    if (icon) icon.setAttribute("data-lucide", getTheme() === "dark" ? "sun" : "moon");
     if (window.lucide) window.lucide.createIcons();
   });
 

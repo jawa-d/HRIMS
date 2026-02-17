@@ -6,6 +6,7 @@ import { openModal } from "../Collaboration interface/ui-modal.js";
 import { showToast } from "../Collaboration interface/ui-toast.js";
 import { ROLES, ROLE_PERMISSIONS, MENU_ITEMS, STORAGE_KEYS } from "../app.config.js";
 import { listUsers, upsertUser, deleteUser } from "../Services/users.service.js";
+import { logSecurityEvent } from "../Services/security-audit.service.js";
 
 if (!enforceAuth("settings")) {
   throw new Error("Unauthorized");
@@ -20,7 +21,8 @@ if (window.lucide?.createIcons) {
   window.lucide.createIcons();
 }
 
-const canManageUsers = ["super_admin", "hr_admin"].includes(role);
+const canManageUsers = ["super_admin", "hr_admin", "manager"].includes(role);
+const isManager = role === "manager";
 const themeBtn = document.getElementById("settings-theme-toggle");
 const langBtn = document.getElementById("settings-lang-toggle");
 const rolesTable = document.getElementById("roles-table");
@@ -51,6 +53,17 @@ function persistUsersDraft() {
 
 function defaultPagesForRole(roleKey) {
   return roleVisibility[roleKey] || ROLE_PERMISSIONS[roleKey] || [];
+}
+
+function getAssignableRoles() {
+  if (!isManager) return ROLES;
+  return ["employee"];
+}
+
+function canManageTargetUser(item) {
+  if (!canManageUsers || !item) return false;
+  if (!isManager) return true;
+  return item.role === "employee";
 }
 
 function uidFromEmail(email) {
@@ -95,7 +108,7 @@ function renderRoleTable() {
           <td><span class="badge settings-role-badge">${roleKey}</span></td>
           ${MENU_ITEMS.map((item) => {
             const checked = defaultPagesForRole(roleKey).includes(item.key);
-            return `<td><input type="checkbox" data-role="${roleKey}" data-key="${item.key}" ${checked ? "checked" : ""} ${!canManageUsers ? "disabled" : ""} /></td>`;
+            return `<td><input type="checkbox" data-role="${roleKey}" data-key="${item.key}" ${checked ? "checked" : ""} ${!canManageUsers || isManager ? "disabled" : ""} /></td>`;
           }).join("")}
         </tr>
       `
@@ -141,7 +154,7 @@ function renderUsersTable() {
                     <td>${pages}</td>
                     <td>
                       ${
-                        canManageUsers
+                        canManageTargetUser(item)
                           ? `
                           <button class="btn btn-ghost" data-action="edit" data-id="${item.uid}">Edit</button>
                           <button class="btn btn-ghost" data-action="perm" data-id="${item.uid}">Permissions</button>
@@ -188,6 +201,8 @@ function readSelectedPermissions() {
 function openUserModal(existing = null) {
   const record = normalizeUser(existing || {});
   const isEdit = Boolean(existing);
+  const assignableRoles = getAssignableRoles();
+  const selectedRole = assignableRoles.includes(record.role) ? record.role : assignableRoles[0];
   openModal({
     title: isEdit ? "Edit User Definition" : "Add User Definition",
     content: `
@@ -196,7 +211,7 @@ function openUserModal(existing = null) {
       <label>UID<input class="input" id="set-user-uid" value="${record.uid}" ${isEdit ? "disabled" : ""} /></label>
       <label>Role
         <select class="select" id="set-user-role">
-          ${ROLES.map((roleKey) => `<option value="${roleKey}" ${record.role === roleKey ? "selected" : ""}>${roleKey}</option>`).join("")}
+          ${assignableRoles.map((roleKey) => `<option value="${roleKey}" ${selectedRole === roleKey ? "selected" : ""}>${roleKey}</option>`).join("")}
         </select>
       </label>
       <label>Status
@@ -210,7 +225,7 @@ function openUserModal(existing = null) {
       <label>Job Title<input class="input" id="set-user-title" value="${record.title}" /></label>
       <label>Phone<input class="input" id="set-user-phone" value="${record.phone}" /></label>
       <label>Custom Page Permissions (optional)</label>
-      ${buildPermissionChecklist(userPermissions[record.uid] || defaultPagesForRole(record.role))}
+      ${buildPermissionChecklist(userPermissions[record.uid] || defaultPagesForRole(selectedRole))}
     `,
     actions: [
       {
@@ -259,6 +274,17 @@ function openUserModal(existing = null) {
 
           renderUsersTable();
           renderSidebar("settings");
+          await logSecurityEvent({
+            action: isEdit ? "user_updated" : "user_created",
+            severity: "info",
+            status: "success",
+            actorUid: user?.uid || "",
+            actorEmail: user?.email || "",
+            actorRole: role || "",
+            entity: "users",
+            entityId: uid,
+            message: isEdit ? "User definition updated from settings." : "User definition created from settings."
+          });
           showToast("success", "User definition saved");
         }
       },
@@ -269,7 +295,7 @@ function openUserModal(existing = null) {
 
 function openPermissionsModal(uid) {
   const item = users.find((entry) => entry.uid === uid);
-  if (!item) return;
+  if (!item || !canManageTargetUser(item)) return;
   const selected = userPermissions[uid] || defaultPagesForRole(item.role);
   openModal({
     title: `Permissions - ${item.name || item.uid}`,
@@ -288,6 +314,17 @@ function openPermissionsModal(uid) {
           }
           renderUsersTable();
           renderSidebar("settings");
+          await logSecurityEvent({
+            action: "permissions_updated",
+            severity: "warning",
+            status: "success",
+            actorUid: user?.uid || "",
+            actorEmail: user?.email || "",
+            actorRole: role || "",
+            entity: "users",
+            entityId: uid,
+            message: "User custom permissions were changed."
+          });
           showToast("success", "Permissions updated");
         }
       },
@@ -298,7 +335,7 @@ function openPermissionsModal(uid) {
 
 async function handleUserAction(action, uid) {
   const item = users.find((entry) => entry.uid === uid);
-  if (!item || !canManageUsers) return;
+  if (!item || !canManageTargetUser(item)) return;
 
   if (action === "edit") {
     openUserModal(item);
@@ -321,6 +358,17 @@ async function handleUserAction(action, uid) {
       showToast("info", "Deleted locally. Firebase sync can be completed later.");
     }
     renderUsersTable();
+    await logSecurityEvent({
+      action: "user_deleted",
+      severity: "critical",
+      status: "success",
+      actorUid: user?.uid || "",
+      actorEmail: user?.email || "",
+      actorRole: role || "",
+      entity: "users",
+      entityId: uid,
+      message: "User definition deleted from settings."
+    });
     showToast("success", "User definition deleted");
   }
 }
@@ -346,7 +394,7 @@ async function loadUsers() {
 }
 
 rolesTable.addEventListener("change", (event) => {
-  if (!canManageUsers) return;
+  if (!canManageUsers || isManager) return;
   if (!event.target.matches("input[type=checkbox]")) return;
   const roleKey = event.target.dataset.role;
   const key = event.target.dataset.key;
@@ -357,6 +405,17 @@ rolesTable.addEventListener("change", (event) => {
   localStorage.setItem(STORAGE_KEYS.roleVisibility, JSON.stringify(roleVisibility));
   renderUsersTable();
   renderSidebar("settings");
+  logSecurityEvent({
+    action: "role_template_updated",
+    severity: "warning",
+    status: "success",
+    actorUid: user?.uid || "",
+    actorEmail: user?.email || "",
+    actorRole: role || "",
+    entity: "roles",
+    entityId: roleKey,
+    message: `Role template changed for ${roleKey}.`
+  });
   showToast("info", "Role template updated");
 });
 

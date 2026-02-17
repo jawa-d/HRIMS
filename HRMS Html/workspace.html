@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HRMS | Workspace</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../HRMS%20CSS/tokens.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/global.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/components.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/navbar.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/sidebar.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/toast.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/workspace.css" />
+</head>
+<body data-page="workspace">
+  <div id="app" class="app-shell">
+    <div id="sidebar-root"></div>
+    <div class="main-content">
+      <div id="navbar-root"></div>
+      <main class="page">
+        <section class="workspace-header">
+          <div>
+            <h1 class="page-title">Professional Workspace Pages</h1>
+            <p class="text-muted">Production-ready page pack for enterprise HR workflows and dashboards.</p>
+          </div>
+          <div class="workspace-search">
+            <label class="text-muted" for="workspace-search">Search pages</label>
+            <input id="workspace-search" class="input" placeholder="Search by title or area" />
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-header">
+            <h3 class="section-title">
+              <i data-lucide="layout-grid"></i>
+              Pages Catalog
+            </h3>
+            <span class="badge" id="workspace-count">0 pages</span>
+          </div>
+          <div class="workspace-grid" id="workspace-grid"></div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script type="module" src="../Page%20Controllers/workspace.page.js"></script>
+</body>
+</html>

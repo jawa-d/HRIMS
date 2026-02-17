@@ -22,6 +22,10 @@ export function getUserProfile() {
 }
 
 export function getAllowedPages(role = getRole(), profile = getUserProfile()) {
+  if (role === "super_admin") {
+    return MENU_ITEMS.map((item) => item.key);
+  }
+
   const roleVisibility = parseStorage(STORAGE_KEYS.roleVisibility, {});
   const userPermissions = parseStorage(STORAGE_KEYS.userPermissions, {});
 

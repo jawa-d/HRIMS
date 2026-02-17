@@ -1,0 +1,82 @@
+.my-leaves-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.form-grid {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.submit-row {
+  margin-top: var(--space-4);
+}
+
+.submit-row .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.status-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.status-tile {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  background: var(--surface-strong);
+}
+
+.status-value {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-top: 6px;
+}
+
+.decision-box {
+  margin-top: var(--space-4);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  background: var(--glass);
+}
+
+.filters-row {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.badge.status-pending {
+  background: #fde68a;
+  color: #92400e;
+}
+
+.badge.status-approved {
+  background: #bbf7d0;
+  color: #166534;
+}
+
+.badge.status-rejected {
+  background: #fecaca;
+  color: #991b1b;
+}
+
+@media (max-width: 1100px) {
+  .my-leaves-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .filters-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

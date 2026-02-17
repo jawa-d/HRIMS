@@ -3,6 +3,7 @@ import { loginWithEmailOnly, getStoredProfile } from "../Aman/auth.js";
 import { showToast } from "../Collaboration interface/ui-toast.js";
 import { isAuthenticated, canAccess, getDefaultPage } from "../Aman/guard.js";
 import { MENU_ITEMS } from "../app.config.js";
+import { logSecurityEvent } from "../Services/security-audit.service.js";
 
 initI18n();
 
@@ -62,6 +63,15 @@ if (form) {
       await loginWithEmailOnly(email);
       window.location.replace(getPostLoginTarget());
     } catch (error) {
+      await logSecurityEvent({
+        action: "login_failed",
+        severity: "warning",
+        status: "failed",
+        actorEmail: email,
+        entity: "auth",
+        message: mapLoginError(error),
+        metadata: { code: error?.code || "" }
+      });
       showToast("error", mapLoginError(error));
     } finally {
       if (submitBtn) {

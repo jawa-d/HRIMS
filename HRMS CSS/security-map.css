@@ -1,0 +1,110 @@
+.map-actions {
+  display: inline-flex;
+  gap: var(--space-2);
+}
+
+.threat-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.threat-kpi {
+  padding: var(--space-4);
+}
+
+.threat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-top: var(--space-2);
+}
+
+.threat-layout {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
+  gap: var(--space-4);
+}
+
+#threat-map {
+  height: 520px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+}
+
+.map-note {
+  margin-top: var(--space-3);
+}
+
+.ai-report-box {
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+  background: var(--glass);
+  padding: var(--space-3);
+}
+
+.incident-list {
+  margin-top: var(--space-4);
+  display: grid;
+  gap: var(--space-3);
+  max-height: 430px;
+  overflow: auto;
+}
+
+.incident-item {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-strong);
+  padding: var(--space-3);
+}
+
+.incident-item.is-blocked {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.2);
+}
+
+.incident-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.incident-meta {
+  display: inline-flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.incident-risk {
+  font-weight: 700;
+}
+
+.incident-actions {
+  margin-top: var(--space-2);
+}
+
+@media (max-width: 1200px) {
+  .threat-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .threat-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .threat-kpis {
+    grid-template-columns: 1fr;
+  }
+
+  .map-actions {
+    width: 100%;
+    display: grid;
+  }
+
+  #threat-map {
+    height: 420px;
+  }
+}

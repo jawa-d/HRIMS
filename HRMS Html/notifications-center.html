@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HRMS | Notification Center</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../HRMS%20CSS/tokens.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/global.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/components.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/navbar.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/sidebar.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/toast.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/notifications-center.css" />
+</head>
+<body data-page="notifications_center">
+  <div id="app" class="app-shell">
+    <div id="sidebar-root"></div>
+    <div class="main-content">
+      <div id="navbar-root"></div>
+      <main class="page">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title" data-i18n="notifications_center.title">Notification Center</h1>
+            <p class="text-muted">Filter, review, and manage all of your system notifications.</p>
+          </div>
+          <button class="btn btn-primary" id="mark-all-read-btn">Mark All Read</button>
+        </div>
+
+        <section class="notif-toolbar card">
+          <div class="notif-filters">
+            <input class="input" id="notif-search" placeholder="Search notifications" />
+            <select class="select" id="notif-status-filter">
+              <option value="">All</option>
+              <option value="unread">Unread</option>
+              <option value="read">Read</option>
+            </select>
+            <select class="select" id="notif-type-filter">
+              <option value="">All Types</option>
+              <option value="leave">Leave</option>
+              <option value="system">System</option>
+              <option value="security">Security</option>
+            </select>
+            <label class="notif-checkbox"><input type="checkbox" id="notif-archived-toggle" /> Show archived</label>
+          </div>
+        </section>
+
+        <section class="notif-list card">
+          <div class="card-header">
+            <h3 class="section-title">
+              <i data-lucide="bell-ring"></i>
+              Inbox
+            </h3>
+            <span class="badge" id="notif-count">0</span>
+          </div>
+          <div id="notif-items" class="notif-items"></div>
+          <div id="notif-empty" class="empty-state hidden">No notifications found</div>
+        </section>
+      </main>
+    </div>
+  </div>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script type="module" src="../Page%20Controllers/notifications-center.page.js"></script>
+</body>
+</html>

@@ -22,7 +22,7 @@ const role = getRole();
 renderNavbar({ user, role });
 renderSidebar("employees");
 
-const canManage = ["super_admin", "hr_admin"].includes(role);
+const canManage = ["super_admin", "hr_admin", "manager"].includes(role);
 const addButton = document.getElementById("add-employee-btn");
 const searchInput = document.getElementById("employee-search");
 const statusFilter = document.getElementById("employee-status-filter");

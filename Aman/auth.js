@@ -14,6 +14,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 import { auth, db } from "./firebase.js";
 import { STORAGE_KEYS } from "../app.config.js";
+import { logSecurityEvent } from "../Services/security-audit.service.js";
 
 const session = {
   profile: null
@@ -78,6 +79,16 @@ export async function hydrateUser(user) {
     role: raw.role || "employee"
   };
   setSession(profile);
+  await logSecurityEvent({
+    action: "login_success",
+    severity: "info",
+    status: "success",
+    actorUid: profile.uid,
+    actorEmail: profile.email,
+    actorRole: profile.role,
+    entity: "auth",
+    message: "User authenticated successfully."
+  });
   return profile;
 }
 
@@ -101,13 +112,29 @@ export async function loginWithEmailOnly(email) {
   const usersRef = collection(db, "users");
   const snap = await getDocs(query(usersRef, where("email", "==", normalizedEmail), limit(1)));
   if (snap.empty) {
-    throw buildAuthError("auth/email-not-enabled", "هذا الايميل غير مفعل في النظام.");
+    await logSecurityEvent({
+      action: "login_failed",
+      severity: "warning",
+      status: "failed",
+      actorEmail: normalizedEmail,
+      entity: "auth",
+      message: "Email is not enabled in the system."
+    });
+    throw buildAuthError("auth/email-not-enabled", "This email is not enabled in the system.");
   }
 
   const docSnap = snap.docs[0];
   const raw = docSnap.data() || {};
   if (String(raw.status || "active").toLowerCase() === "inactive") {
-    throw buildAuthError("auth/user-disabled", "هذا الايميل غير مفعل في النظام.");
+    await logSecurityEvent({
+      action: "login_failed",
+      severity: "warning",
+      status: "failed",
+      actorEmail: normalizedEmail,
+      entity: "auth",
+      message: "Inactive account login attempt."
+    });
+    throw buildAuthError("auth/user-disabled", "Your account is inactive. Contact HR administrator.");
   }
 
   const profile = {
@@ -118,10 +145,31 @@ export async function loginWithEmailOnly(email) {
   };
 
   setSession(profile);
+  await logSecurityEvent({
+    action: "login_success",
+    severity: "info",
+    status: "success",
+    actorUid: profile.uid,
+    actorEmail: profile.email,
+    actorRole: profile.role,
+    entity: "auth",
+    message: "Direct email login succeeded."
+  });
   return profile;
 }
 
 export async function logout(redirect = true) {
+  const profile = getStoredProfile();
+  await logSecurityEvent({
+    action: "logout",
+    severity: "info",
+    status: "success",
+    actorUid: profile?.uid || "",
+    actorEmail: profile?.email || "",
+    actorRole: profile?.role || "",
+    entity: "auth",
+    message: "User logged out."
+  });
   await signOut(auth);
   clearSession();
   if (redirect) {

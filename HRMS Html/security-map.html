@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HRMS | Security Threat Map</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/tokens.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/global.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/components.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/navbar.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/sidebar.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/toast.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/security-map.css" />
+</head>
+<body data-page="security_map">
+  <div id="app" class="app-shell">
+    <div id="sidebar-root"></div>
+    <div class="main-content">
+      <div id="navbar-root"></div>
+      <main class="page">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title" data-i18n="security_map.title">Security Threat Map</h1>
+            <p class="text-muted">Live geographic view of attacks, suspicious behavior, and AI-powered response actions.</p>
+          </div>
+          <div class="map-actions">
+            <button class="btn btn-primary" id="run-ai-defense-btn">Run AI Defense</button>
+            <button class="btn btn-outline" id="export-ai-report-btn">Export Report</button>
+          </div>
+        </div>
+
+        <section class="threat-kpis">
+          <div class="card threat-kpi"><div class="text-muted">Detected Attempts</div><div class="threat-value" id="threat-attempts">0</div></div>
+          <div class="card threat-kpi"><div class="text-muted">High Risk</div><div class="threat-value" id="threat-high-risk">0</div></div>
+          <div class="card threat-kpi"><div class="text-muted">Blocked Actors</div><div class="threat-value" id="threat-blocked">0</div></div>
+          <div class="card threat-kpi"><div class="text-muted">AI Confidence</div><div class="threat-value" id="threat-confidence">0%</div></div>
+        </section>
+
+        <section class="threat-layout">
+          <article class="card map-card">
+            <div class="card-header">
+              <h3 class="section-title">
+                <i data-lucide="map-pinned"></i>
+                Global Threat Map
+              </h3>
+              <span class="badge" id="map-incidents-count">0</span>
+            </div>
+            <div id="threat-map"></div>
+            <p class="text-muted map-note">Marker colors: red=blocked, orange=high risk, yellow=medium, blue=low.</p>
+          </article>
+
+          <article class="card">
+            <div class="card-header">
+              <h3 class="section-title">
+                <i data-lucide="bot"></i>
+                AI Defense Report
+              </h3>
+            </div>
+            <div id="ai-report-box" class="ai-report-box">
+              <strong>Waiting for AI analysis</strong>
+              <p class="text-muted">Click "Run AI Defense" to evaluate incidents and generate response report.</p>
+            </div>
+            <div class="incident-list" id="incident-list"></div>
+          </article>
+        </section>
+      </main>
+    </div>
+  </div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script type="module" src="../Page%20Controllers/security-map.page.js"></script>
+</body>
+</html>

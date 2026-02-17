@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HRMS | Security Center</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../HRMS%20CSS/tokens.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/global.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/components.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/navbar.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/sidebar.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/security-center.css" />
+</head>
+<body data-page="security_center">
+  <div id="app" class="app-shell">
+    <div id="sidebar-root"></div>
+    <div class="main-content">
+      <div id="navbar-root"></div>
+      <main class="page">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title" data-i18n="security_center.title">Security Center</h1>
+            <p class="text-muted">Complete audit visibility for sign-in activity, privileged actions, and security events.</p>
+          </div>
+        </div>
+
+        <section class="sec-kpis">
+          <div class="card sec-kpi"><div class="text-muted">Total Events</div><div class="sec-kpi-value" id="sec-total">0</div></div>
+          <div class="card sec-kpi"><div class="text-muted">Failed Logins (24h)</div><div class="sec-kpi-value" id="sec-failures">0</div></div>
+          <div class="card sec-kpi"><div class="text-muted">High Severity</div><div class="sec-kpi-value" id="sec-high">0</div></div>
+          <div class="card sec-kpi"><div class="text-muted">Unique Actors</div><div class="sec-kpi-value" id="sec-actors">0</div></div>
+        </section>
+
+        <section class="card sec-toolbar">
+          <div class="sec-filters">
+            <input class="input" id="sec-search" placeholder="Search action, actor, or message" />
+            <select class="select" id="sec-severity">
+              <option value="">All Severity</option>
+              <option value="info">Info</option>
+              <option value="warning">Warning</option>
+              <option value="critical">Critical</option>
+            </select>
+            <select class="select" id="sec-status">
+              <option value="">All Status</option>
+              <option value="success">Success</option>
+              <option value="failed">Failed</option>
+            </select>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-header">
+            <h3 class="section-title">
+              <i data-lucide="shield-alert"></i>
+              Audit Trail
+            </h3>
+            <span class="badge" id="sec-count">0</span>
+          </div>
+          <div class="table-scroll">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Action</th>
+                  <th>Actor</th>
+                  <th>Severity</th>
+                  <th>Status</th>
+                  <th>Message</th>
+                </tr>
+              </thead>
+              <tbody id="sec-body"></tbody>
+            </table>
+          </div>
+          <div id="sec-empty" class="empty-state hidden">No security events found</div>
+        </section>
+      </main>
+    </div>
+  </div>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script type="module" src="../Page%20Controllers/security-center.page.js"></script>
+</body>
+</html>
