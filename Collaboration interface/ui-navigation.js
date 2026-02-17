@@ -1,4 +1,5 @@
 const PREFETCHED = new Set();
+const MAX_PREFETCH_LINKS = 8;
 
 function normalizeHref(rawHref) {
   if (!rawHref) return "";
@@ -33,6 +34,7 @@ function canNavigateWithTransition(anchor, event) {
 function prefetchPage(href) {
   const normalized = normalizeHref(href);
   if (!normalized || PREFETCHED.has(normalized)) return;
+  if (PREFETCHED.size >= MAX_PREFETCH_LINKS) return;
 
   const url = new URL(normalized);
   if (url.origin !== window.location.origin) return;
@@ -46,11 +48,24 @@ function prefetchPage(href) {
   document.head.appendChild(link);
 }
 
+function canUsePrefetch() {
+  const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+  if (!connection) return true;
+  if (connection.saveData) return false;
+  const slowType = ["slow-2g", "2g"];
+  return !slowType.includes(connection.effectiveType);
+}
+
 function prefetchVisibleLinks() {
-  document.querySelectorAll('a[href$=".html"]').forEach((anchor) => {
+  if (!canUsePrefetch()) return;
+  const candidates = [
+    ...document.querySelectorAll(".sidebar-link[href], .navbar a[href], .recent-activity-bar a[href], a[data-prefetch='1']")
+  ];
+  for (const anchor of candidates) {
+    if (PREFETCHED.size >= MAX_PREFETCH_LINKS) break;
     const href = anchor.getAttribute("href");
     if (href) prefetchPage(href);
-  });
+  }
 }
 
 function transitionNavigate(href) {
@@ -85,6 +100,7 @@ export function initNavigationEnhancements() {
   });
 
   const eagerPrefetch = (event) => {
+    if (!canUsePrefetch()) return;
     const anchor = getAnchorFromEvent(event);
     if (!anchor) return;
     prefetchPage(anchor.getAttribute("href"));

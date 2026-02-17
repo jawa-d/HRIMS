@@ -39,8 +39,9 @@ function buildSidebarSections(items, activeKey) {
 
     const links = sectionItems
       .map((item) => {
+        const delayIndex = Math.min(animationIndex, 10);
         const markup = `
-          <a class="sidebar-link ${activeKey === item.key ? "active" : ""}" data-key="${item.key}" href="${item.href}" style="--i:${animationIndex}">
+          <a class="sidebar-link ${activeKey === item.key ? "active" : ""}" data-key="${item.key}" href="${item.href}" style="--i:${delayIndex}">
             <i data-lucide="${item.icon}"></i>
             <span data-i18n="${item.labelKey}">${t(item.labelKey)}</span>
           </a>
@@ -63,8 +64,9 @@ function buildSidebarSections(items, activeKey) {
 
   const restLinks = rest
     .map((item) => {
+      const delayIndex = Math.min(animationIndex, 10);
       const markup = `
-        <a class="sidebar-link ${activeKey === item.key ? "active" : ""}" data-key="${item.key}" href="${item.href}" style="--i:${animationIndex}">
+        <a class="sidebar-link ${activeKey === item.key ? "active" : ""}" data-key="${item.key}" href="${item.href}" style="--i:${delayIndex}">
           <i data-lucide="${item.icon}"></i>
           <span data-i18n="${item.labelKey}">${t(item.labelKey)}</span>
         </a>
