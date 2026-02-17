@@ -45,3 +45,11 @@ Option B (VS Code Live Server):
 3. Connect the GitHub repository and select this project.
 4. Render will read `render.yaml` and deploy automatically.
 5. Open the generated Render URL after build succeeds.
+
+## Deploy Online (GitHub Domain)
+1. Push to `main` branch (workflow already configured in `.github/workflows/deploy-pages.yml`).
+2. In GitHub repo settings: `Settings -> Pages`.
+3. Set `Source` to `GitHub Actions`.
+4. Wait for workflow `Deploy to GitHub Pages` to finish.
+5. Your domain will be:
+   `https://jawa-d.github.io/HRIMS/`
