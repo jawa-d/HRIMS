@@ -4,6 +4,10 @@
   flex-wrap: wrap;
 }
 
+:root {
+  --lane-speed: 1.5s;
+}
+
 .threat-kpis {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -38,6 +42,38 @@
   grid-template-columns: 1.5fr repeat(2, minmax(170px, 1fr)) auto;
   gap: var(--space-3);
   align-items: end;
+}
+
+.soc-controls {
+  margin-bottom: var(--space-4);
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+  align-items: stretch;
+}
+
+.soc-control {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: var(--surface-strong);
+  display: grid;
+  gap: 8px;
+}
+
+.soc-control label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.quick-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.quick-actions .btn {
+  border-radius: 999px;
 }
 
 .toolbar-group {
@@ -149,6 +185,35 @@
   background: linear-gradient(180deg, rgba(2, 132, 199, 0.08), transparent 80%);
 }
 
+.live-feed {
+  margin-top: var(--space-3);
+  padding: var(--space-3);
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(239, 68, 68, 0.06), transparent 80%);
+}
+
+.live-feed h4 {
+  font-size: 0.92rem;
+  margin-bottom: 8px;
+}
+
+.feed-list {
+  max-height: 120px;
+  overflow: auto;
+  display: grid;
+  gap: 6px;
+}
+
+.feed-item {
+  font-size: 0.78rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 6px 8px;
+  background: var(--surface);
+  animation: feed-in 320ms ease both;
+}
+
 .response-procedures h4 {
   font-size: 0.95rem;
   margin-bottom: var(--space-2);
@@ -175,6 +240,7 @@
   background: var(--surface-strong);
   padding: var(--space-3);
   transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
+  animation: incident-rise 340ms ease both;
 }
 
 .incident-item:hover {
@@ -227,7 +293,7 @@
 
 .leaflet-interactive.attack-lane {
   stroke-dasharray: 8 10;
-  animation: lane-flow 1.5s linear infinite;
+  animation: lane-flow var(--lane-speed) linear infinite;
 }
 
 .leaflet-interactive.attack-lane.lane-risk-critical { stroke: #ef4444; }
@@ -270,6 +336,28 @@ body.lanes-paused .pulse-dot {
   100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
 }
 
+@keyframes feed-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes incident-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @media (max-width: 1200px) {
   .threat-kpis {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -280,6 +368,10 @@ body.lanes-paused .pulse-dot {
   }
 
   .threat-toolbar {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .soc-controls {
     grid-template-columns: 1fr 1fr;
   }
 
@@ -299,6 +391,10 @@ body.lanes-paused .pulse-dot {
   }
 
   .threat-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .soc-controls {
     grid-template-columns: 1fr;
   }
 

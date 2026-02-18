@@ -25,6 +25,10 @@ const toggleLanesBtn = document.getElementById("toggle-lanes-btn");
 const searchInput = document.getElementById("threat-search");
 const riskFilter = document.getElementById("risk-filter");
 const statusFilter = document.getElementById("status-filter");
+const intensityInput = document.getElementById("attack-intensity");
+const intensityLabel = document.getElementById("attack-intensity-label");
+const patrolToggle = document.getElementById("patrol-toggle");
+const quickActionButtons = [...document.querySelectorAll("button[data-quick-action]")];
 const attemptsEl = document.getElementById("threat-attempts");
 const highRiskEl = document.getElementById("threat-high-risk");
 const blockedEl = document.getElementById("threat-blocked");
@@ -33,6 +37,7 @@ const mapCountEl = document.getElementById("map-incidents-count");
 const reportBoxEl = document.getElementById("ai-report-box");
 const incidentListEl = document.getElementById("incident-list");
 const responseListEl = document.getElementById("response-list");
+const feedListEl = document.getElementById("feed-list");
 
 let map;
 let markerLayer;
@@ -41,7 +46,28 @@ let incidents = [];
 let filteredIncidents = [];
 let lanesEnabled = true;
 let simulationTimer = null;
+let patrolTimer = null;
+const kpiState = {
+  attempts: 0,
+  highRisk: 0,
+  blocked: 0,
+  confidence: 0
+};
 const markersByIncidentId = new Map();
+
+function animateMetric(el, from, to, suffix = "", duration = 380) {
+  if (!el) return;
+  const start = performance.now();
+  const delta = to - from;
+  function frame(now) {
+    const progress = Math.min(1, (now - start) / duration);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    const value = Math.round(from + delta * eased);
+    el.textContent = `${value}${suffix}`;
+    if (progress < 1) requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
 
 function getRiskTier(incident) {
   if (incident.isBlocked || incident.risk >= 85) return "critical";
@@ -170,6 +196,15 @@ function renderProcedures(incident) {
   responseListEl.innerHTML = steps.map((step) => `<li>${step}</li>`).join("");
 }
 
+function renderFeed(items) {
+  const feedItems = items.slice(0, 10);
+  feedListEl.innerHTML = feedItems.length
+    ? feedItems
+      .map((incident) => `<div class="feed-item">[${getRiskTier(incident).toUpperCase()}] ${incident.attackType} :: ${incident.actorEmail || incident.actor}</div>`)
+      .join("")
+    : '<div class="feed-item">No live threats in current filter.</div>';
+}
+
 function renderIncidents(items) {
   incidentListEl.innerHTML = items
     .slice(0, 35)
@@ -214,12 +249,19 @@ function renderKpis(items) {
   const highRisk = items.filter((item) => item.risk >= 70).length;
   const blockedCount = items.filter((item) => item.isBlocked).length;
   const confidence = items.length ? Math.min(99, Math.round((highRisk / items.length) * 65 + 30)) : 0;
+  const attempts = items.length;
+  const blocked = Math.max(blockedCount, countBlockedActors());
 
-  attemptsEl.textContent = String(items.length);
-  highRiskEl.textContent = String(highRisk);
-  blockedEl.textContent = String(Math.max(blockedCount, countBlockedActors()));
-  confidenceEl.textContent = `${confidence}%`;
-  mapCountEl.textContent = String(items.length);
+  animateMetric(attemptsEl, kpiState.attempts, attempts);
+  animateMetric(highRiskEl, kpiState.highRisk, highRisk);
+  animateMetric(blockedEl, kpiState.blocked, blocked);
+  animateMetric(confidenceEl, kpiState.confidence, confidence, "%");
+  mapCountEl.textContent = String(attempts);
+
+  kpiState.attempts = attempts;
+  kpiState.highRisk = highRisk;
+  kpiState.blocked = blocked;
+  kpiState.confidence = confidence;
 }
 
 function renderLatestReport() {
@@ -255,7 +297,6 @@ function passesFilter(incident) {
 
   const tier = getRiskTier(incident);
   const hitRisk = !risk || tier === risk;
-
   const hitStatus =
     !status ||
     (status === "blocked" && incident.isBlocked) ||
@@ -264,14 +305,34 @@ function passesFilter(incident) {
   return hitQuery && hitRisk && hitStatus;
 }
 
+function stopPatrol() {
+  if (patrolTimer) {
+    window.clearInterval(patrolTimer);
+    patrolTimer = null;
+  }
+}
+
+function startPatrol() {
+  stopPatrol();
+  if (patrolToggle.value !== "on") return;
+  if (!filteredIncidents.length) return;
+  let i = 0;
+  patrolTimer = window.setInterval(() => {
+    const incident = filteredIncidents[i % filteredIncidents.length];
+    focusIncidentOnMap(incident.id);
+    renderProcedures(incident);
+    i += 1;
+  }, 2600);
+}
+
 function rerenderThreatView() {
   filteredIncidents = incidents.filter(passesFilter);
   renderKpis(filteredIncidents);
   renderMap(filteredIncidents);
+  renderFeed(filteredIncidents);
   renderIncidents(filteredIncidents);
-  if (!filteredIncidents.length) {
-    renderProcedures(null);
-  }
+  if (!filteredIncidents.length) renderProcedures(null);
+  startPatrol();
 }
 
 async function loadThreatData() {
@@ -296,6 +357,8 @@ function simulateAttackWave() {
     return;
   }
   let i = 0;
+  const intensity = Number(intensityInput.value || 3);
+  const interval = Math.max(420, 900 - intensity * 110);
   showToast("info", "Attack wave simulation started.");
   simulationTimer = window.setInterval(() => {
     const incident = wave[i % wave.length];
@@ -306,7 +369,46 @@ function simulateAttackWave() {
       stopSimulation();
       showToast("success", "Attack wave simulation complete.");
     }
-  }, 800);
+  }, interval);
+}
+
+function applyIntensityLevel() {
+  const level = Number(intensityInput.value || 3);
+  intensityLabel.textContent = `Level ${level}`;
+  const speed = Math.max(0.75, 2.3 - level * 0.3);
+  document.documentElement.style.setProperty("--lane-speed", `${speed.toFixed(2)}s`);
+}
+
+function runQuickAction(action) {
+  if (action === "mfa") {
+    showToast("success", "MFA challenge forced for high-risk actors.");
+    renderProcedures({
+      attackType: "Privilege Escalation Attempt",
+      actorEmail: "high-risk actors",
+      risk: 78,
+      isBlocked: false
+    });
+    return;
+  }
+  if (action === "quarantine") {
+    showToast("success", "Quarantine policy applied to selected actor range.");
+    renderProcedures({
+      attackType: "Brute Force / Credential Attack",
+      actorEmail: "suspicious segment",
+      risk: 88,
+      isBlocked: true
+    });
+    return;
+  }
+  if (action === "lock_roles") {
+    showToast("success", "Role change guard activated for 15 minutes.");
+    renderProcedures({
+      attackType: "Privilege Escalation Attempt",
+      actorEmail: "role management endpoints",
+      risk: 84,
+      isBlocked: false
+    });
+  }
 }
 
 runAiBtn.addEventListener("click", async () => {
@@ -332,6 +434,11 @@ toggleLanesBtn.addEventListener("click", () => {
 searchInput.addEventListener("input", rerenderThreatView);
 riskFilter.addEventListener("change", rerenderThreatView);
 statusFilter.addEventListener("change", rerenderThreatView);
+intensityInput.addEventListener("input", applyIntensityLevel);
+patrolToggle.addEventListener("change", startPatrol);
+quickActionButtons.forEach((btn) => {
+  btn.addEventListener("click", () => runQuickAction(btn.dataset.quickAction));
+});
 
 window.addEventListener("load", async () => {
   if (!navigator?.geolocation) return;
@@ -383,6 +490,7 @@ exportBtn.addEventListener("click", () => {
   URL.revokeObjectURL(url);
 });
 
+applyIntensityLevel();
 loadThreatData();
 renderProcedures(null);
 

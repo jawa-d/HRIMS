@@ -72,6 +72,30 @@
           </div>
         </section>
 
+        <section class="soc-controls card">
+          <div class="soc-control">
+            <label for="attack-intensity">Attack Intensity</label>
+            <input type="range" id="attack-intensity" min="1" max="5" value="3" />
+            <small class="text-muted" id="attack-intensity-label">Level 3</small>
+          </div>
+          <div class="soc-control">
+            <label for="patrol-toggle">Auto Patrol</label>
+            <select class="select" id="patrol-toggle">
+              <option value="off">Off</option>
+              <option value="on">On</option>
+            </select>
+            <small class="text-muted">Auto focus on top incidents</small>
+          </div>
+          <div class="soc-control">
+            <label>SOC Quick Actions</label>
+            <div class="quick-actions">
+              <button class="btn btn-ghost btn-xs" data-quick-action="mfa">Force MFA</button>
+              <button class="btn btn-ghost btn-xs" data-quick-action="quarantine">Quarantine Actor</button>
+              <button class="btn btn-ghost btn-xs" data-quick-action="lock_roles">Lock Role Changes</button>
+            </div>
+          </div>
+        </section>
+
         <section class="threat-layout">
           <article class="card map-card">
             <div class="card-header">
@@ -109,6 +133,10 @@
               <ul id="response-list">
                 <li>Select an incident to see recommended actions.</li>
               </ul>
+            </div>
+            <div class="live-feed" id="live-feed">
+              <h4>Live Threat Feed</h4>
+              <div class="feed-list" id="feed-list"></div>
             </div>
             <div class="incident-list" id="incident-list"></div>
           </article>
