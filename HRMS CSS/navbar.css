@@ -302,16 +302,18 @@ body[data-page="profile"] .navbar {
   padding: 10px var(--space-6);
   border-bottom: 1px solid var(--border);
   background: linear-gradient(110deg, rgba(15, 118, 110, 0.2), rgba(59, 130, 246, 0.14), rgba(16, 185, 129, 0.18));
-  background-size: 220% 220%;
-  animation: activity-bar-flow 12s linear infinite;
-  overflow: hidden;
+  background-size: 100% 100%;
+  animation: none;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
 }
 
 .recent-activity-marquee {
   display: flex;
   width: max-content;
-  gap: 20px;
-  animation: activity-marquee 24s linear infinite;
+  gap: 8px;
+  animation: none;
 }
 
 .recent-activity-track {
@@ -319,10 +321,6 @@ body[data-page="profile"] .navbar {
   align-items: center;
   gap: 8px;
   white-space: nowrap;
-}
-
-.recent-activity-bar:hover .recent-activity-marquee {
-  animation-play-state: paused;
 }
 
 .activity-pill {
@@ -337,7 +335,7 @@ body[data-page="profile"] .navbar {
   white-space: nowrap;
   font-size: 0.78rem;
   box-shadow: 0 3px 10px rgba(15, 23, 42, 0.08);
-  animation: activity-pill-in 420ms cubic-bezier(0.2, 0.7, 0.2, 1) both, activity-pill-drift 3.6s ease-in-out infinite;
+  animation: none;
 }
 
 .activity-pill:hover {

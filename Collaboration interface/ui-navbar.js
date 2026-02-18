@@ -95,10 +95,14 @@ export function renderNavbar({ user, role }) {
           <div>
             <strong>${item.title || t("nav.notifications")}</strong>
             <div class="text-muted">${item.body || ""}</div>
+            ${item.priority ? `<small class="text-muted">P:${item.priority}</small>` : ""}
           </div>
-          <button class="btn btn-ghost btn-xs" data-id="${item.id}">
-            ${t("notifications.mark_read")}
-          </button>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            ${item.actionHref ? `<a class="btn btn-ghost btn-xs" href="${item.actionHref}">${t("notifications.open_entity")}</a>` : ""}
+            <button class="btn btn-ghost btn-xs" data-id="${item.id}">
+              ${t("notifications.mark_read")}
+            </button>
+          </div>
         </div>
       `
       )
@@ -122,7 +126,7 @@ export function renderNavbar({ user, role }) {
     if (!activityBarEl) return;
     const items = listRecentActivities(6);
     if (!items.length) {
-      activityBarEl.innerHTML = `<span class="activity-pill is-empty">No recent activity yet</span>`;
+      activityBarEl.innerHTML = `<span class="activity-pill is-empty">${t("activity.empty")}</span>`;
       return;
     }
     const pills = items
@@ -138,7 +142,6 @@ export function renderNavbar({ user, role }) {
     activityBarEl.innerHTML = `
       <div class="recent-activity-marquee">
         <div class="recent-activity-track">${pills}</div>
-        <div class="recent-activity-track" aria-hidden="true">${pills}</div>
       </div>
     `;
   };

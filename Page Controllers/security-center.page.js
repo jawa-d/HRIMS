@@ -3,6 +3,7 @@ import { initI18n } from "../Languages/i18n.js";
 import { renderNavbar } from "../Collaboration interface/ui-navbar.js";
 import { renderSidebar } from "../Collaboration interface/ui-sidebar.js";
 import { listSecurityEvents } from "../Services/security-audit.service.js";
+import { listUiErrors, listUxEvents } from "../Services/telemetry.service.js";
 
 if (!enforceAuth("security_center")) {
   throw new Error("Unauthorized");
@@ -77,7 +78,30 @@ function applyFilters() {
 }
 
 async function loadEvents() {
-  events = await listSecurityEvents();
+  const [securityEvents, uiErrors, uxEvents] = await Promise.all([
+    listSecurityEvents(),
+    Promise.resolve(listUiErrors(120)),
+    Promise.resolve(listUxEvents(120))
+  ]);
+  const mappedUiErrors = uiErrors.map((item) => ({
+    action: "ui_error",
+    actorEmail: "-",
+    severity: "warning",
+    status: "failed",
+    message: item.message || "UI error",
+    entity: item.page || "ui",
+    createdAt: item.at || 0
+  }));
+  const mappedUxEvents = uxEvents.map((item) => ({
+    action: item.event || "ux_event",
+    actorEmail: "-",
+    severity: "info",
+    status: "success",
+    message: `${item.module || "app"} :: ${item.page || "unknown"}`,
+    entity: "ux",
+    createdAt: item.at || 0
+  }));
+  events = [...securityEvents, ...mappedUiErrors, ...mappedUxEvents].sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0));
   updateKpis(events);
   applyFilters();
 }

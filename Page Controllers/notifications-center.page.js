@@ -1,8 +1,10 @@
 import { enforceAuth, getUserProfile, getRole } from "../Aman/guard.js";
-import { initI18n } from "../Languages/i18n.js";
+import { initI18n, t } from "../Languages/i18n.js";
 import { renderNavbar } from "../Collaboration interface/ui-navbar.js";
 import { renderSidebar } from "../Collaboration interface/ui-sidebar.js";
 import { showToast } from "../Collaboration interface/ui-toast.js";
+import { canDo } from "../Services/permissions.service.js";
+import { trackUxEvent } from "../Services/telemetry.service.js";
 import {
   listNotifications,
   markNotificationRead,
@@ -22,14 +24,19 @@ const role = getRole();
 renderNavbar({ user, role });
 renderSidebar("notifications_center");
 
+const canMarkAll = canDo({ role, entity: "notifications", action: "mark_all" });
+
 const searchInput = document.getElementById("notif-search");
 const statusFilter = document.getElementById("notif-status-filter");
 const typeFilter = document.getElementById("notif-type-filter");
+const priorityFilter = document.getElementById("notif-priority-filter");
 const archivedToggle = document.getElementById("notif-archived-toggle");
 const markAllBtn = document.getElementById("mark-all-read-btn");
 const countEl = document.getElementById("notif-count");
 const listEl = document.getElementById("notif-items");
 const emptyEl = document.getElementById("notif-empty");
+
+if (!canMarkAll) markAllBtn.classList.add("hidden");
 
 let notifications = [];
 
@@ -39,10 +46,16 @@ function formatDate(item) {
   return new Date(seconds * 1000).toLocaleString();
 }
 
+function priorityLabel(priority = "medium") {
+  return t(`notifications.priority.${priority}`) || priority;
+}
+
 function applyFilters() {
   const q = (searchInput.value || "").trim().toLowerCase();
   const status = statusFilter.value || "";
   const type = typeFilter.value || "";
+  const priority = priorityFilter.value || "";
+
   const filtered = notifications.filter((item) => {
     const hitSearch =
       !q ||
@@ -52,25 +65,30 @@ function applyFilters() {
       (status === "unread" && item.isRead !== true) ||
       (status === "read" && item.isRead === true);
     const hitType = !type || (item.type || "system") === type;
-    return hitSearch && hitStatus && hitType;
+    const hitPriority = !priority || (item.priority || "medium") === priority;
+    return hitSearch && hitStatus && hitType && hitPriority;
   });
 
   countEl.textContent = String(filtered.length);
   listEl.innerHTML = filtered
     .map((item) => {
       const isArchived = item.isArchived === true;
+      const href = item.actionHref || "";
+      const openButton = href ? `<a class="btn btn-ghost" href="${href}">${t("notifications.open_entity")}</a>` : "";
       return `
         <article class="notif-item ${item.isRead ? "" : "is-unread"}">
           <div class="notif-head">
             <strong>${item.title || "Notification"}</strong>
             <div class="notif-meta">
               <span class="badge">${item.type || "system"}</span>
+              <span class="badge">P:${priorityLabel(item.priority || "medium")}</span>
               <span class="text-muted">${formatDate(item)}</span>
             </div>
           </div>
           <div class="text-muted">${item.body || ""}</div>
           <div class="notif-actions">
-            ${item.isRead ? "" : `<button class="btn btn-ghost" data-action="read" data-id="${item.id}">Mark read</button>`}
+            ${openButton}
+            ${item.isRead ? "" : `<button class="btn btn-ghost" data-action="read" data-id="${item.id}">${t("notifications.mark_read")}</button>`}
             ${
               isArchived
                 ? `<button class="btn btn-ghost" data-action="unarchive" data-id="${item.id}">Unarchive</button>`
@@ -121,10 +139,10 @@ markAllBtn.addEventListener("click", async () => {
 searchInput.addEventListener("input", applyFilters);
 statusFilter.addEventListener("change", applyFilters);
 typeFilter.addEventListener("change", applyFilters);
+priorityFilter.addEventListener("change", applyFilters);
 archivedToggle.addEventListener("change", loadNotifications);
 
+trackUxEvent({ event: "page_open", module: "notifications_center" });
 loadNotifications();
 
-if (window.lucide?.createIcons) {
-  window.lucide.createIcons();
-}
+if (window.lucide?.createIcons) window.lucide.createIcons();

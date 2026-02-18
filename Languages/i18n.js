@@ -1,5 +1,6 @@
 ﻿import { STORAGE_KEYS, DEFAULT_LANGUAGE, DEFAULT_THEME } from "../app.config.js";
 import { initErrorRouter } from "../Collaboration interface/ui-error-router.js";
+import { initTelemetry } from "../Services/telemetry.service.js";
 
 const dictionaries = {
   en: {
@@ -47,6 +48,16 @@ const dictionaries = {
     "nav.notifications": "Notifications",
     "notifications.empty": "No notifications",
     "notifications.mark_read": "Mark read",
+    "notifications.mark_all_read": "Mark All Read",
+    "notifications.search_placeholder": "Search notifications",
+    "notifications.show_archived": "Show archived",
+    "notifications.inbox": "Inbox",
+    "notifications.no_results": "No notifications found",
+    "notifications.open_entity": "Open",
+    "notifications.priority.high": "High",
+    "notifications.priority.medium": "Medium",
+    "notifications.priority.low": "Low",
+    "activity.empty": "No recent activity yet",
     "dashboard.subtitle": "Overview of your HR operations",
     "dashboard.welcome_title": "Welcome,",
     "dashboard.welcome_subtitle": "Here is a quick snapshot of your people operations today.",
@@ -66,6 +77,10 @@ const dictionaries = {
     "dashboard.attendance_status": "Attendance Status",
     "dashboard.payroll_trend": "Payroll Trend",
     "dashboard.recent_activity": "Recent Activity",
+    "dashboard.today_attendance": "Today's Attendance",
+    "dashboard.pending_approvals": "Pending Approvals",
+    "dashboard.payroll_ready": "Payroll Ready",
+    "dashboard.critical_alerts": "Critical Alerts",
     "nav.language": "AR",
     "nav.theme": "Theme",
     "login.title": "Welcome back",
@@ -95,6 +110,13 @@ const dictionaries = {
     "common.submit": "Submit",
     "common.close": "Close",
     "common.view": "View",
+    "common.all": "All",
+    "common.active": "Active",
+    "common.inactive": "Inactive",
+    "common.export_csv": "Export CSV",
+    "common.prev": "Prev",
+    "common.next": "Next",
+    "common.page": "Page",
     "employees.title": "Employees",
     "employees.add": "Add Employee",
     "employees.details": "Employee Details",
@@ -159,6 +181,16 @@ const dictionaries = {
     "nav.notifications": "الإشعارات",
     "notifications.empty": "لا توجد إشعارات",
     "notifications.mark_read": "تمييز كمقروء",
+    "notifications.mark_all_read": "تمييز الكل كمقروء",
+    "notifications.search_placeholder": "ابحث في الإشعارات",
+    "notifications.show_archived": "عرض المؤرشف",
+    "notifications.inbox": "صندوق الوارد",
+    "notifications.no_results": "لا توجد إشعارات مطابقة",
+    "notifications.open_entity": "فتح",
+    "notifications.priority.high": "عالي",
+    "notifications.priority.medium": "متوسط",
+    "notifications.priority.low": "منخفض",
+    "activity.empty": "لا يوجد نشاط حديث بعد",
     "dashboard.subtitle": "نظرة عامة على عمليات الموارد البشرية",
     "dashboard.welcome_title": "مرحبًا،",
     "dashboard.welcome_subtitle": "هذه لمحة سريعة عن عمليات الموارد البشرية اليوم.",
@@ -178,6 +210,10 @@ const dictionaries = {
     "dashboard.attendance_status": "حالة الحضور",
     "dashboard.payroll_trend": "اتجاه الرواتب",
     "dashboard.recent_activity": "النشاط الأخير",
+    "dashboard.today_attendance": "حضور اليوم",
+    "dashboard.pending_approvals": "موافقات معلقة",
+    "dashboard.payroll_ready": "رواتب جاهزة",
+    "dashboard.critical_alerts": "تنبيهات حرجة",
     "nav.language": "EN",
     "nav.theme": "المظهر",
     "login.title": "مرحبًا بعودتك",
@@ -207,6 +243,13 @@ const dictionaries = {
     "common.submit": "إرسال",
     "common.close": "إغلاق",
     "common.view": "عرض",
+    "common.all": "الكل",
+    "common.active": "نشط",
+    "common.inactive": "غير نشط",
+    "common.export_csv": "تصدير CSV",
+    "common.prev": "السابق",
+    "common.next": "التالي",
+    "common.page": "صفحة",
     "employees.title": "الموظفون",
     "employees.add": "إضافة موظف",
     "employees.details": "تفاصيل الموظف",
@@ -286,6 +329,7 @@ export function applyTheme() {
 
 export function initI18n() {
   initErrorRouter();
+  initTelemetry();
   applyLanguage();
   applyTheme();
 }

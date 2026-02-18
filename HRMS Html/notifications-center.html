@@ -26,24 +26,30 @@
             <h1 class="page-title" data-i18n="notifications_center.title">Notification Center</h1>
             <p class="text-muted">Filter, review, and manage all of your system notifications.</p>
           </div>
-          <button class="btn btn-primary" id="mark-all-read-btn">Mark All Read</button>
+          <button class="btn btn-primary" id="mark-all-read-btn" data-i18n="notifications.mark_all_read">Mark All Read</button>
         </div>
 
         <section class="notif-toolbar card">
           <div class="notif-filters">
-            <input class="input" id="notif-search" placeholder="Search notifications" />
+            <input class="input" id="notif-search" data-i18n-placeholder="notifications.search_placeholder" placeholder="Search notifications" />
             <select class="select" id="notif-status-filter">
-              <option value="">All</option>
+              <option value="" data-i18n="common.all">All</option>
               <option value="unread">Unread</option>
               <option value="read">Read</option>
             </select>
             <select class="select" id="notif-type-filter">
-              <option value="">All Types</option>
+              <option value="" data-i18n="common.all">All</option>
               <option value="leave">Leave</option>
               <option value="system">System</option>
               <option value="security">Security</option>
             </select>
-            <label class="notif-checkbox"><input type="checkbox" id="notif-archived-toggle" /> Show archived</label>
+            <select class="select" id="notif-priority-filter">
+              <option value="" data-i18n="common.all">All</option>
+              <option value="high">High</option>
+              <option value="medium">Medium</option>
+              <option value="low">Low</option>
+            </select>
+            <label class="notif-checkbox"><input type="checkbox" id="notif-archived-toggle" /> <span data-i18n="notifications.show_archived">Show archived</span></label>
           </div>
         </section>
 
@@ -51,12 +57,12 @@
           <div class="card-header">
             <h3 class="section-title">
               <i data-lucide="bell-ring"></i>
-              Inbox
+              <span data-i18n="notifications.inbox">Inbox</span>
             </h3>
             <span class="badge" id="notif-count">0</span>
           </div>
           <div id="notif-items" class="notif-items"></div>
-          <div id="notif-empty" class="empty-state hidden">No notifications found</div>
+          <div id="notif-empty" class="empty-state hidden" data-i18n="notifications.no_results">No notifications found</div>
         </section>
       </main>
     </div>

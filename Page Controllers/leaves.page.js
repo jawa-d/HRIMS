@@ -5,6 +5,10 @@ import { renderSidebar } from "../Collaboration interface/ui-sidebar.js";
 import { openModal } from "../Collaboration interface/ui-modal.js";
 import { showToast } from "../Collaboration interface/ui-toast.js";
 import { showTableSkeleton } from "../Collaboration interface/ui-skeleton.js";
+import { canDo } from "../Services/permissions.service.js";
+import { saveTablePrefs, getTablePrefs, paginate, exportRowsToCsv } from "../Services/table-tools.service.js";
+import { trackUxEvent } from "../Services/telemetry.service.js";
+import { logSecurityEvent } from "../Services/security-audit.service.js";
 import { listLeaves, createLeave, updateLeave, deleteLeave } from "../Services/leaves.service.js";
 import { createNotification } from "../Services/notifications.service.js";
 import { listEmployees } from "../Services/employees.service.js";
@@ -19,17 +23,24 @@ const user = getUserProfile();
 const role = getRole();
 renderNavbar({ user, role });
 renderSidebar("leaves");
-if (window.lucide?.createIcons) {
-  window.lucide.createIcons();
-}
+if (window.lucide?.createIcons) window.lucide.createIcons();
 
-const canApprove = ["super_admin", "hr_admin", "manager"].includes(role);
-const canManageAll = ["super_admin", "hr_admin", "manager"].includes(role);
+const canCreate = canDo({ role, entity: "leaves", action: "create" });
+const canEditAll = canDo({ role, entity: "leaves", action: "edit" });
+const canDeleteAll = canDo({ role, entity: "leaves", action: "delete" });
+const canReviewManager = canDo({ role, entity: "leaves", action: "review_manager" });
+const canReviewHr = canDo({ role, entity: "leaves", action: "review_hr" });
+const canApprove = canDo({ role, entity: "leaves", action: "approve" });
+const canReject = canDo({ role, entity: "leaves", action: "reject" });
+const canExport = canDo({ role, entity: "leaves", action: "export" }) || role === "manager";
+
 const addButton = document.getElementById("add-leave-btn");
+const exportButton = document.getElementById("leaves-export-btn");
 const searchInput = document.getElementById("leave-search");
 const statusFilter = document.getElementById("leave-status-filter");
 const tbody = document.getElementById("leaves-body");
 const emptyState = document.getElementById("leaves-empty");
+const paginationEl = document.getElementById("leaves-pagination");
 const totalEl = document.getElementById("leave-total");
 const pendingEl = document.getElementById("leave-pending");
 const approvedEl = document.getElementById("leave-approved");
@@ -38,6 +49,9 @@ const annualEl = document.getElementById("leave-annual");
 const usedEl = document.getElementById("leave-used");
 const remainingEl = document.getElementById("leave-remaining");
 
+if (!canCreate) addButton.classList.add("hidden");
+if (!canExport && exportButton) exportButton.classList.add("hidden");
+
 let leaves = [];
 let allLeaves = [];
 let employees = [];
@@ -45,6 +59,18 @@ let balances = [];
 let currentEmployee = null;
 
 const DEFAULT_ANNUAL = 24;
+const PREF_KEY = "leaves_table";
+const prefs = getTablePrefs(PREF_KEY, { query: "", status: "", page: 1, pageSize: 10 });
+searchInput.value = prefs.query || "";
+statusFilter.value = prefs.status || "";
+
+function savePrefs() {
+  saveTablePrefs(PREF_KEY, prefs);
+}
+
+function normalizeStatus(status = "") {
+  return status === "pending" ? "submitted" : status;
+}
 
 function calcLeaveDays(leave) {
   if (leave.days) return Number(leave.days) || 0;
@@ -92,13 +118,16 @@ function matchesEmployee(leave, emp, profile) {
 
 function canEditLeave(leave) {
   if (!leave) return false;
-  if (canManageAll) return true;
+  if (canEditAll) return true;
   if (role !== "employee") return false;
-  return leave.status === "pending" && matchesEmployee(leave, currentEmployee, user);
+  const status = normalizeStatus(leave.status);
+  return ["submitted", "manager_review"].includes(status) && matchesEmployee(leave, currentEmployee, user);
 }
 
 function canDeleteLeave(leave) {
-  return canEditLeave(leave);
+  if (!leave) return false;
+  if (canDeleteAll) return true;
+  return role === "employee" && normalizeStatus(leave.status) === "submitted" && matchesEmployee(leave, currentEmployee, user);
 }
 
 function getRemainingBalance(employeeId, leaveDate, extraDays = 0, emp = null, profile = null) {
@@ -108,11 +137,8 @@ function getRemainingBalance(employeeId, leaveDate, extraDays = 0, emp = null, p
   const adjustment = Number(balance.adjustment ?? 0);
   const targetYear = leaveDate ? new Date(leaveDate).getFullYear() : new Date().getFullYear();
   const used = allLeaves
-    .filter((leave) => leave.status === "approved")
-    .filter((leave) => {
-      if (!leave.from) return true;
-      return new Date(leave.from).getFullYear() === targetYear;
-    })
+    .filter((leave) => normalizeStatus(leave.status) === "approved")
+    .filter((leave) => !leave.from || new Date(leave.from).getFullYear() === targetYear)
     .filter((leave) => (emp || profile ? matchesEmployee(leave, emp, profile) : leave.employeeId === employeeId))
     .reduce((sum, leave) => sum + calcLeaveDays(leave), 0);
   return annual + carryover + adjustment - used - extraDays;
@@ -127,11 +153,8 @@ function updateBalanceSummary() {
   const adjustment = Number(balance.adjustment ?? 0);
   const allowance = annual + carryover + adjustment;
   const used = allLeaves
-    .filter((leave) => leave.status === "approved")
-    .filter((leave) => {
-      if (!leave.from) return true;
-      return new Date(leave.from).getFullYear() === new Date().getFullYear();
-    })
+    .filter((leave) => normalizeStatus(leave.status) === "approved")
+    .filter((leave) => !leave.from || new Date(leave.from).getFullYear() === new Date().getFullYear())
     .filter((leave) => matchesEmployee(leave, emp, user))
     .reduce((sum, leave) => sum + calcLeaveDays(leave), 0);
   const remaining = allowance - used;
@@ -141,10 +164,31 @@ function updateBalanceSummary() {
   if (remainingEl) remainingEl.textContent = String(remaining);
 }
 
-function renderLeaves() {
-  const query = (searchInput?.value || "").trim().toLowerCase();
-  const status = statusFilter?.value || "";
-  const filtered = leaves.filter((leave) => {
+function workflowButtons(leave) {
+  const status = normalizeStatus(leave.status);
+  const actions = [];
+  if (canEditLeave(leave)) actions.push(`<button class="btn btn-ghost" data-action="edit" data-id="${leave.id}">Edit</button>`);
+  if (canDeleteLeave(leave)) actions.push(`<button class="btn btn-ghost" data-action="delete" data-id="${leave.id}">Delete</button>`);
+  if (canReviewManager && status === "submitted") {
+    actions.push(`<button class="btn btn-ghost" data-action="manager_review" data-id="${leave.id}">Manager Review</button>`);
+  }
+  if (canReviewManager && status === "manager_review") {
+    actions.push(`<button class="btn btn-ghost" data-action="send_hr" data-id="${leave.id}">Send to HR</button>`);
+  }
+  if (canApprove && canReviewHr && status === "hr_review") {
+    actions.push(`<button class="btn btn-ghost" data-action="approve" data-id="${leave.id}">Approve</button>`);
+  }
+  if (canReject && ["manager_review", "hr_review", "submitted"].includes(status)) {
+    actions.push(`<button class="btn btn-ghost" data-action="reject" data-id="${leave.id}">Reject</button>`);
+  }
+  return actions.length ? actions.join("") : "<span class=\"text-muted\">View only</span>";
+}
+
+function filterLeaves() {
+  const query = (prefs.query || "").trim().toLowerCase();
+  const status = prefs.status || "";
+  return leaves.filter((leave) => {
+    const normalized = normalizeStatus(leave.status);
     const matchesQuery =
       !query ||
       (leave.requestId || "").toLowerCase().includes(query) ||
@@ -152,12 +196,40 @@ function renderLeaves() {
       (leave.employeeCode || "").toLowerCase().includes(query) ||
       (leave.type || "").toLowerCase().includes(query) ||
       (leave.category || "").toLowerCase().includes(query) ||
-      (leave.status || "").toLowerCase().includes(query);
-    const matchesStatus = !status || leave.status === status;
+      normalized.toLowerCase().includes(query);
+    const matchesStatus = !status || normalized === status;
     return matchesQuery && matchesStatus;
   });
+}
 
-  tbody.innerHTML = filtered
+function renderPagination(meta) {
+  if (!paginationEl) return;
+  if (meta.total <= meta.pageSize) {
+    paginationEl.innerHTML = "";
+    return;
+  }
+  paginationEl.innerHTML = `
+    <button class="btn btn-ghost" data-page-action="prev" ${meta.page <= 1 ? "disabled" : ""}>Prev</button>
+    <span class="page-label">Page ${meta.page} / ${meta.pages}</span>
+    <button class="btn btn-ghost" data-page-action="next" ${meta.page >= meta.pages ? "disabled" : ""}>Next</button>
+  `;
+  paginationEl.querySelectorAll("button[data-page-action]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const action = button.dataset.pageAction;
+      prefs.page = action === "prev" ? Math.max(1, prefs.page - 1) : prefs.page + 1;
+      savePrefs();
+      renderLeaves();
+    });
+  });
+}
+
+function renderLeaves() {
+  const filtered = filterLeaves();
+  const paged = paginate(filtered, prefs.page, prefs.pageSize);
+  prefs.page = paged.page;
+  savePrefs();
+
+  tbody.innerHTML = paged.items
     .map(
       (leave) => `
       <tr>
@@ -177,28 +249,19 @@ function renderLeaves() {
           </div>
         </td>
         <td>${leave.days || 1}</td>
-        <td><span class="badge status-${leave.status || "pending"}">${leave.status}</span></td>
-        <td>
-          ${canEditLeave(leave) ? `<button class="btn btn-ghost" data-action="edit" data-id="${leave.id}">Edit</button>` : ""}
-          ${canDeleteLeave(leave) ? `<button class="btn btn-ghost" data-action="delete" data-id="${leave.id}">Delete</button>` : ""}
-          ${canApprove ? `<button class="btn btn-ghost" data-action="approve" data-id="${leave.id}">Approve</button>` : ""}
-          ${canApprove ? `<button class="btn btn-ghost" data-action="reject" data-id="${leave.id}">Reject</button>` : ""}
-          ${
-            !canEditLeave(leave) && !canDeleteLeave(leave) && !canApprove
-              ? "<span class=\"text-muted\">View only</span>"
-              : ""
-          }
-        </td>
+        <td><span class="badge status-${normalizeStatus(leave.status)}">${normalizeStatus(leave.status)}</span></td>
+        <td>${workflowButtons(leave)}</td>
       </tr>
     `
     )
     .join("");
 
   emptyState.classList.toggle("hidden", filtered.length > 0);
-  if (totalEl) totalEl.textContent = leaves.length;
-  if (pendingEl) pendingEl.textContent = leaves.filter((l) => l.status === "pending").length;
-  if (approvedEl) approvedEl.textContent = leaves.filter((l) => l.status === "approved").length;
-  if (rejectedEl) rejectedEl.textContent = leaves.filter((l) => l.status === "rejected").length;
+  if (totalEl) totalEl.textContent = String(leaves.length);
+  if (pendingEl) pendingEl.textContent = String(leaves.filter((l) => ["submitted", "manager_review", "hr_review"].includes(normalizeStatus(l.status))).length);
+  if (approvedEl) approvedEl.textContent = String(leaves.filter((l) => normalizeStatus(l.status) === "approved").length);
+  if (rejectedEl) rejectedEl.textContent = String(leaves.filter((l) => normalizeStatus(l.status) === "rejected").length);
+  renderPagination(paged);
 
   tbody.querySelectorAll("button[data-action]").forEach((button) => {
     button.addEventListener("click", () => handleLeaveAction(button.dataset.action, button.dataset.id));
@@ -226,21 +289,11 @@ function leaveFormContent(leave = null) {
         <option value="Sick" ${isEdit && leave?.type === "Sick" ? "selected" : ""}>Sick</option>
         <option value="Emergency" ${isEdit && leave?.type === "Emergency" ? "selected" : ""}>Emergency</option>
         <option value="Unpaid" ${isEdit && leave?.type === "Unpaid" ? "selected" : ""}>Unpaid</option>
-        <option value="Maternity" ${isEdit && leave?.type === "Maternity" ? "selected" : ""}>Maternity</option>
       </select>
     </label>
     <label>From<input class="input" id="leave-from" type="date" value="${leave?.from || ""}" /></label>
     <label>To<input class="input" id="leave-to" type="date" value="${leave?.to || ""}" /></label>
     <label>Days<input class="input" id="leave-days" type="number" value="${leave?.days || 1}" /></label>
-    <label>Reason Category
-      <select class="select" id="leave-category">
-        <option value="Personal" ${isEdit && leave?.category === "Personal" ? "selected" : ""}>Personal</option>
-        <option value="Medical" ${isEdit && leave?.category === "Medical" ? "selected" : ""}>Medical</option>
-        <option value="Family" ${isEdit && leave?.category === "Family" ? "selected" : ""}>Family</option>
-        <option value="Travel" ${isEdit && leave?.category === "Travel" ? "selected" : ""}>Travel</option>
-        <option value="Other" ${isEdit && leave?.category === "Other" ? "selected" : ""}>Other</option>
-      </select>
-    </label>
     <label>Reason<textarea class="textarea" id="leave-reason">${leave?.reason || ""}</textarea></label>
   `;
 }
@@ -254,7 +307,6 @@ function collectLeaveForm() {
     employeeEmail: user.email || "",
     employeeName: currentEmployee?.fullName || user.name || user.email || user.uid,
     type: document.getElementById("leave-type").value.trim(),
-    category: document.getElementById("leave-category").value.trim(),
     from: document.getElementById("leave-from").value,
     to: document.getElementById("leave-to").value,
     days: Number(document.getElementById("leave-days").value || 1),
@@ -279,32 +331,68 @@ function openLeaveModal(existingLeave = null) {
             payload.employeeCode = existingLeave.employeeCode;
             payload.employeeEmail = existingLeave.employeeEmail || "";
             payload.employeeName = existingLeave.employeeName || payload.employeeName;
-            payload.status = existingLeave.status || "pending";
-            payload.approverId = existingLeave.approverId || "";
+            payload.status = normalizeStatus(existingLeave.status) || "submitted";
+          } else {
+            payload.status = "submitted";
           }
-          const remaining = getRemainingBalance(
-            payload.employeeId,
-            payload.from,
-            payload.days,
-            currentEmployee,
-            user
-          );
+
+          const remaining = getRemainingBalance(payload.employeeId, payload.from, payload.days, currentEmployee, user);
           if (remaining < 0) {
             showToast("error", "Insufficient leave balance");
             return;
           }
           if (isEdit) {
             await updateLeave(existingLeave.id, payload);
+            await logSecurityEvent({
+              action: "leave_update",
+              entity: "leaves",
+              entityId: existingLeave.id,
+              actorUid: user?.uid || "",
+              actorEmail: user?.email || "",
+              actorRole: role || "",
+              message: `Updated leave ${existingLeave.requestId || existingLeave.id}`
+            });
             showToast("success", "Leave updated");
           } else {
-            await createLeave(payload);
-            showToast("success", "Leave requested");
+            const createdId = await createLeave(payload);
+            await logSecurityEvent({
+              action: "leave_create",
+              entity: "leaves",
+              entityId: createdId,
+              actorUid: user?.uid || "",
+              actorEmail: user?.email || "",
+              actorRole: role || "",
+              message: `Created leave request ${createdId}`
+            });
+            showToast("success", "Leave submitted");
           }
           await loadLeaves();
         }
       },
       { label: "Cancel", className: "btn btn-ghost" }
     ]
+  });
+}
+
+async function applyWorkflowAction(leave, status, message) {
+  await updateLeave(leave.id, { status, approverId: user.uid });
+  await createNotification({
+    toUid: leave.employeeId,
+    title: `Leave ${status}`,
+    body: message || leave.reason || "Leave request updated",
+    type: "leave",
+    priority: status === "rejected" ? "high" : "medium",
+    entityId: leave.id,
+    actionHref: "leaves.html"
+  });
+  await logSecurityEvent({
+    action: `leave_${status}`,
+    entity: "leaves",
+    entityId: leave.id,
+    actorUid: user?.uid || "",
+    actorEmail: user?.email || "",
+    actorRole: role || "",
+    message: `Leave ${leave.requestId || leave.id} moved to ${status}`
   });
 }
 
@@ -319,12 +407,34 @@ async function handleLeaveAction(action, id) {
   if (action === "delete") {
     if (!canDeleteLeave(leave)) return;
     await deleteLeave(id);
+    await logSecurityEvent({
+      action: "leave_delete",
+      entity: "leaves",
+      entityId: id,
+      severity: "warning",
+      actorUid: user?.uid || "",
+      actorEmail: user?.email || "",
+      actorRole: role || "",
+      message: `Deleted leave ${leave.requestId || id}`
+    });
     showToast("success", "Leave deleted");
     await loadLeaves();
     return;
   }
-  const status = action === "approve" ? "approved" : "rejected";
-  if (status === "approved") {
+
+  if (action === "manager_review" && canReviewManager) {
+    await applyWorkflowAction(leave, "manager_review", "Under manager review");
+    showToast("success", "Moved to manager review");
+    await loadLeaves();
+    return;
+  }
+  if (action === "send_hr" && canReviewManager) {
+    await applyWorkflowAction(leave, "hr_review", "Sent to HR for final approval");
+    showToast("success", "Sent to HR review");
+    await loadLeaves();
+    return;
+  }
+  if (action === "approve" && canApprove && canReviewHr) {
     const leaveEmployee = resolveEmployeeForLeave(leave);
     const remaining = getRemainingBalance(
       leave.employeeId,
@@ -337,17 +447,34 @@ async function handleLeaveAction(action, id) {
       showToast("error", "Insufficient leave balance");
       return;
     }
+    await applyWorkflowAction(leave, "approved", "Leave request approved");
+    showToast("success", "Leave approved");
+    await loadLeaves();
+    return;
   }
-  await updateLeave(id, { status, approverId: user.uid });
-  await createNotification({
-    toUid: leave.employeeId,
-    title: `Leave ${status}`,
-    body: leave.reason || "Leave request updated",
-    type: "leave",
-    entityId: id
+  if (action === "reject" && canReject) {
+    await applyWorkflowAction(leave, "rejected", "Leave request rejected");
+    showToast("success", "Leave rejected");
+    await loadLeaves();
+  }
+}
+
+function exportCurrentRows() {
+  const rows = filterLeaves().map((item) => ({ ...item, status: normalizeStatus(item.status) }));
+  const ok = exportRowsToCsv({
+    rows,
+    filename: "leaves-export.csv",
+    columns: [
+      { key: "requestId", label: "Request ID" },
+      { key: "employeeName", label: "Employee Name" },
+      { key: "type", label: "Type" },
+      { key: "from", label: "From" },
+      { key: "to", label: "To" },
+      { key: "days", label: "Days" },
+      { key: "status", label: "Status" }
+    ]
   });
-  showToast("success", `Leave ${status}`);
-  await loadLeaves();
+  if (ok) showToast("success", "CSV exported");
 }
 
 async function loadLeaves() {
@@ -357,27 +484,40 @@ async function loadLeaves() {
     listEmployees(),
     listTimeoffBalances()
   ]);
-  allLeaves = leavesData;
+  allLeaves = leavesData.map((item) => ({ ...item, status: normalizeStatus(item.status) }));
   employees = employeesData;
   balances = balancesData;
   currentEmployee = resolveEmployeeForUser(user, employees);
-  leaves =
-    role === "employee"
-      ? leavesData.filter((item) => matchesEmployee(item, currentEmployee, user))
-      : leavesData;
+  leaves = role === "employee" ? allLeaves.filter((item) => matchesEmployee(item, currentEmployee, user)) : allLeaves;
   updateBalanceSummary();
   renderLeaves();
 }
 
 addButton.addEventListener("click", openLeaveModal);
+if (exportButton) exportButton.addEventListener("click", exportCurrentRows);
 if (searchInput) {
-  searchInput.addEventListener("input", renderLeaves);
+  searchInput.addEventListener("input", () => {
+    prefs.query = searchInput.value || "";
+    prefs.page = 1;
+    savePrefs();
+    renderLeaves();
+  });
 }
 if (statusFilter) {
-  statusFilter.addEventListener("change", renderLeaves);
+  statusFilter.addEventListener("change", () => {
+    prefs.status = statusFilter.value || "";
+    prefs.page = 1;
+    savePrefs();
+    renderLeaves();
+  });
 }
 window.addEventListener("global-search", (event) => {
   if (searchInput) searchInput.value = event.detail || "";
+  prefs.query = searchInput?.value || "";
+  prefs.page = 1;
+  savePrefs();
   renderLeaves();
 });
+
+trackUxEvent({ event: "page_open", module: "leaves" });
 loadLeaves();

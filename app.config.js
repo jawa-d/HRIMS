@@ -7,8 +7,11 @@ export const STORAGE_KEYS = {
   user: "hrms_user",
   roleVisibility: "hrms_role_visibility",
   userPermissions: "hrms_user_permissions",
+  tablePrefs: "hrms_table_prefs",
   usersDraft: "hrms_users_draft",
   securityAudit: "hrms_security_audit",
+  uxAnalytics: "hrms_ux_analytics",
+  uiErrors: "hrms_ui_errors",
   aiDefenseBlocks: "hrms_ai_defense_blocks",
   aiDefenseReports: "hrms_ai_defense_reports"
 };
@@ -161,6 +164,43 @@ export const ROLE_PERMISSIONS = {
     "hr_tickets",
     "profile"
   ]
+};
+
+export const ACTION_PERMISSIONS = {
+  employee: {
+    employees: ["view"],
+    leaves: ["create", "view", "edit_own", "delete_own"],
+    payroll: ["view_own"],
+    attendance: ["view_own"],
+    notifications: ["view", "mark_read", "archive"],
+    reports: ["view_own"]
+  },
+  manager: {
+    employees: ["view", "edit"],
+    leaves: ["create", "view", "edit", "delete", "review_manager", "approve", "reject"],
+    payroll: ["view"],
+    attendance: ["view", "edit"],
+    notifications: ["view", "mark_read", "archive", "mark_all"],
+    reports: ["view", "export"]
+  },
+  hr_admin: {
+    employees: ["create", "view", "edit", "delete", "export"],
+    leaves: ["create", "view", "edit", "delete", "review_manager", "review_hr", "approve", "reject", "export"],
+    payroll: ["create", "view", "edit", "delete", "publish", "export"],
+    attendance: ["create", "view", "edit", "delete", "export"],
+    notifications: ["view", "mark_read", "archive", "mark_all"],
+    reports: ["view", "export"]
+  },
+  super_admin: {
+    employees: ["*"],
+    leaves: ["*"],
+    payroll: ["*"],
+    attendance: ["*"],
+    notifications: ["*"],
+    reports: ["*"],
+    security: ["*"],
+    settings: ["*"]
+  }
 };
 
 export const DEFAULT_LANGUAGE = "en";

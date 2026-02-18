@@ -5,6 +5,10 @@
   margin: var(--space-5) 0;
 }
 
+.dashboard-ops-kpis {
+  margin-top: var(--space-5);
+}
+
 .welcome-banner {
   display: grid;
   grid-template-columns: 1.5fr 1fr;

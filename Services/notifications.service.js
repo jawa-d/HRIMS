@@ -32,6 +32,8 @@ function normalizeNotifications(items = [], { includeArchived = false } = {}) {
 export async function createNotification(payload) {
   const data = {
     ...payload,
+    priority: payload?.priority || "medium",
+    actionHref: payload?.actionHref || "",
     isRead: false,
     isArchived: false,
     createdAt: ts()

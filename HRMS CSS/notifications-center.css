@@ -4,7 +4,7 @@
 
 .notif-filters {
   display: grid;
-  grid-template-columns: 1.5fr 180px 180px auto;
+  grid-template-columns: 1.5fr 160px 160px 140px auto;
   gap: var(--space-3);
   align-items: center;
 }

@@ -35,12 +35,15 @@
             <div class="leaves-filter">
               <label class="text-muted" for="leave-status-filter">Status</label>
               <select class="select" id="leave-status-filter">
-                <option value="">All Status</option>
-                <option value="pending">Pending</option>
+                <option value="" data-i18n="common.all">All</option>
+                <option value="submitted">Submitted</option>
+                <option value="manager_review">Manager Review</option>
+                <option value="hr_review">HR Review</option>
                 <option value="approved">Approved</option>
                 <option value="rejected">Rejected</option>
               </select>
             </div>
+            <button class="btn btn-ghost" id="leaves-export-btn" data-i18n="common.export_csv">Export CSV</button>
             <button class="btn btn-primary" id="add-leave-btn">
               <i data-lucide="plus"></i>
               Request Leave
@@ -103,6 +106,7 @@
             </table>
           </div>
           <div id="leaves-empty" class="empty-state hidden">No leave requests found</div>
+          <div class="table-pagination" id="leaves-pagination"></div>
         </div>
       </main>
     </div>
