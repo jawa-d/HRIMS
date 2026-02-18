@@ -36,17 +36,17 @@
               <label class="text-muted" for="leave-status-filter">Status</label>
               <select class="select" id="leave-status-filter">
                 <option value="" data-i18n="common.all">All</option>
-                <option value="submitted">Submitted</option>
-                <option value="manager_review">Manager Review</option>
-                <option value="hr_review">HR Review</option>
-                <option value="approved">Approved</option>
-                <option value="rejected">Rejected</option>
+                <option value="submitted" data-i18n="common.status.submitted">Submitted</option>
+                <option value="manager_review" data-i18n="common.status.manager_review">Manager Review</option>
+                <option value="hr_review" data-i18n="common.status.hr_review">HR Review</option>
+                <option value="approved" data-i18n="common.status.approved">Approved</option>
+                <option value="rejected" data-i18n="common.status.rejected">Rejected</option>
               </select>
             </div>
             <button class="btn btn-ghost" id="leaves-export-btn" data-i18n="common.export_csv">Export CSV</button>
             <button class="btn btn-primary" id="add-leave-btn">
               <i data-lucide="plus"></i>
-              Request Leave
+              <span data-i18n="common.request_leave">Request Leave</span>
             </button>
           </div>
         </div>
@@ -60,11 +60,11 @@
             <div class="summary-value" id="leave-pending">0</div>
           </div>
           <div class="card summary-card">
-            <div class="text-muted">Approved</div>
+            <div class="text-muted" data-i18n="common.status.approved">Approved</div>
             <div class="summary-value" id="leave-approved">0</div>
           </div>
           <div class="card summary-card">
-            <div class="text-muted">Rejected</div>
+            <div class="text-muted" data-i18n="common.status.rejected">Rejected</div>
             <div class="summary-value" id="leave-rejected">0</div>
           </div>
         </section>

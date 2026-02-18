@@ -1,5 +1,5 @@
 import { enforceAuth, getUserProfile, getRole } from "../Aman/guard.js";
-import { initI18n } from "../Languages/i18n.js";
+import { initI18n, t } from "../Languages/i18n.js";
 import { renderNavbar } from "../Collaboration interface/ui-navbar.js";
 import { renderSidebar } from "../Collaboration interface/ui-sidebar.js";
 import { openModal } from "../Collaboration interface/ui-modal.js";
@@ -167,21 +167,21 @@ function updateBalanceSummary() {
 function workflowButtons(leave) {
   const status = normalizeStatus(leave.status);
   const actions = [];
-  if (canEditLeave(leave)) actions.push(`<button class="btn btn-ghost" data-action="edit" data-id="${leave.id}">Edit</button>`);
-  if (canDeleteLeave(leave)) actions.push(`<button class="btn btn-ghost" data-action="delete" data-id="${leave.id}">Delete</button>`);
+  if (canEditLeave(leave)) actions.push(`<button class="btn btn-ghost" data-action="edit" data-id="${leave.id}">${t("common.edit")}</button>`);
+  if (canDeleteLeave(leave)) actions.push(`<button class="btn btn-ghost" data-action="delete" data-id="${leave.id}">${t("common.delete")}</button>`);
   if (canReviewManager && status === "submitted") {
-    actions.push(`<button class="btn btn-ghost" data-action="manager_review" data-id="${leave.id}">Manager Review</button>`);
+    actions.push(`<button class="btn btn-ghost" data-action="manager_review" data-id="${leave.id}">${t("common.status.manager_review")}</button>`);
   }
   if (canReviewManager && status === "manager_review") {
-    actions.push(`<button class="btn btn-ghost" data-action="send_hr" data-id="${leave.id}">Send to HR</button>`);
+    actions.push(`<button class="btn btn-ghost" data-action="send_hr" data-id="${leave.id}">${t("common.status.hr_review")}</button>`);
   }
   if (canApprove && canReviewHr && status === "hr_review") {
-    actions.push(`<button class="btn btn-ghost" data-action="approve" data-id="${leave.id}">Approve</button>`);
+    actions.push(`<button class="btn btn-ghost" data-action="approve" data-id="${leave.id}">${t("common.status.approved")}</button>`);
   }
   if (canReject && ["manager_review", "hr_review", "submitted"].includes(status)) {
-    actions.push(`<button class="btn btn-ghost" data-action="reject" data-id="${leave.id}">Reject</button>`);
+    actions.push(`<button class="btn btn-ghost" data-action="reject" data-id="${leave.id}">${t("common.status.rejected")}</button>`);
   }
-  return actions.length ? actions.join("") : "<span class=\"text-muted\">View only</span>";
+  return actions.length ? actions.join("") : `<span class="text-muted">${t("common.view_only")}</span>`;
 }
 
 function filterLeaves() {
@@ -249,7 +249,7 @@ function renderLeaves() {
           </div>
         </td>
         <td>${leave.days || 1}</td>
-        <td><span class="badge status-${normalizeStatus(leave.status)}">${normalizeStatus(leave.status)}</span></td>
+        <td><span class="badge status-${normalizeStatus(leave.status)}">${t(`common.status.${normalizeStatus(leave.status)}`)}</span></td>
         <td>${workflowButtons(leave)}</td>
       </tr>
     `
@@ -280,21 +280,21 @@ function leaveFormContent(leave = null) {
     user
   );
   return `
-    <label>Employee Name<input class="input" value="${employeeName}" readonly /></label>
-    <label>Employee ID<input class="input" value="${employeeCode}" readonly /></label>
-    <label>Remaining Balance<input class="input" value="${remaining}" readonly /></label>
-    <label>Type
+    <label>اسم الموظف<input class="input" value="${employeeName}" readonly /></label>
+    <label>رقم الموظف<input class="input" value="${employeeCode}" readonly /></label>
+    <label>الرصيد المتبقي<input class="input" value="${remaining}" readonly /></label>
+    <label>النوع
       <select class="select" id="leave-type">
-        <option value="Annual" ${isEdit && leave?.type === "Annual" ? "selected" : ""}>Annual</option>
-        <option value="Sick" ${isEdit && leave?.type === "Sick" ? "selected" : ""}>Sick</option>
-        <option value="Emergency" ${isEdit && leave?.type === "Emergency" ? "selected" : ""}>Emergency</option>
-        <option value="Unpaid" ${isEdit && leave?.type === "Unpaid" ? "selected" : ""}>Unpaid</option>
+        <option value="Annual" ${isEdit && leave?.type === "Annual" ? "selected" : ""}>سنوية</option>
+        <option value="Sick" ${isEdit && leave?.type === "Sick" ? "selected" : ""}>مرضية</option>
+        <option value="Emergency" ${isEdit && leave?.type === "Emergency" ? "selected" : ""}>طارئة</option>
+        <option value="Unpaid" ${isEdit && leave?.type === "Unpaid" ? "selected" : ""}>بدون راتب</option>
       </select>
     </label>
-    <label>From<input class="input" id="leave-from" type="date" value="${leave?.from || ""}" /></label>
-    <label>To<input class="input" id="leave-to" type="date" value="${leave?.to || ""}" /></label>
-    <label>Days<input class="input" id="leave-days" type="number" value="${leave?.days || 1}" /></label>
-    <label>Reason<textarea class="textarea" id="leave-reason">${leave?.reason || ""}</textarea></label>
+    <label>من<input class="input" id="leave-from" type="date" value="${leave?.from || ""}" /></label>
+    <label>إلى<input class="input" id="leave-to" type="date" value="${leave?.to || ""}" /></label>
+    <label>عدد الأيام<input class="input" id="leave-days" type="number" value="${leave?.days || 1}" /></label>
+    <label>السبب<textarea class="textarea" id="leave-reason">${leave?.reason || ""}</textarea></label>
   `;
 }
 
@@ -318,11 +318,11 @@ function collectLeaveForm() {
 function openLeaveModal(existingLeave = null) {
   const isEdit = Boolean(existingLeave);
   openModal({
-    title: isEdit ? "Edit Leave Request" : "Request Leave",
+    title: isEdit ? t("common.edit") : t("common.request_leave"),
     content: leaveFormContent(existingLeave),
     actions: [
       {
-        label: isEdit ? "Save" : "Submit",
+        label: isEdit ? t("common.save") : t("common.submit"),
         className: "btn btn-primary",
         onClick: async () => {
           const payload = collectLeaveForm();
@@ -338,7 +338,7 @@ function openLeaveModal(existingLeave = null) {
 
           const remaining = getRemainingBalance(payload.employeeId, payload.from, payload.days, currentEmployee, user);
           if (remaining < 0) {
-            showToast("error", "Insufficient leave balance");
+            showToast("error", "رصيد الإجازات غير كافٍ");
             return;
           }
           if (isEdit) {
@@ -352,7 +352,7 @@ function openLeaveModal(existingLeave = null) {
               actorRole: role || "",
               message: `Updated leave ${existingLeave.requestId || existingLeave.id}`
             });
-            showToast("success", "Leave updated");
+            showToast("success", `${t("common.edit")} ${t("leaves.title")}`);
           } else {
             const createdId = await createLeave(payload);
             await logSecurityEvent({
@@ -364,12 +364,12 @@ function openLeaveModal(existingLeave = null) {
               actorRole: role || "",
               message: `Created leave request ${createdId}`
             });
-            showToast("success", "Leave submitted");
+            showToast("success", `${t("common.submit")} ${t("leaves.title")}`);
           }
           await loadLeaves();
         }
       },
-      { label: "Cancel", className: "btn btn-ghost" }
+      { label: t("common.cancel"), className: "btn btn-ghost" }
     ]
   });
 }
@@ -417,20 +417,20 @@ async function handleLeaveAction(action, id) {
       actorRole: role || "",
       message: `Deleted leave ${leave.requestId || id}`
     });
-    showToast("success", "Leave deleted");
+    showToast("success", `${t("common.delete")} ${t("leaves.title")}`);
     await loadLeaves();
     return;
   }
 
   if (action === "manager_review" && canReviewManager) {
     await applyWorkflowAction(leave, "manager_review", "Under manager review");
-    showToast("success", "Moved to manager review");
+    showToast("success", t("common.status.manager_review"));
     await loadLeaves();
     return;
   }
   if (action === "send_hr" && canReviewManager) {
     await applyWorkflowAction(leave, "hr_review", "Sent to HR for final approval");
-    showToast("success", "Sent to HR review");
+    showToast("success", t("common.status.hr_review"));
     await loadLeaves();
     return;
   }
@@ -444,17 +444,17 @@ async function handleLeaveAction(action, id) {
       leave.employeeEmail ? { email: leave.employeeEmail, uid: leave.employeeId } : null
     );
     if (remaining < 0) {
-      showToast("error", "Insufficient leave balance");
+      showToast("error", "رصيد الإجازات غير كافٍ");
       return;
     }
     await applyWorkflowAction(leave, "approved", "Leave request approved");
-    showToast("success", "Leave approved");
+    showToast("success", t("common.status.approved"));
     await loadLeaves();
     return;
   }
   if (action === "reject" && canReject) {
     await applyWorkflowAction(leave, "rejected", "Leave request rejected");
-    showToast("success", "Leave rejected");
+    showToast("success", t("common.status.rejected"));
     await loadLeaves();
   }
 }
@@ -474,7 +474,7 @@ function exportCurrentRows() {
       { key: "status", label: "Status" }
     ]
   });
-  if (ok) showToast("success", "CSV exported");
+  if (ok) showToast("success", t("common.export_csv"));
 }
 
 async function loadLeaves() {

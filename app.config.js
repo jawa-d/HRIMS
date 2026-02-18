@@ -203,7 +203,7 @@ export const ACTION_PERMISSIONS = {
   }
 };
 
-export const DEFAULT_LANGUAGE = "en";
+export const DEFAULT_LANGUAGE = "ar";
 export const DEFAULT_THEME = "light";
 
 export const APP_NAME = "HRMS";

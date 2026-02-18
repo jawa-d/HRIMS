@@ -25,13 +25,13 @@
         <div class="page-header">
           <div>
             <h1 class="page-title" data-i18n="security_map.title">Security Threat Map</h1>
-            <p class="text-muted">Live geographic view of attacks, suspicious behavior, and AI-powered response actions.</p>
+            <p class="text-muted" data-i18n="security_map.subtitle">Live geographic view of attacks, suspicious behavior, and AI-powered response actions.</p>
           </div>
           <div class="map-actions">
-            <button class="btn btn-primary" id="run-ai-defense-btn">Run AI Defense</button>
-            <button class="btn btn-outline" id="export-ai-report-btn">Export Report</button>
-            <button class="btn btn-ghost" id="simulate-attack-btn">Simulate Attack Wave</button>
-            <button class="btn btn-ghost" id="toggle-lanes-btn">Pause Lanes</button>
+            <button class="btn btn-primary" id="run-ai-defense-btn" data-i18n="security_map.run_ai">Run AI Defense</button>
+            <button class="btn btn-outline" id="export-ai-report-btn" data-i18n="security_map.export_report">Export Report</button>
+            <button class="btn btn-ghost" id="simulate-attack-btn" data-i18n="security_map.simulate_wave">Simulate Attack Wave</button>
+            <button class="btn btn-ghost" id="toggle-lanes-btn" data-i18n="security_map.pause_lanes">Pause Lanes</button>
           </div>
         </div>
 
@@ -44,13 +44,13 @@
 
         <section class="threat-toolbar card">
           <div class="toolbar-group">
-            <label for="threat-search">Search Actor / Type</label>
-            <input class="input" id="threat-search" placeholder="e.g. brute force, domain, actor..." />
+            <label for="threat-search" data-i18n="common.search_actor_type">Search Actor / Type</label>
+            <input class="input" id="threat-search" data-i18n-placeholder="common.search_actor_type" placeholder="e.g. brute force, domain, actor..." />
           </div>
           <div class="toolbar-group">
-            <label for="risk-filter">Risk Level</label>
+            <label for="risk-filter" data-i18n="common.risk_level">Risk Level</label>
             <select class="select" id="risk-filter">
-              <option value="">All</option>
+              <option value="" data-i18n="common.all">All</option>
               <option value="critical">Critical (85+)</option>
               <option value="high">High (70+)</option>
               <option value="medium">Medium (50+)</option>
@@ -58,40 +58,40 @@
             </select>
           </div>
           <div class="toolbar-group">
-            <label for="status-filter">Status</label>
+            <label for="status-filter" data-i18n="common.status">Status</label>
             <select class="select" id="status-filter">
-              <option value="">All</option>
-              <option value="failed">Failed</option>
-              <option value="success">Success</option>
-              <option value="blocked">Blocked</option>
+              <option value="" data-i18n="common.all">All</option>
+              <option value="failed" data-i18n="common.status.failed">Failed</option>
+              <option value="success" data-i18n="common.status.success">Success</option>
+              <option value="blocked" data-i18n="common.status.blocked">Blocked</option>
             </select>
           </div>
           <div class="threat-live-indicator">
             <span class="pulse-dot"></span>
-            <span>Live Monitoring</span>
+            <span data-i18n="common.live_monitoring">Live Monitoring</span>
           </div>
         </section>
 
         <section class="soc-controls card">
           <div class="soc-control">
-            <label for="attack-intensity">Attack Intensity</label>
+            <label for="attack-intensity" data-i18n="common.attack_intensity">Attack Intensity</label>
             <input type="range" id="attack-intensity" min="1" max="5" value="3" />
-            <small class="text-muted" id="attack-intensity-label">Level 3</small>
+            <small class="text-muted" id="attack-intensity-label" data-i18n="common.level">Level 3</small>
           </div>
           <div class="soc-control">
-            <label for="patrol-toggle">Auto Patrol</label>
+            <label for="patrol-toggle" data-i18n="common.auto_patrol">Auto Patrol</label>
             <select class="select" id="patrol-toggle">
-              <option value="off">Off</option>
-              <option value="on">On</option>
+              <option value="off" data-i18n="common.off">Off</option>
+              <option value="on" data-i18n="common.on">On</option>
             </select>
             <small class="text-muted">Auto focus on top incidents</small>
           </div>
           <div class="soc-control">
             <label>SOC Quick Actions</label>
             <div class="quick-actions">
-              <button class="btn btn-ghost btn-xs" data-quick-action="mfa">Force MFA</button>
-              <button class="btn btn-ghost btn-xs" data-quick-action="quarantine">Quarantine Actor</button>
-              <button class="btn btn-ghost btn-xs" data-quick-action="lock_roles">Lock Role Changes</button>
+              <button class="btn btn-ghost btn-xs" data-quick-action="mfa" data-i18n="security_map.quick_mfa">Force MFA</button>
+              <button class="btn btn-ghost btn-xs" data-quick-action="quarantine" data-i18n="security_map.quick_quarantine">Quarantine Actor</button>
+              <button class="btn btn-ghost btn-xs" data-quick-action="lock_roles" data-i18n="security_map.quick_lock_roles">Lock Role Changes</button>
             </div>
           </div>
         </section>
@@ -125,17 +125,17 @@
               </h3>
             </div>
             <div id="ai-report-box" class="ai-report-box">
-              <strong>Waiting for AI analysis</strong>
-              <p class="text-muted">Click "Run AI Defense" to evaluate incidents and generate response report.</p>
+              <strong data-i18n="security_map.waiting_ai">Waiting for AI analysis</strong>
+              <p class="text-muted" data-i18n="security_map.no_report">Click "Run AI Defense" to evaluate incidents and generate response report.</p>
             </div>
             <div class="response-procedures" id="response-procedures">
-              <h4>Response Procedures</h4>
+              <h4 data-i18n="security_map.response_procedures">Response Procedures</h4>
               <ul id="response-list">
                 <li>Select an incident to see recommended actions.</li>
               </ul>
             </div>
             <div class="live-feed" id="live-feed">
-              <h4>Live Threat Feed</h4>
+              <h4 data-i18n="security_map.live_feed">Live Threat Feed</h4>
               <div class="feed-list" id="feed-list"></div>
             </div>
             <div class="incident-list" id="incident-list"></div>

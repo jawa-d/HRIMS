@@ -1,5 +1,5 @@
 import { enforceAuth, getUserProfile, getRole } from "../Aman/guard.js";
-import { initI18n } from "../Languages/i18n.js";
+import { initI18n, t } from "../Languages/i18n.js";
 import { renderNavbar } from "../Collaboration interface/ui-navbar.js";
 import { renderSidebar } from "../Collaboration interface/ui-sidebar.js";
 import { showToast } from "../Collaboration interface/ui-toast.js";
@@ -202,7 +202,7 @@ function renderFeed(items) {
     ? feedItems
       .map((incident) => `<div class="feed-item">[${getRiskTier(incident).toUpperCase()}] ${incident.attackType} :: ${incident.actorEmail || incident.actor}</div>`)
       .join("")
-    : '<div class="feed-item">No live threats in current filter.</div>';
+    : `<div class="feed-item">${t("security_map.live_no_threats")}</div>`;
 }
 
 function renderIncidents(items) {
@@ -224,8 +224,8 @@ function renderIncidents(items) {
           <div class="text-muted">Coords: ${incident.coords[0].toFixed(5)}, ${incident.coords[1].toFixed(5)} (${incident.coordsSource})</div>
           <div>${incident.message || incident.explanation}</div>
           <div class="incident-actions">
-            <button class="btn btn-ghost btn-xs" data-action="focus-map" data-id="${incident.id}">Show on Map</button>
-            <button class="btn btn-ghost btn-xs" data-action="procedure" data-id="${incident.id}">Run Procedure</button>
+            <button class="btn btn-ghost btn-xs" data-action="focus-map" data-id="${incident.id}">${t("security_map.show_on_map")}</button>
+            <button class="btn btn-ghost btn-xs" data-action="procedure" data-id="${incident.id}">${t("security_map.run_procedure")}</button>
           </div>
           ${incident.isBlocked ? `<span class="badge">Blocked by AI</span>` : ""}
         </article>
@@ -269,15 +269,15 @@ function renderLatestReport() {
   const latest = reports[0];
   if (!latest) {
     reportBoxEl.innerHTML = `
-      <strong>Waiting for AI analysis</strong>
-      <p class="text-muted">No report generated yet. Run AI Defense to create the first report.</p>
+      <strong>${t("security_map.waiting_ai")}</strong>
+      <p class="text-muted">${t("security_map.no_report")}</p>
     `;
     return;
   }
 
   const details = (latest.details || []).slice(0, 6).map((line) => `<li>${line}</li>`).join("");
   reportBoxEl.innerHTML = `
-    <strong>Latest AI Report</strong>
+    <strong>${t("security_map.latest_report")}</strong>
     <p class="text-muted">${new Date(latest.generatedAt).toLocaleString()}</p>
     <p>${latest.summary}</p>
     ${details ? `<ul>${details}</ul>` : "<p class='text-muted'>No new actors were blocked in this run.</p>"}
@@ -353,13 +353,13 @@ function simulateAttackWave() {
   stopSimulation();
   const wave = filteredIncidents.slice(0, 8);
   if (!wave.length) {
-    showToast("info", "No incidents available for simulation.");
+    showToast("info", t("security_map.no_incidents"));
     return;
   }
   let i = 0;
   const intensity = Number(intensityInput.value || 3);
   const interval = Math.max(420, 900 - intensity * 110);
-  showToast("info", "Attack wave simulation started.");
+  showToast("info", t("security_map.wave_started"));
   simulationTimer = window.setInterval(() => {
     const incident = wave[i % wave.length];
     focusIncidentOnMap(incident.id);
@@ -367,21 +367,21 @@ function simulateAttackWave() {
     i += 1;
     if (i >= wave.length * 2) {
       stopSimulation();
-      showToast("success", "Attack wave simulation complete.");
+      showToast("success", t("security_map.wave_done"));
     }
   }, interval);
 }
 
 function applyIntensityLevel() {
   const level = Number(intensityInput.value || 3);
-  intensityLabel.textContent = `Level ${level}`;
+  intensityLabel.textContent = `${t("common.level")} ${level}`;
   const speed = Math.max(0.75, 2.3 - level * 0.3);
   document.documentElement.style.setProperty("--lane-speed", `${speed.toFixed(2)}s`);
 }
 
 function runQuickAction(action) {
   if (action === "mfa") {
-    showToast("success", "MFA challenge forced for high-risk actors.");
+    showToast("success", t("security_map.quick_mfa_done"));
     renderProcedures({
       attackType: "Privilege Escalation Attempt",
       actorEmail: "high-risk actors",
@@ -391,7 +391,7 @@ function runQuickAction(action) {
     return;
   }
   if (action === "quarantine") {
-    showToast("success", "Quarantine policy applied to selected actor range.");
+    showToast("success", t("security_map.quick_quarantine_done"));
     renderProcedures({
       attackType: "Brute Force / Credential Attack",
       actorEmail: "suspicious segment",
@@ -401,7 +401,7 @@ function runQuickAction(action) {
     return;
   }
   if (action === "lock_roles") {
-    showToast("success", "Role change guard activated for 15 minutes.");
+    showToast("success", t("security_map.quick_lock_roles_done"));
     renderProcedures({
       attackType: "Privilege Escalation Attempt",
       actorEmail: "role management endpoints",
@@ -427,7 +427,7 @@ simulateBtn.addEventListener("click", simulateAttackWave);
 toggleLanesBtn.addEventListener("click", () => {
   lanesEnabled = !lanesEnabled;
   document.body.classList.toggle("lanes-paused", !lanesEnabled);
-  toggleLanesBtn.textContent = lanesEnabled ? "Pause Lanes" : "Resume Lanes";
+  toggleLanesBtn.textContent = lanesEnabled ? t("security_map.pause_lanes") : t("security_map.resume_lanes");
   rerenderThreatView();
 });
 
@@ -448,7 +448,7 @@ window.addEventListener("load", async () => {
         (pos) => {
           showToast(
             "info",
-            `Location detected: ${Number(pos.coords.latitude).toFixed(5)}, ${Number(pos.coords.longitude).toFixed(5)}`
+            `${t("security_map.location_detected")}: ${Number(pos.coords.latitude).toFixed(5)}, ${Number(pos.coords.longitude).toFixed(5)}`
           );
           resolve(true);
         },
@@ -465,7 +465,7 @@ exportBtn.addEventListener("click", () => {
   const reports = listAIReports();
   const latest = reports[0];
   if (!latest) {
-    showToast("info", "No AI report available yet.");
+    showToast("info", t("security_map.no_ai_report"));
     return;
   }
   const lines = [

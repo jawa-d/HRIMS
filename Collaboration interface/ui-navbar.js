@@ -56,7 +56,7 @@ export function renderNavbar({ user, role }) {
         </button>
         <div class="navbar-user">
           <strong>${user?.name || "User"}</strong>
-          <span>${ROLE_LABELS[role] || role}</span>
+          <span>${t(`roles.${role}`) !== `roles.${role}` ? t(`roles.${role}`) : (ROLE_LABELS[role] || role)}</span>
         </div>
         <button class="btn btn-outline" id="logout-btn" data-i18n="nav.logout">${t("nav.logout")}</button>
       </div>

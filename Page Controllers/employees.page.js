@@ -107,10 +107,10 @@ function renderEmployees() {
           ${
             canEdit || canDelete
               ? `
-            ${canEdit ? `<button class="btn btn-ghost" data-action="edit" data-id="${emp.id}">Edit</button>` : ""}
-            ${canDelete ? `<button class="btn btn-ghost" data-action="delete" data-id="${emp.id}">Delete</button>` : ""}
+            ${canEdit ? `<button class="btn btn-ghost" data-action="edit" data-id="${emp.id}">${t("common.edit")}</button>` : ""}
+            ${canDelete ? `<button class="btn btn-ghost" data-action="delete" data-id="${emp.id}">${t("common.delete")}</button>` : ""}
           `
-              : "<span class=\"text-muted\">View only</span>"
+              : `<span class="text-muted">${t("common.view_only")}</span>`
           }
         </td>
       </tr>
@@ -128,16 +128,16 @@ function renderEmployees() {
 
 function employeeFormContent(emp = {}) {
   return `
-    <label>Employee ID<input class="input" id="emp-id" value="${emp.empId || ""}" /></label>
-    <label>Full Name<input class="input" id="emp-name" value="${emp.fullName || ""}" /></label>
-    <label>Email<input class="input" id="emp-email" value="${emp.email || ""}" /></label>
-    <label>Phone<input class="input" id="emp-phone" value="${emp.phone || ""}" /></label>
-    <label>Department ID<input class="input" id="emp-dept" value="${emp.departmentId || ""}" /></label>
-    <label>Position ID<input class="input" id="emp-position" value="${emp.positionId || ""}" /></label>
-    <label>Base Salary<input class="input" id="emp-salary" type="number" value="${emp.salaryBase || 0}" /></label>
-    <label>Allowances<input class="input" id="emp-allowances" type="number" value="${emp.allowances || 0}" /></label>
-    <label>Join Date<input class="input" id="emp-join" type="date" value="${emp.joinDate || ""}" /></label>
-    <label>Status
+    <label>رقم الموظف<input class="input" id="emp-id" value="${emp.empId || ""}" /></label>
+    <label>الاسم الكامل<input class="input" id="emp-name" value="${emp.fullName || ""}" /></label>
+    <label>البريد الإلكتروني<input class="input" id="emp-email" value="${emp.email || ""}" /></label>
+    <label>الهاتف<input class="input" id="emp-phone" value="${emp.phone || ""}" /></label>
+    <label>رقم القسم<input class="input" id="emp-dept" value="${emp.departmentId || ""}" /></label>
+    <label>رقم الوظيفة<input class="input" id="emp-position" value="${emp.positionId || ""}" /></label>
+    <label>الراتب الأساسي<input class="input" id="emp-salary" type="number" value="${emp.salaryBase || 0}" /></label>
+    <label>المخصصات<input class="input" id="emp-allowances" type="number" value="${emp.allowances || 0}" /></label>
+    <label>تاريخ المباشرة<input class="input" id="emp-join" type="date" value="${emp.joinDate || ""}" /></label>
+    <label>الحالة
       <select class="select" id="emp-status">
         <option value="active" ${emp.status === "active" ? "selected" : ""}>${t("common.active")}</option>
         <option value="inactive" ${emp.status === "inactive" ? "selected" : ""}>${t("common.inactive")}</option>
@@ -163,11 +163,11 @@ function collectEmployeeForm() {
 
 function openEmployeeModal(emp) {
   openModal({
-    title: emp ? "Edit Employee" : "Add Employee",
+    title: emp ? t("common.edit") : t("employees.add"),
     content: employeeFormContent(emp),
     actions: [
       {
-        label: "Save",
+        label: t("common.save"),
         className: "btn btn-primary",
         onClick: async () => {
           const payload = collectEmployeeForm();
@@ -182,7 +182,7 @@ function openEmployeeModal(emp) {
               actorRole: role || "",
               message: `Updated employee ${payload.empId || emp.id}`
             });
-            showToast("success", "Employee updated");
+            showToast("success", `${t("common.edit")} ${t("employees.title")}`);
           } else {
             const createdId = await createEmployee(payload);
             await logSecurityEvent({
@@ -194,12 +194,12 @@ function openEmployeeModal(emp) {
               actorRole: role || "",
               message: `Created employee ${payload.empId || createdId}`
             });
-            showToast("success", "Employee added");
+            showToast("success", `${t("common.add")} ${t("employees.title")}`);
           }
           await loadEmployees();
         }
       },
-      { label: "Cancel", className: "btn btn-ghost" }
+      { label: t("common.cancel"), className: "btn btn-ghost" }
     ]
   });
 }
@@ -222,7 +222,7 @@ async function handleRowAction(action, id) {
       actorRole: role || "",
       message: `Deleted employee ${emp.empId || id}`
     });
-    showToast("success", "Employee removed");
+    showToast("success", `${t("common.delete")} ${t("employees.title")}`);
     await loadEmployees();
   }
 }
@@ -240,7 +240,7 @@ function exportCurrentRows() {
       { key: "status", label: "Status" }
     ]
   });
-  if (ok) showToast("success", "CSV exported");
+  if (ok) showToast("success", t("common.export_csv"));
 }
 
 async function loadEmployees() {
