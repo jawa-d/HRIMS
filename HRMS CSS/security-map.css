@@ -1,6 +1,7 @@
 .map-actions {
   display: inline-flex;
   gap: var(--space-2);
+  flex-wrap: wrap;
 }
 
 .threat-kpis {
@@ -12,12 +13,62 @@
 
 .threat-kpi {
   padding: var(--space-4);
+  position: relative;
+  overflow: hidden;
+}
+
+.threat-kpi::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, rgba(239, 68, 68, 0.07), transparent 55%);
+  opacity: 0.8;
+  pointer-events: none;
 }
 
 .threat-value {
-  font-size: 1.5rem;
-  font-weight: 700;
+  font-size: 1.55rem;
+  font-weight: 800;
   margin-top: var(--space-2);
+}
+
+.threat-toolbar {
+  margin-bottom: var(--space-4);
+  display: grid;
+  grid-template-columns: 1.5fr repeat(2, minmax(170px, 1fr)) auto;
+  gap: var(--space-3);
+  align-items: end;
+}
+
+.toolbar-group {
+  display: grid;
+  gap: 8px;
+}
+
+.toolbar-group label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.threat-live-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: 12px;
+  color: #ef4444;
+  font-weight: 700;
+  justify-self: end;
+}
+
+.pulse-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #ef4444;
+  box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+  animation: live-pulse 1.4s ease-out infinite;
 }
 
 .threat-layout {
@@ -26,11 +77,58 @@
   gap: var(--space-4);
 }
 
+.map-card {
+  background:
+    radial-gradient(600px 240px at 20% 15%, rgba(239, 68, 68, 0.08), transparent 60%),
+    linear-gradient(180deg, var(--surface), var(--surface-strong));
+}
+
 #threat-map {
   height: 520px;
   border-radius: var(--radius-md);
   border: 1px solid var(--border);
+  position: relative;
+  overflow: hidden;
 }
+
+.map-sweep {
+  position: absolute;
+  width: 260%;
+  height: 140px;
+  top: -80px;
+  left: -80%;
+  background: linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.09), transparent);
+  transform: rotate(-6deg);
+  pointer-events: none;
+  z-index: 350;
+  animation: sweep 6s linear infinite;
+}
+
+.map-legend {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: var(--space-3);
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+}
+
+.legend-dot.is-critical { background: #ef4444; }
+.legend-dot.is-high { background: #f97316; }
+.legend-dot.is-medium { background: #eab308; }
+.legend-dot.is-low { background: #3b82f6; }
 
 .map-note {
   margin-top: var(--space-3);
@@ -41,6 +139,26 @@
   border-radius: var(--radius-md);
   background: var(--glass);
   padding: var(--space-3);
+}
+
+.response-procedures {
+  margin-top: var(--space-3);
+  padding: var(--space-3);
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(2, 132, 199, 0.08), transparent 80%);
+}
+
+.response-procedures h4 {
+  font-size: 0.95rem;
+  margin-bottom: var(--space-2);
+}
+
+.response-procedures ul {
+  margin: 0;
+  padding-inline-start: 18px;
+  display: grid;
+  gap: 6px;
 }
 
 .incident-list {
@@ -56,6 +174,12 @@
   border-radius: var(--radius-md);
   background: var(--surface-strong);
   padding: var(--space-3);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
+}
+
+.incident-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 22px rgba(2, 6, 23, 0.1);
 }
 
 .incident-item.is-blocked {
@@ -82,6 +206,68 @@
 
 .incident-actions {
   margin-top: var(--space-2);
+  display: inline-flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.threat-marker {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5);
+  animation: marker-ping 1.8s ease-out infinite;
+}
+
+.threat-marker.risk-critical { background: #ef4444; box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.65); }
+.threat-marker.risk-high { background: #f97316; box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.6); }
+.threat-marker.risk-medium { background: #eab308; box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.58); }
+.threat-marker.risk-low { background: #3b82f6; box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.55); }
+
+.leaflet-interactive.attack-lane {
+  stroke-dasharray: 8 10;
+  animation: lane-flow 1.5s linear infinite;
+}
+
+.leaflet-interactive.attack-lane.lane-risk-critical { stroke: #ef4444; }
+.leaflet-interactive.attack-lane.lane-risk-high { stroke: #f97316; }
+.leaflet-interactive.attack-lane.lane-risk-medium { stroke: #eab308; }
+.leaflet-interactive.attack-lane.lane-risk-low { stroke: #3b82f6; }
+
+body.lanes-paused .leaflet-interactive.attack-lane,
+body.lanes-paused .threat-marker,
+body.lanes-paused .map-sweep,
+body.lanes-paused .pulse-dot {
+  animation-play-state: paused !important;
+}
+
+@keyframes lane-flow {
+  from { stroke-dashoffset: 36; }
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes marker-ping {
+  0% {
+    transform: scale(0.95);
+  }
+  70% {
+    transform: scale(1.06);
+  }
+  100% {
+    transform: scale(0.95);
+  }
+}
+
+@keyframes sweep {
+  from { transform: translateX(-28%) rotate(-6deg); }
+  to { transform: translateX(40%) rotate(-6deg); }
+}
+
+@keyframes live-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+  70% { box-shadow: 0 0 0 12px rgba(239, 68, 68, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
 }
 
 @media (max-width: 1200px) {
@@ -91,6 +277,14 @@
 
   .threat-layout {
     grid-template-columns: 1fr;
+  }
+
+  .threat-toolbar {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .threat-live-indicator {
+    justify-self: start;
   }
 }
 
@@ -102,6 +296,10 @@
   .map-actions {
     width: 100%;
     display: grid;
+  }
+
+  .threat-toolbar {
+    grid-template-columns: 1fr;
   }
 
   #threat-map {

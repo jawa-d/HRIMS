@@ -30,6 +30,8 @@
           <div class="map-actions">
             <button class="btn btn-primary" id="run-ai-defense-btn">Run AI Defense</button>
             <button class="btn btn-outline" id="export-ai-report-btn">Export Report</button>
+            <button class="btn btn-ghost" id="simulate-attack-btn">Simulate Attack Wave</button>
+            <button class="btn btn-ghost" id="toggle-lanes-btn">Pause Lanes</button>
           </div>
         </div>
 
@@ -38,6 +40,36 @@
           <div class="card threat-kpi"><div class="text-muted">High Risk</div><div class="threat-value" id="threat-high-risk">0</div></div>
           <div class="card threat-kpi"><div class="text-muted">Blocked Actors</div><div class="threat-value" id="threat-blocked">0</div></div>
           <div class="card threat-kpi"><div class="text-muted">AI Confidence</div><div class="threat-value" id="threat-confidence">0%</div></div>
+        </section>
+
+        <section class="threat-toolbar card">
+          <div class="toolbar-group">
+            <label for="threat-search">Search Actor / Type</label>
+            <input class="input" id="threat-search" placeholder="e.g. brute force, domain, actor..." />
+          </div>
+          <div class="toolbar-group">
+            <label for="risk-filter">Risk Level</label>
+            <select class="select" id="risk-filter">
+              <option value="">All</option>
+              <option value="critical">Critical (85+)</option>
+              <option value="high">High (70+)</option>
+              <option value="medium">Medium (50+)</option>
+              <option value="low">Low (&lt;50)</option>
+            </select>
+          </div>
+          <div class="toolbar-group">
+            <label for="status-filter">Status</label>
+            <select class="select" id="status-filter">
+              <option value="">All</option>
+              <option value="failed">Failed</option>
+              <option value="success">Success</option>
+              <option value="blocked">Blocked</option>
+            </select>
+          </div>
+          <div class="threat-live-indicator">
+            <span class="pulse-dot"></span>
+            <span>Live Monitoring</span>
+          </div>
         </section>
 
         <section class="threat-layout">
@@ -49,7 +81,15 @@
               </h3>
               <span class="badge" id="map-incidents-count">0</span>
             </div>
-            <div id="threat-map"></div>
+            <div id="threat-map">
+              <div class="map-sweep"></div>
+            </div>
+            <div class="map-legend">
+              <span class="legend-item"><span class="legend-dot is-critical"></span>Critical</span>
+              <span class="legend-item"><span class="legend-dot is-high"></span>High</span>
+              <span class="legend-item"><span class="legend-dot is-medium"></span>Medium</span>
+              <span class="legend-item"><span class="legend-dot is-low"></span>Low</span>
+            </div>
             <p class="text-muted map-note">Marker colors: red=blocked, orange=high risk, yellow=medium, blue=low.</p>
           </article>
 
@@ -63,6 +103,12 @@
             <div id="ai-report-box" class="ai-report-box">
               <strong>Waiting for AI analysis</strong>
               <p class="text-muted">Click "Run AI Defense" to evaluate incidents and generate response report.</p>
+            </div>
+            <div class="response-procedures" id="response-procedures">
+              <h4>Response Procedures</h4>
+              <ul id="response-list">
+                <li>Select an incident to see recommended actions.</li>
+              </ul>
             </div>
             <div class="incident-list" id="incident-list"></div>
           </article>

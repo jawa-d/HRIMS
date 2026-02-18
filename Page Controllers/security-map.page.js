@@ -16,8 +16,15 @@ const role = getRole();
 renderNavbar({ user, role });
 renderSidebar("security_map");
 
+const DEFENSE_HQ = [33.3152, 44.3661];
+
 const runAiBtn = document.getElementById("run-ai-defense-btn");
 const exportBtn = document.getElementById("export-ai-report-btn");
+const simulateBtn = document.getElementById("simulate-attack-btn");
+const toggleLanesBtn = document.getElementById("toggle-lanes-btn");
+const searchInput = document.getElementById("threat-search");
+const riskFilter = document.getElementById("risk-filter");
+const statusFilter = document.getElementById("status-filter");
 const attemptsEl = document.getElementById("threat-attempts");
 const highRiskEl = document.getElementById("threat-high-risk");
 const blockedEl = document.getElementById("threat-blocked");
@@ -25,17 +32,45 @@ const confidenceEl = document.getElementById("threat-confidence");
 const mapCountEl = document.getElementById("map-incidents-count");
 const reportBoxEl = document.getElementById("ai-report-box");
 const incidentListEl = document.getElementById("incident-list");
+const responseListEl = document.getElementById("response-list");
 
 let map;
 let markerLayer;
+let laneLayer;
 let incidents = [];
+let filteredIncidents = [];
+let lanesEnabled = true;
+let simulationTimer = null;
 const markersByIncidentId = new Map();
 
+function getRiskTier(incident) {
+  if (incident.isBlocked || incident.risk >= 85) return "critical";
+  if (incident.risk >= 70) return "high";
+  if (incident.risk >= 50) return "medium";
+  return "low";
+}
+
 function getMarkerColor(incident) {
-  if (incident.isBlocked) return "#ef4444";
-  if (incident.risk >= 75) return "#f97316";
-  if (incident.risk >= 50) return "#eab308";
+  const tier = getRiskTier(incident);
+  if (tier === "critical") return "#ef4444";
+  if (tier === "high") return "#f97316";
+  if (tier === "medium") return "#eab308";
   return "#3b82f6";
+}
+
+function getLaneClassName(incident) {
+  const tier = getRiskTier(incident);
+  return `attack-lane lane-risk-${tier}`;
+}
+
+function createThreatIcon(incident) {
+  const tier = getRiskTier(incident);
+  return window.L.divIcon({
+    className: "threat-marker-wrap",
+    html: `<span class="threat-marker risk-${tier}"></span>`,
+    iconSize: [18, 18],
+    iconAnchor: [9, 9]
+  });
 }
 
 function ensureMap() {
@@ -46,24 +81,19 @@ function ensureMap() {
     attribution: "&copy; OpenStreetMap contributors"
   }).addTo(map);
   markerLayer = window.L.layerGroup().addTo(map);
+  laneLayer = window.L.layerGroup().addTo(map);
 }
 
 function renderMap(items) {
   ensureMap();
   markerLayer.clearLayers();
+  laneLayer.clearLayers();
   markersByIncidentId.clear();
   if (!items.length) return;
 
   const bounds = [];
   items.forEach((incident) => {
-    const color = getMarkerColor(incident);
-    const marker = window.L.circleMarker(incident.coords, {
-      radius: Math.max(6, Math.min(13, Math.round(incident.risk / 10))),
-      color,
-      fillColor: color,
-      fillOpacity: 0.55,
-      weight: 2
-    });
+    const marker = window.L.marker(incident.coords, { icon: createThreatIcon(incident) });
     marker.bindPopup(`
       <strong>${incident.attackType}</strong><br/>
       Actor: ${incident.actorEmail || incident.actor}<br/>
@@ -75,8 +105,25 @@ function renderMap(items) {
     `);
     marker.addTo(markerLayer);
     markersByIncidentId.set(incident.id, marker);
+
+    if (lanesEnabled) {
+      window.L.polyline([incident.coords, DEFENSE_HQ], {
+        color: getMarkerColor(incident),
+        weight: 2,
+        opacity: 0.8,
+        className: getLaneClassName(incident)
+      }).addTo(laneLayer);
+    }
     bounds.push(incident.coords);
   });
+
+  window.L.circleMarker(DEFENSE_HQ, {
+    radius: 8,
+    color: "#22c55e",
+    fillColor: "#16a34a",
+    fillOpacity: 0.75,
+    weight: 2
+  }).bindTooltip("Defense HQ").addTo(markerLayer);
 
   if (bounds.length > 1) {
     map.fitBounds(bounds, { padding: [30, 30] });
@@ -93,9 +140,39 @@ function focusIncidentOnMap(incidentId) {
   marker.openPopup();
 }
 
+function proceduresForIncident(incident) {
+  if (!incident) {
+    return ["Select an incident to see recommended actions."];
+  }
+  const base = [
+    `Validate actor identity: ${incident.actorEmail || incident.actor}.`,
+    "Correlate with authentication logs and endpoint telemetry.",
+    "Open ticket in security queue and assign owner."
+  ];
+  if (incident.attackType.includes("Brute Force")) {
+    base.push("Enforce password reset and activate temporary IP throttling.");
+  }
+  if (incident.attackType.includes("Privilege")) {
+    base.push("Lock elevated role changes and force manager approval.");
+  }
+  if (incident.isBlocked || incident.risk >= 85) {
+    base.push("Keep actor blocked for 24h and request manual SOC review.");
+  } else if (incident.risk >= 70) {
+    base.push("Apply challenge flow (MFA) and monitor for 2h.");
+  } else {
+    base.push("Continue passive monitoring and auto-close if clean for 1h.");
+  }
+  return base;
+}
+
+function renderProcedures(incident) {
+  const steps = proceduresForIncident(incident);
+  responseListEl.innerHTML = steps.map((step) => `<li>${step}</li>`).join("");
+}
+
 function renderIncidents(items) {
   incidentListEl.innerHTML = items
-    .slice(0, 30)
+    .slice(0, 35)
     .map(
       (incident) => `
         <article class="incident-item ${incident.isBlocked ? "is-blocked" : ""}">
@@ -103,6 +180,7 @@ function renderIncidents(items) {
             <strong>${incident.attackType}</strong>
             <div class="incident-meta">
               <span class="badge">${incident.severity}</span>
+              <span class="badge">${getRiskTier(incident)}</span>
               <span class="incident-risk">${incident.risk}</span>
             </div>
           </div>
@@ -112,6 +190,7 @@ function renderIncidents(items) {
           <div>${incident.message || incident.explanation}</div>
           <div class="incident-actions">
             <button class="btn btn-ghost btn-xs" data-action="focus-map" data-id="${incident.id}">Show on Map</button>
+            <button class="btn btn-ghost btn-xs" data-action="procedure" data-id="${incident.id}">Run Procedure</button>
           </div>
           ${incident.isBlocked ? `<span class="badge">Blocked by AI</span>` : ""}
         </article>
@@ -120,7 +199,12 @@ function renderIncidents(items) {
     .join("");
 
   incidentListEl.querySelectorAll('button[data-action="focus-map"]').forEach((button) => {
+    button.addEventListener("click", () => focusIncidentOnMap(button.dataset.id));
+  });
+  incidentListEl.querySelectorAll('button[data-action="procedure"]').forEach((button) => {
     button.addEventListener("click", () => {
+      const incident = filteredIncidents.find((item) => item.id === button.dataset.id);
+      renderProcedures(incident);
       focusIncidentOnMap(button.dataset.id);
     });
   });
@@ -158,13 +242,71 @@ function renderLatestReport() {
   `;
 }
 
+function passesFilter(incident) {
+  const q = (searchInput.value || "").trim().toLowerCase();
+  const risk = riskFilter.value || "";
+  const status = statusFilter.value || "";
+
+  const hitQuery =
+    !q ||
+    `${incident.actorEmail || ""} ${incident.actor || ""} ${incident.attackType || ""} ${incident.message || ""}`
+      .toLowerCase()
+      .includes(q);
+
+  const tier = getRiskTier(incident);
+  const hitRisk = !risk || tier === risk;
+
+  const hitStatus =
+    !status ||
+    (status === "blocked" && incident.isBlocked) ||
+    (status !== "blocked" && incident.status === status);
+
+  return hitQuery && hitRisk && hitStatus;
+}
+
+function rerenderThreatView() {
+  filteredIncidents = incidents.filter(passesFilter);
+  renderKpis(filteredIncidents);
+  renderMap(filteredIncidents);
+  renderIncidents(filteredIncidents);
+  if (!filteredIncidents.length) {
+    renderProcedures(null);
+  }
+}
+
 async function loadThreatData() {
   const events = await listSecurityEvents();
   incidents = buildThreatMap(events).sort((a, b) => b.risk - a.risk || b.createdAt - a.createdAt);
-  renderKpis(incidents);
-  renderMap(incidents);
-  renderIncidents(incidents);
+  rerenderThreatView();
   renderLatestReport();
+}
+
+function stopSimulation() {
+  if (simulationTimer) {
+    window.clearInterval(simulationTimer);
+    simulationTimer = null;
+  }
+}
+
+function simulateAttackWave() {
+  stopSimulation();
+  const wave = filteredIncidents.slice(0, 8);
+  if (!wave.length) {
+    showToast("info", "No incidents available for simulation.");
+    return;
+  }
+  let i = 0;
+  showToast("info", "Attack wave simulation started.");
+  simulationTimer = window.setInterval(() => {
+    const incident = wave[i % wave.length];
+    focusIncidentOnMap(incident.id);
+    renderProcedures(incident);
+    i += 1;
+    if (i >= wave.length * 2) {
+      stopSimulation();
+      showToast("success", "Attack wave simulation complete.");
+    }
+  }, 800);
 }
 
 runAiBtn.addEventListener("click", async () => {
@@ -178,12 +320,25 @@ runAiBtn.addEventListener("click", async () => {
   await loadThreatData();
 });
 
+simulateBtn.addEventListener("click", simulateAttackWave);
+
+toggleLanesBtn.addEventListener("click", () => {
+  lanesEnabled = !lanesEnabled;
+  document.body.classList.toggle("lanes-paused", !lanesEnabled);
+  toggleLanesBtn.textContent = lanesEnabled ? "Pause Lanes" : "Resume Lanes";
+  rerenderThreatView();
+});
+
+searchInput.addEventListener("input", rerenderThreatView);
+riskFilter.addEventListener("change", rerenderThreatView);
+statusFilter.addEventListener("change", rerenderThreatView);
+
 window.addEventListener("load", async () => {
   if (!navigator?.geolocation) return;
   try {
     await new Promise((resolve) => {
       navigator.geolocation.getCurrentPosition(
-        async (pos) => {
+        (pos) => {
           showToast(
             "info",
             `Location detected: ${Number(pos.coords.latitude).toFixed(5)}, ${Number(pos.coords.longitude).toFixed(5)}`
@@ -229,6 +384,7 @@ exportBtn.addEventListener("click", () => {
 });
 
 loadThreatData();
+renderProcedures(null);
 
 if (window.lucide?.createIcons) {
   window.lucide.createIcons();
