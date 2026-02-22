@@ -5,6 +5,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: clamp(10px, 3vh, 24px);
+  overflow-y: auto;
   opacity: 0;
   pointer-events: none;
   transition: opacity var(--transition-base);
@@ -17,29 +19,90 @@
 }
 
 .modal {
-  width: min(560px, 90vw);
+  width: min(640px, 100%);
+  max-height: min(90vh, 860px);
   background: var(--surface-strong);
   border-radius: var(--radius-lg);
   border: 1px solid var(--border);
-  padding: var(--space-5);
+  padding: clamp(12px, 2.2vw, var(--space-5));
   box-shadow: var(--shadow-lg);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  overflow: hidden;
 }
 
 .modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: var(--space-4);
+  gap: var(--space-3);
 }
 
 .modal-body {
   display: grid;
   gap: var(--space-3);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-inline: 2px;
+  padding-bottom: 2px;
+  scrollbar-gutter: stable;
 }
 
 .modal-actions {
   display: flex;
   justify-content: flex-end;
   gap: var(--space-3);
-  margin-top: var(--space-4);
+  margin-top: var(--space-1);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border);
+}
+
+.modal-body label {
+  display: grid;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.modal-body .input,
+.modal-body .select,
+.modal-body .textarea {
+  min-height: 42px;
+}
+
+.modal-body::-webkit-scrollbar {
+  width: 10px;
+}
+
+.modal-body::-webkit-scrollbar-track {
+  background: rgba(148, 163, 184, 0.18);
+  border-radius: 999px;
+}
+
+.modal-body::-webkit-scrollbar-thumb {
+  background: rgba(15, 118, 110, 0.42);
+  border-radius: 999px;
+}
+
+@media (max-width: 720px) {
+  .modal-backdrop {
+    padding: 8px;
+  }
+
+  .modal {
+    max-height: 96vh;
+    border-radius: var(--radius-md);
+    gap: var(--space-2);
+  }
+
+  .modal-header {
+    align-items: flex-start;
+  }
+
+  .modal-actions {
+    position: sticky;
+    bottom: 0;
+    background: var(--surface-strong);
+    padding-bottom: 2px;
+  }
 }
