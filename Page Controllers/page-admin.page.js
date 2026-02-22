@@ -156,16 +156,20 @@ async function openPauseModal(item, scheduleOnly = false) {
   openModal({
     title: scheduleOnly ? `${t("page_admin.action_schedule")} - ${label}` : `${t("page_admin.action_pause")} - ${label}`,
     content: `
-      <label>${t("page_admin.reason_label")}
-        <textarea class="textarea" id="page-maint-reason" rows="3" placeholder="${t("page_admin.reason_placeholder")}">${item.reason || ""}</textarea>
-      </label>
-      <label>${t("page_admin.pause_at_label")}
-        <input class="input" id="page-pause-at" type="datetime-local" value="${toDateTimeLocalInput(item.pauseAt)}" />
-      </label>
-      <label>${t("page_admin.resume_at_label")}
-        <input class="input" id="page-resume-at" type="datetime-local" value="${toDateTimeLocalInput(item.resumeAt)}" />
-      </label>
-      <small class="text-muted">${t("page_admin.schedule_hint")}</small>
+      <div class="page-admin-modal-form">
+        <label class="page-admin-modal-full">${t("page_admin.reason_label")}
+          <textarea class="textarea" id="page-maint-reason" rows="3" placeholder="${t("page_admin.reason_placeholder")}">${item.reason || ""}</textarea>
+        </label>
+        <div class="page-admin-modal-grid">
+          <label>${t("page_admin.pause_at_label")}
+            <input class="input" id="page-pause-at" type="datetime-local" value="${toDateTimeLocalInput(item.pauseAt)}" />
+          </label>
+          <label>${t("page_admin.resume_at_label")}
+            <input class="input" id="page-resume-at" type="datetime-local" value="${toDateTimeLocalInput(item.resumeAt)}" />
+          </label>
+        </div>
+        <small class="text-muted page-admin-modal-note">${t("page_admin.schedule_hint")}</small>
+      </div>
     `,
     actions: [
       {
@@ -216,10 +220,14 @@ async function openRunModal(item, scheduleOnly = false) {
   openModal({
     title: scheduleOnly ? `${t("page_admin.action_schedule")} - ${label}` : `${t("page_admin.action_run")} - ${label}`,
     content: `
-      <label>${t("page_admin.resume_at_label")}
-        <input class="input" id="page-resume-at" type="datetime-local" value="${toDateTimeLocalInput(item.resumeAt)}" />
-      </label>
-      <small class="text-muted">${scheduleOnly ? t("page_admin.resume_schedule_hint") : t("page_admin.run_hint")}</small>
+      <div class="page-admin-modal-form">
+        <div class="page-admin-modal-grid">
+          <label>${t("page_admin.resume_at_label")}
+            <input class="input" id="page-resume-at" type="datetime-local" value="${toDateTimeLocalInput(item.resumeAt)}" />
+          </label>
+        </div>
+        <small class="text-muted page-admin-modal-note">${scheduleOnly ? t("page_admin.resume_schedule_hint") : t("page_admin.run_hint")}</small>
+      </div>
     `,
     actions: [
       {
