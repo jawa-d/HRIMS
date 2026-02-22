@@ -1,0 +1,82 @@
+.page-admin-card {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.page-admin-help {
+  margin-bottom: 2px;
+}
+
+.page-admin-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.page-admin-table th,
+.page-admin-table td {
+  vertical-align: middle;
+}
+
+.page-admin-table td:last-child,
+.page-admin-table th:last-child {
+  text-align: end;
+}
+
+.page-admin-badge {
+  min-width: 86px;
+  justify-content: center;
+}
+
+.page-admin-badge.paused {
+  background: rgba(239, 68, 68, 0.14);
+  color: #b91c1c;
+}
+
+.page-admin-badge.running {
+  background: rgba(34, 197, 94, 0.16);
+  color: #166534;
+}
+
+.page-admin-badge.locked {
+  background: rgba(59, 130, 246, 0.16);
+  color: #1d4ed8;
+}
+
+.page-admin-action-btn {
+  min-width: 100px;
+}
+
+.page-admin-actions {
+  display: inline-flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.page-admin-meta {
+  display: grid;
+  gap: 4px;
+}
+
+.page-admin-meta small {
+  color: var(--text-muted);
+}
+
+.page-admin-audit-card {
+  margin-top: var(--space-4);
+}
+
+.page-admin-audit-table td,
+.page-admin-audit-table th {
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .page-admin-table th,
+  .page-admin-table td,
+  .page-admin-audit-table th,
+  .page-admin-audit-table td {
+    font-size: 0.84rem;
+    white-space: nowrap;
+  }
+}

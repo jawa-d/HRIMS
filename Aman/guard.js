@@ -1,5 +1,6 @@
 import { STORAGE_KEYS, ROLE_PERMISSIONS, MENU_ITEMS, DEFAULT_LANGUAGE } from "../app.config.js";
 import { getStoredProfile } from "./auth.js";
+import { isPageEnabled } from "../Services/page-availability.service.js";
 
 function parseStorage(key, fallback) {
   try {
@@ -67,6 +68,11 @@ export function enforceAuth(pageKey) {
   }
   if (pageKey && !canAccess(pageKey)) {
     window.location.href = getDefaultPage();
+    return false;
+  }
+  if (pageKey && !isPageEnabled(pageKey)) {
+    const returnTo = window.location.pathname.split("/").pop() || "dashboard.html";
+    window.location.href = `maintenance.html?page=${encodeURIComponent(pageKey)}&from=${encodeURIComponent(returnTo)}`;
     return false;
   }
   return true;

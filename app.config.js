@@ -13,7 +13,8 @@ export const STORAGE_KEYS = {
   uxAnalytics: "hrms_ux_analytics",
   uiErrors: "hrms_ui_errors",
   aiDefenseBlocks: "hrms_ai_defense_blocks",
-  aiDefenseReports: "hrms_ai_defense_reports"
+  aiDefenseReports: "hrms_ai_defense_reports",
+  pageAvailability: "hrms_page_availability"
 };
 
 export const ROLES = ["super_admin", "hr_admin", "manager", "employee"];
@@ -64,6 +65,7 @@ export const MENU_ITEMS = [
   { key: "notifications_center", labelKey: "nav.notifications_center", href: "notifications-center.html", icon: "bell-ring" },
   { key: "security_center", labelKey: "nav.security_center", href: "security-center.html", icon: "shield-alert" },
   { key: "security_map", labelKey: "nav.security_map", href: "security-map.html", icon: "map-pinned" },
+  { key: "page_admin", labelKey: "nav.page_admin", href: "page-admin.html", icon: "power" },
   { key: "settings", labelKey: "nav.settings", href: "settings.html", icon: "settings" },
   { key: "workspace", labelKey: "nav.workspace", href: "workspace.html", icon: "layers-3" },
   ...PROFESSIONAL_MENU_ITEMS,
@@ -87,6 +89,7 @@ export const ROLE_PERMISSIONS = {
     "notifications_center",
     "security_center",
     "security_map",
+    "page_admin",
     "settings",
     "workspace",
     "my_requests",
@@ -206,4 +209,4 @@ export const ACTION_PERMISSIONS = {
 export const DEFAULT_LANGUAGE = "ar";
 export const DEFAULT_THEME = "light";
 
-export const APP_NAME = "HRMS";
+export const APP_NAME = "Wadi Al-Rafidain";
