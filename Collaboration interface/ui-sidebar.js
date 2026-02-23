@@ -7,7 +7,7 @@ const SECTION_DEFS = [
   { key: "people", en: "People Ops", ar: "الموارد البشرية", items: ["employees", "my_leaves", "leaves", "attendance", "timeoff", "payroll", "assets"] },
   { key: "org", en: "Organization", ar: "التنظيم", items: ["orgchart", "departments", "positions", "reports"] },
   { key: "workspace", en: "Workspace", ar: "مساحة العمل", items: ["workspace", "my_requests", "manager_inbox", "approval_timeline", "team_calendar", "employee_360", "document_center", "recruitment_pipeline", "onboarding_tracker", "offboarding_checklist", "performance_reviews", "compensation_history", "attendance_anomalies", "policy_center", "announcements", "hr_tickets", "org_insights", "asset_lifecycle", "training_certifications", "role_permission_matrix", "executive_dashboard"] },
-  { key: "admin", en: "Administration", ar: "الإدارة", items: ["notifications_center", "security_center", "security_map", "page_admin", "settings"] }
+  { key: "admin", en: "Administration", ar: "الإدارة", items: ["notifications_center", "security_center", "security_map", "system_health", "page_admin", "settings"] }
 ];
 
 let lastRole = null;

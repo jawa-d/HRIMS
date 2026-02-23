@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HRMS | System Health</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../HRMS%20CSS/tokens.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/global.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/components.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/navbar.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/sidebar.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/toast.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/system-health.css" />
+</head>
+<body data-page="system_health">
+  <div id="app" class="app-shell">
+    <div id="sidebar-root"></div>
+    <div class="main-content">
+      <div id="navbar-root"></div>
+      <main class="page">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title" data-i18n="system_health.title">System Health</h1>
+            <p class="text-muted" data-i18n="system_health.subtitle">Live health checks for backend, latency, UI errors, and page operations.</p>
+          </div>
+          <button class="btn btn-outline" id="health-refresh-btn" data-i18n="common.refresh">Refresh</button>
+        </div>
+
+        <section class="health-kpis">
+          <div class="card health-kpi">
+            <div class="text-muted" data-i18n="system_health.firebase_status">Firebase Status</div>
+            <div class="health-kpi-value" id="health-firebase-state">-</div>
+            <small class="text-muted" id="health-firebase-detail">-</small>
+          </div>
+          <div class="card health-kpi">
+            <div class="text-muted" data-i18n="system_health.response_time">Response Time</div>
+            <div class="health-kpi-value" id="health-latency">-</div>
+            <small class="text-muted" data-i18n="system_health.ms_note">Measured from browser to Firebase</small>
+          </div>
+          <div class="card health-kpi">
+            <div class="text-muted" data-i18n="system_health.ui_errors">Recent UI Errors</div>
+            <div class="health-kpi-value" id="health-ui-errors-count">0</div>
+            <small class="text-muted" id="health-refresh-time">-</small>
+          </div>
+          <div class="card health-kpi">
+            <div class="text-muted" data-i18n="system_health.page_ops">Paused Pages</div>
+            <div class="health-kpi-value" id="health-paused-pages">0</div>
+            <small class="text-muted" data-i18n="system_health.page_ops_hint">From Page Management state</small>
+          </div>
+        </section>
+
+        <section class="grid-2">
+          <div class="card">
+            <div class="card-header">
+              <h3 class="section-title">
+                <i data-lucide="bug"></i>
+                <span data-i18n="system_health.last_ui_errors">Latest UI Errors</span>
+              </h3>
+            </div>
+            <div class="table-scroll">
+              <table class="table health-table" id="health-errors-table"></table>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <h3 class="section-title">
+                <i data-lucide="power"></i>
+                <span data-i18n="system_health.last_page_actions">Latest Page Stop/Run Actions</span>
+              </h3>
+            </div>
+            <div class="table-scroll">
+              <table class="table health-table" id="health-page-ops-table"></table>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script type="module" src="../Page%20Controllers/system-health.page.js"></script>
+</body>
+</html>

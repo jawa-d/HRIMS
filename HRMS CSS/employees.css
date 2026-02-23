@@ -6,3 +6,8 @@
 .table a:hover {
   text-decoration: underline;
 }
+
+#employees-backup-btn,
+#employees-restore-btn {
+  min-width: 110px;
+}

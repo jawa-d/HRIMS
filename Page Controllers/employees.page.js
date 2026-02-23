@@ -13,7 +13,11 @@ import {
   listEmployees,
   createEmployee,
   updateEmployee,
-  deleteEmployee
+  archiveEmployee,
+  restoreEmployee,
+  hasEmployeeDuplicate,
+  exportEmployeesBackup,
+  restoreEmployeesBackup
 } from "../Services/employees.service.js";
 
 if (!enforceAuth("employees")) {
@@ -33,6 +37,9 @@ const canExport = canDo({ role, entity: "employees", action: "export" }) || role
 
 const addButton = document.getElementById("add-employee-btn");
 const exportButton = document.getElementById("employees-export-btn");
+const backupButton = document.getElementById("employees-backup-btn");
+const restoreButton = document.getElementById("employees-restore-btn");
+const restoreFileInput = document.getElementById("employees-restore-file");
 const searchInput = document.getElementById("employee-search");
 const statusFilter = document.getElementById("employee-status-filter");
 const tbody = document.getElementById("employees-body");
@@ -41,6 +48,8 @@ const paginationEl = document.getElementById("employees-pagination");
 
 if (!canCreate) addButton.classList.add("hidden");
 if (!canExport && exportButton) exportButton.classList.add("hidden");
+if (!canExport && backupButton) backupButton.classList.add("hidden");
+if (!canCreate && restoreButton) restoreButton.classList.add("hidden");
 
 const PREF_KEY = "employees_table";
 const prefs = getTablePrefs(PREF_KEY, { query: "", status: "", page: 1, pageSize: 10 });
@@ -62,7 +71,8 @@ function filterEmployees() {
       (emp.fullName || "").toLowerCase().includes(query) ||
       (emp.email || "").toLowerCase().includes(query) ||
       (emp.empId || "").toLowerCase().includes(query);
-    const matchesStatus = !status || emp.status === status;
+    const normalizedStatus = emp.isArchived ? "archived" : (emp.status || "active");
+    const matchesStatus = !status || normalizedStatus === status;
     return matchesQuery && matchesStatus;
   });
 }
@@ -102,13 +112,14 @@ function renderEmployees() {
         <td><a href="employee-details.html?id=${emp.id}">${emp.fullName || "-"}</a></td>
         <td>${emp.email || "-"}</td>
         <td>${emp.departmentId || "-"}</td>
-        <td><span class="badge">${emp.status || "active"}</span></td>
+        <td><span class="badge">${emp.isArchived ? "archived" : (emp.status || "active")}</span></td>
         <td>
           ${
             canEdit || canDelete
               ? `
-            ${canEdit ? `<button class="btn btn-ghost" data-action="edit" data-id="${emp.id}">${t("common.edit")}</button>` : ""}
-            ${canDelete ? `<button class="btn btn-ghost" data-action="delete" data-id="${emp.id}">${t("common.delete")}</button>` : ""}
+            ${canEdit && !emp.isArchived ? `<button class="btn btn-ghost" data-action="edit" data-id="${emp.id}">${t("common.edit")}</button>` : ""}
+            ${canDelete && !emp.isArchived ? `<button class="btn btn-ghost" data-action="archive" data-id="${emp.id}">Archive</button>` : ""}
+            ${canDelete && emp.isArchived ? `<button class="btn btn-ghost" data-action="restore" data-id="${emp.id}">Restore</button>` : ""}
           `
               : `<span class="text-muted">${t("common.view_only")}</span>`
           }
@@ -150,7 +161,7 @@ function collectEmployeeForm() {
   return {
     empId: document.getElementById("emp-id").value.trim(),
     fullName: document.getElementById("emp-name").value.trim(),
-    email: document.getElementById("emp-email").value.trim(),
+    email: document.getElementById("emp-email").value.trim().toLowerCase(),
     phone: document.getElementById("emp-phone").value.trim(),
     departmentId: document.getElementById("emp-dept").value.trim(),
     positionId: document.getElementById("emp-position").value.trim(),
@@ -171,6 +182,27 @@ function openEmployeeModal(emp) {
         className: "btn btn-primary",
         onClick: async () => {
           const payload = collectEmployeeForm();
+          const duplicate = await hasEmployeeDuplicate(payload, emp?.id || "");
+          if (duplicate.exists) {
+            const fieldLabelMap = {
+              empId: "Employee ID",
+              email: "Email",
+              phone: "Phone"
+            };
+            const fieldLabel = fieldLabelMap[duplicate.field] || duplicate.field;
+            showToast("error", `Duplicate ${fieldLabel}. This value is already used.`);
+            await logSecurityEvent({
+              action: "employee_duplicate_blocked",
+              entity: "employees",
+              entityId: emp?.id || "",
+              severity: "warning",
+              actorUid: user?.uid || "",
+              actorEmail: user?.email || "",
+              actorRole: role || "",
+              message: `Blocked duplicate ${duplicate.field} during employee save.`
+            });
+            return;
+          }
           if (emp) {
             await updateEmployee(emp.id, payload);
             await logSecurityEvent({
@@ -210,19 +242,34 @@ async function handleRowAction(action, id) {
   if (action === "edit" && canEdit) {
     openEmployeeModal(emp);
   }
-  if (action === "delete" && canDelete) {
-    await deleteEmployee(id);
+  if (action === "archive" && canDelete) {
+    await archiveEmployee(id, { uid: user?.uid, email: user?.email, role });
     await logSecurityEvent({
-      action: "employee_delete",
+      action: "employee_archive",
       entity: "employees",
       entityId: id,
       severity: "warning",
       actorUid: user?.uid || "",
       actorEmail: user?.email || "",
       actorRole: role || "",
-      message: `Deleted employee ${emp.empId || id}`
+      message: `Archived employee ${emp.empId || id}`
     });
-    showToast("success", `${t("common.delete")} ${t("employees.title")}`);
+    showToast("success", "Employee archived");
+    await loadEmployees();
+  }
+  if (action === "restore" && canDelete) {
+    await restoreEmployee(id);
+    await logSecurityEvent({
+      action: "employee_restore",
+      entity: "employees",
+      entityId: id,
+      severity: "info",
+      actorUid: user?.uid || "",
+      actorEmail: user?.email || "",
+      actorRole: role || "",
+      message: `Restored employee ${emp.empId || id}`
+    });
+    showToast("success", "Employee restored");
     await loadEmployees();
   }
 }
@@ -245,12 +292,70 @@ function exportCurrentRows() {
 
 async function loadEmployees() {
   showTableSkeleton(tbody, { rows: 6, cols: 6 });
-  employees = await listEmployees();
+  employees = await listEmployees({ includeArchived: true });
   renderEmployees();
+}
+
+async function backupEmployees() {
+  const backup = await exportEmployeesBackup();
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `employees-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  a.style.display = "none";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  await logSecurityEvent({
+    action: "employees_backup_export",
+    entity: "employees",
+    actorUid: user?.uid || "",
+    actorEmail: user?.email || "",
+    actorRole: role || "",
+    message: "Exported employees backup."
+  });
+  showToast("success", "Employees backup downloaded");
+}
+
+function requestRestoreFile() {
+  if (!restoreFileInput) return;
+  restoreFileInput.value = "";
+  restoreFileInput.click();
+}
+
+async function handleRestoreFileChange(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  try {
+    const raw = await file.text();
+    const parsed = JSON.parse(raw);
+    const restoredCount = await restoreEmployeesBackup(parsed, {
+      uid: user?.uid || "",
+      email: user?.email || "",
+      role: role || ""
+    });
+    await logSecurityEvent({
+      action: "employees_backup_restore",
+      entity: "employees",
+      actorUid: user?.uid || "",
+      actorEmail: user?.email || "",
+      actorRole: role || "",
+      message: `Restored ${restoredCount} employees from backup.`
+    });
+    showToast("success", `Restored ${restoredCount} employees`);
+    await loadEmployees();
+  } catch (_) {
+    showToast("error", "Invalid backup file");
+  }
 }
 
 addButton.addEventListener("click", () => openEmployeeModal());
 if (exportButton) exportButton.addEventListener("click", exportCurrentRows);
+if (backupButton) backupButton.addEventListener("click", backupEmployees);
+if (restoreButton) restoreButton.addEventListener("click", requestRestoreFile);
+if (restoreFileInput) restoreFileInput.addEventListener("change", handleRestoreFileChange);
 searchInput.addEventListener("input", () => {
   prefs.query = searchInput.value || "";
   prefs.page = 1;

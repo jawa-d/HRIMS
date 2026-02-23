@@ -43,7 +43,12 @@ function formatDateTime(value) {
   if (!value) return "-";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "-";
-  return date.toLocaleString();
+  const lang = document.documentElement.getAttribute("lang") || "en";
+  const locale = lang.startsWith("ar") ? "ar-IQ" : "en-US";
+  return new Intl.DateTimeFormat(locale, {
+    dateStyle: "medium",
+    timeStyle: "short"
+  }).format(date);
 }
 
 function statusBadge(item) {
@@ -200,10 +205,10 @@ async function openPauseModal(item, scheduleOnly = false) {
           }
 
           if (immediatePause) {
-            await logPageAction("page_availability_paused", item, { reason, resumeAt });
+            void logPageAction("page_availability_paused", item, { reason, resumeAt });
             showToast("success", t("page_admin.updated_paused"));
           } else {
-            await logPageAction("page_availability_schedule_updated", item, { reason, pauseAt, resumeAt });
+            void logPageAction("page_availability_schedule_updated", item, { reason, pauseAt, resumeAt });
             showToast("success", t("page_admin.updated_schedule"));
           }
           closeModal();
@@ -252,7 +257,7 @@ async function openRunModal(item, scheduleOnly = false) {
               showToast("error", t("page_admin.error_save"));
               return;
             }
-            await logPageAction("page_availability_schedule_updated", item, { resumeAt });
+            void logPageAction("page_availability_schedule_updated", item, { resumeAt });
             showToast("success", t("page_admin.updated_schedule"));
           } else {
             const changed = setPageEnabled(item.key, true, { actor });
@@ -260,7 +265,7 @@ async function openRunModal(item, scheduleOnly = false) {
               showToast("error", t("page_admin.error_save"));
               return;
             }
-            await logPageAction("page_availability_resumed", item);
+            void logPageAction("page_availability_resumed", item);
             showToast("success", t("page_admin.updated_running"));
           }
 
@@ -308,16 +313,33 @@ function renderTable() {
       const mode = button.dataset.mode;
       const item = rows.find((entry) => entry.key === key);
       if (!item) return;
+
       if (mode === "schedule") {
         if (item.enabled) await openPauseModal(item, true);
         else await openRunModal(item, true);
         return;
       }
+
       if (item.enabled) {
-        await openPauseModal(item);
+        const changed = setPageEnabled(item.key, false, { reason: "", resumeAt: "", actor });
+        if (!changed) {
+          showToast("error", t("page_admin.error_save"));
+          return;
+        }
+        showToast("success", t("page_admin.updated_paused"));
+        void logPageAction("page_availability_paused", item, { direct: true });
+        await refreshAll();
         return;
       }
-      await openRunModal(item);
+
+      const changed = setPageEnabled(item.key, true, { actor });
+      if (!changed) {
+        showToast("error", t("page_admin.error_save"));
+        return;
+      }
+      showToast("success", t("page_admin.updated_running"));
+      void logPageAction("page_availability_resumed", item);
+      await refreshAll();
     });
   });
 }
