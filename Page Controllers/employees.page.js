@@ -15,6 +15,7 @@ import {
   updateEmployee,
   archiveEmployee,
   restoreEmployee,
+  deleteEmployee,
   hasEmployeeDuplicate,
   exportEmployeesBackup,
   restoreEmployeesBackup
@@ -120,6 +121,7 @@ function renderEmployees() {
             ${canEdit && !emp.isArchived ? `<button class="btn btn-ghost" data-action="edit" data-id="${emp.id}">${t("common.edit")}</button>` : ""}
             ${canDelete && !emp.isArchived ? `<button class="btn btn-ghost" data-action="archive" data-id="${emp.id}">Archive</button>` : ""}
             ${canDelete && emp.isArchived ? `<button class="btn btn-ghost" data-action="restore" data-id="${emp.id}">Restore</button>` : ""}
+            ${canDelete ? `<button class="btn btn-ghost" data-action="delete" data-id="${emp.id}">Delete</button>` : ""}
           `
               : `<span class="text-muted">${t("common.view_only")}</span>`
           }
@@ -270,6 +272,23 @@ async function handleRowAction(action, id) {
       message: `Restored employee ${emp.empId || id}`
     });
     showToast("success", "Employee restored");
+    await loadEmployees();
+  }
+  if (action === "delete" && canDelete) {
+    const confirmed = window.confirm("Delete this employee permanently?");
+    if (!confirmed) return;
+    await deleteEmployee(id);
+    await logSecurityEvent({
+      action: "employee_delete",
+      entity: "employees",
+      entityId: id,
+      severity: "critical",
+      actorUid: user?.uid || "",
+      actorEmail: user?.email || "",
+      actorRole: role || "",
+      message: `Deleted employee ${emp.empId || id}`
+    });
+    showToast("success", "Employee deleted");
     await loadEmployees();
   }
 }

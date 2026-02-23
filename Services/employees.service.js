@@ -7,6 +7,7 @@ import {
   addDoc,
   setDoc,
   updateDoc,
+  deleteDoc,
   query,
   orderBy,
   where,
@@ -86,6 +87,10 @@ export async function restoreEmployee(id) {
     status: "active",
     updatedAt: ts()
   });
+}
+
+export async function deleteEmployee(id) {
+  await deleteDoc(doc(db, "employees", id));
 }
 
 export async function hasEmployeeDuplicate(payload, excludeId = "") {
