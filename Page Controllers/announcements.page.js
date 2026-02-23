@@ -47,6 +47,51 @@ if (!canManage && statusFilter) statusFilter.value = "published";
 let announcements = [];
 let users = [];
 let unsubscribeAnnouncements = null;
+const COMPANY_NAME_AR = "\u0634\u0631\u0643\u0629 \u0648\u0627\u062F\u064A \u0627\u0644\u0631\u0627\u0641\u062F\u064A\u0646 \u0644\u0644\u062A\u0623\u0645\u064A\u0646 \u0627\u0644\u062A\u0643\u0627\u0641\u0644\u064A";
+
+function normalizeWhatsAppNumber(value) {
+  const cleaned = String(value || "").replace(/[^\d+]/g, "").trim();
+  if (!cleaned) return "";
+  if (cleaned.startsWith("+")) return cleaned.slice(1);
+  if (cleaned.startsWith("00")) return cleaned.slice(2);
+  return cleaned;
+}
+
+function buildWhatsAppText(item = {}) {
+  const recipient = String(item.whatsappRecipientName || "").trim();
+  const title = String(item.title || "").trim();
+  const body = String(item.body || "").trim();
+  const lines = [
+    "*\u0625\u0634\u0639\u0627\u0631 \u0645\u0646 \u0646\u0638\u0627\u0645 \u0627\u0644\u0645\u0648\u0627\u0631\u062F \u0627\u0644\u0628\u0634\u0631\u064A\u0629*",
+    `*\u0627\u0644\u062C\u0647\u0629:* ${COMPANY_NAME_AR}`,
+    "",
+    recipient ? `*\u0639\u0646\u0627\u064A\u0629:* ${recipient}` : "",
+    title ? `*\u0627\u0644\u0645\u0648\u0636\u0648\u0639:* ${title}` : "",
+    "*\u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0631\u0633\u0627\u0644\u0629:*",
+    body || "-",
+    "",
+    "\u0634\u0643\u0631\u0627 \u0644\u0643\u0645",
+    COMPANY_NAME_AR
+  ].filter(Boolean);
+  return lines.join("\n").trim();
+}
+
+async function openWhatsAppForAnnouncement(item = {}) {
+  const phone = normalizeWhatsAppNumber(item.whatsappNumber);
+  if (!phone) {
+    showToast("error", "WhatsApp number is required");
+    return;
+  }
+
+  const text = buildWhatsAppText(item);
+  if (!text) {
+    showToast("error", "Message is empty");
+    return;
+  }
+
+  const url = `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
+  window.open(url, "_blank", "noopener,noreferrer");
+}
 
 function toDateInput(value) {
   if (!value) return "";
@@ -100,6 +145,12 @@ function announcementFormContent(item = {}) {
   return `
     <label>Title<input class="input" id="ann-title" value="${item.title || ""}" /></label>
     <label>Message<textarea class="textarea" id="ann-body" rows="5">${item.body || ""}</textarea></label>
+    <label>WhatsApp Number (with country code)
+      <input class="input" id="ann-whatsapp-number" value="${item.whatsappNumber || ""}" placeholder="9647XXXXXXXX" />
+    </label>
+    <label>WhatsApp Recipient Name (optional)
+      <input class="input" id="ann-whatsapp-recipient" value="${item.whatsappRecipientName || ""}" placeholder="Employee name" />
+    </label>
     <label>Audience
       <select class="select" id="ann-audience-input">
         <option value="all" ${item.audience === "all" ? "selected" : ""}>All Staff</option>
@@ -120,6 +171,7 @@ function announcementFormContent(item = {}) {
       <input class="input" id="ann-expires" type="date" value="${toDateInput(item.expiresAt)}" />
     </label>
     <label><input type="checkbox" id="ann-pinned" ${item.pinned ? "checked" : ""} /> Pin this announcement</label>
+    <label><input type="checkbox" id="ann-send-whatsapp" /> Send via WhatsApp now</label>
   `;
 }
 
@@ -130,6 +182,9 @@ function collectAnnouncementForm(existing = {}) {
     ...existing,
     title: document.getElementById("ann-title").value.trim(),
     body: document.getElementById("ann-body").value.trim(),
+    whatsappNumber: normalizeWhatsAppNumber(document.getElementById("ann-whatsapp-number")?.value || ""),
+    whatsappRecipientName: document.getElementById("ann-whatsapp-recipient")?.value.trim() || "",
+    sendWhatsAppNow: Boolean(document.getElementById("ann-send-whatsapp")?.checked),
     audience: document.getElementById("ann-audience-input").value,
     status: document.getElementById("ann-status-input").value,
     pinned: Boolean(document.getElementById("ann-pinned").checked),
@@ -163,11 +218,17 @@ function openAnnouncementModal(item = null) {
             if (payload.status === "published") {
               await notifyAnnouncementPublished(payload);
             }
+            if (payload.sendWhatsAppNow) {
+              await openWhatsAppForAnnouncement(payload);
+            }
             showToast("success", "Announcement updated");
           } else {
             await createAnnouncement(payload);
             if (payload.status === "published") {
               await notifyAnnouncementPublished(payload);
+            }
+            if (payload.sendWhatsAppNow) {
+              await openWhatsAppForAnnouncement(payload);
             }
             showToast("success", "Announcement posted");
           }
@@ -203,6 +264,11 @@ async function handleAction(action, id) {
     return;
   }
 
+  if (action === "send-whatsapp" && canManage) {
+    await openWhatsAppForAnnouncement(item);
+    return;
+  }
+
   if (action === "delete" && canDelete) {
     const confirmed = window.confirm("Delete this announcement?");
     if (!confirmed) return;
@@ -235,6 +301,7 @@ function renderAnnouncements() {
               canManage
                 ? `
               <button class="btn btn-ghost" data-action="edit" data-id="${item.id}">Edit</button>
+              ${item.whatsappNumber ? `<button class="btn btn-ghost" data-action="send-whatsapp" data-id="${item.id}">Send WhatsApp</button>` : ""}
               ${
                 item.status === "published"
                   ? `<button class="btn btn-ghost" data-action="unpublish" data-id="${item.id}">Unpublish</button>`

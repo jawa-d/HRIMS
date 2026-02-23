@@ -19,6 +19,8 @@ function normalizeAnnouncementPayload(payload = {}) {
   return {
     title: String(payload.title || "").trim(),
     body: String(payload.body || "").trim(),
+    whatsappNumber: String(payload.whatsappNumber || "").trim(),
+    whatsappRecipientName: String(payload.whatsappRecipientName || "").trim(),
     audience: String(payload.audience || "all").trim(),
     status: String(payload.status || "published").trim().toLowerCase(),
     pinned: Boolean(payload.pinned),
