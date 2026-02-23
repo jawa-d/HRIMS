@@ -37,6 +37,38 @@
             </button>
           </div>
         </div>
+        <section class="card reports-backup">
+          <div class="reports-backup-head">
+            <h3 class="section-title">
+              <i data-lucide="database-backup"></i>
+              Backup & Restore
+            </h3>
+            <span class="text-muted" id="backup-status-label">No backup yet</span>
+          </div>
+          <div class="reports-actions">
+            <button class="btn btn-primary" id="backup-now-btn">
+              <i data-lucide="shield-check"></i>
+              Backup Now
+            </button>
+            <button class="btn btn-ghost" id="backup-excel-btn">
+              <i data-lucide="file-spreadsheet"></i>
+              Backup Excel
+            </button>
+            <button class="btn btn-ghost" id="backup-word-btn">
+              <i data-lucide="file-text"></i>
+              Backup Word
+            </button>
+            <button class="btn btn-outline" id="restore-latest-btn">
+              <i data-lucide="history"></i>
+              Restore Latest
+            </button>
+            <button class="btn btn-outline" id="restore-file-btn">
+              <i data-lucide="upload"></i>
+              Restore File
+            </button>
+            <input type="file" id="restore-file-input" accept=".json,application/json" hidden />
+          </div>
+        </section>
         <section class="reports-summary grid-6">
           <div class="card summary-card">
             <div class="text-muted">Employees</div>

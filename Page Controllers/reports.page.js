@@ -2,12 +2,20 @@ import { enforceAuth, getUserProfile, getRole } from "../Aman/guard.js";
 import { initI18n } from "../Languages/i18n.js";
 import { renderNavbar } from "../Collaboration interface/ui-navbar.js";
 import { renderSidebar } from "../Collaboration interface/ui-sidebar.js";
+import { showToast } from "../Collaboration interface/ui-toast.js";
 import { listEmployees } from "../Services/employees.service.js";
 import { listLeaves } from "../Services/leaves.service.js";
 import { listDepartments } from "../Services/departments.service.js";
 import { listPositions } from "../Services/positions.service.js";
 import { listAttendance } from "../Services/attendance.service.js";
 import { listPayroll } from "../Services/payroll.service.js";
+import {
+  createBackupSnapshot,
+  listBackupSnapshots,
+  restoreBackupById,
+  restoreBackupPayload,
+  runDailyBackup
+} from "../Services/backup-restore.service.js";
 
 if (!enforceAuth("reports")) {
   throw new Error("Unauthorized");
@@ -24,6 +32,13 @@ if (window.lucide?.createIcons) {
 
 const exportExcelBtn = document.getElementById("export-excel-btn");
 const exportPdfBtn = document.getElementById("export-pdf-btn");
+const backupNowBtn = document.getElementById("backup-now-btn");
+const backupExcelBtn = document.getElementById("backup-excel-btn");
+const backupWordBtn = document.getElementById("backup-word-btn");
+const restoreLatestBtn = document.getElementById("restore-latest-btn");
+const restoreFileBtn = document.getElementById("restore-file-btn");
+const restoreFileInput = document.getElementById("restore-file-input");
+const backupStatusLabel = document.getElementById("backup-status-label");
 const totalsEls = {
   employees: document.getElementById("report-employees"),
   departments: document.getElementById("report-departments"),
@@ -34,6 +49,13 @@ const totalsEls = {
 };
 
 let reportData = null;
+let latestBackup = null;
+
+const actor = {
+  uid: user?.uid || "",
+  name: user?.name || "",
+  role: role || ""
+};
 
 function normalizeLabel(value) {
   const label = (value || "").toString().trim();
@@ -280,6 +302,138 @@ function exportToPdf(data) {
   printable.print();
 }
 
+function escapeCell(value) {
+  const raw = value == null ? "" : String(value);
+  if (/[",\n]/.test(raw)) return `"${raw.replace(/"/g, "\"\"")}"`;
+  return raw;
+}
+
+function toTimeLabel(value) {
+  if (!value) return "-";
+  if (typeof value === "string") return value;
+  if (typeof value?.seconds === "number") {
+    return new Date(value.seconds * 1000).toLocaleString();
+  }
+  return "-";
+}
+
+function backupToCsv(payload) {
+  const summary = payload?.summary || {};
+  const lines = [];
+  lines.push("Collection,Count");
+  Object.keys(summary).forEach((key) => {
+    lines.push(`${escapeCell(key)},${escapeCell(summary[key])}`);
+  });
+  lines.push("");
+
+  Object.keys(payload?.collections || {}).forEach((name) => {
+    const records = payload.collections[name] || [];
+    lines.push(`${name}`);
+    if (!records.length) {
+      lines.push("No records");
+      lines.push("");
+      return;
+    }
+    const keys = Object.keys(records[0]).filter((key) => key !== "id");
+    lines.push(["id", ...keys].map(escapeCell).join(","));
+    records.forEach((record) => {
+      const row = ["id", ...keys].map((key) => {
+        if (key === "id") return escapeCell(record.id || "");
+        return escapeCell(typeof record[key] === "object" ? JSON.stringify(record[key]) : record[key]);
+      });
+      lines.push(row.join(","));
+    });
+    lines.push("");
+  });
+
+  const blob = new Blob([`\uFEFF${lines.join("\n")}`], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `hrms-backup-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function backupToWord(payload) {
+  const summaryRows = Object.keys(payload?.summary || {})
+    .map((key) => `<tr><td>${key}</td><td>${payload.summary[key]}</td></tr>`)
+    .join("");
+
+  const sections = Object.keys(payload?.collections || {})
+    .map((name) => {
+      const list = payload.collections[name] || [];
+      if (!list.length) {
+        return `<h3>${name}</h3><p>No records.</p>`;
+      }
+      const keys = Object.keys(list[0]).filter((key) => key !== "id");
+      const headers = ["id", ...keys].map((key) => `<th>${key}</th>`).join("");
+      const rows = list
+        .slice(0, 250)
+        .map((record) => {
+          const cells = ["id", ...keys]
+            .map((key) => {
+              const value = key === "id" ? record.id : record[key];
+              return `<td>${typeof value === "object" ? JSON.stringify(value) : (value ?? "")}</td>`;
+            })
+            .join("");
+          return `<tr>${cells}</tr>`;
+        })
+        .join("");
+      return `<h3>${name}</h3><table><thead><tr>${headers}</tr></thead><tbody>${rows}</tbody></table>`;
+    })
+    .join("");
+
+  const html = `
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <style>
+          body { font-family: Arial, sans-serif; padding: 20px; color: #111827; }
+          h1 { margin-bottom: 8px; }
+          h3 { margin-top: 24px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+          th, td { border: 1px solid #d1d5db; padding: 6px 8px; font-size: 12px; text-align: left; vertical-align: top; }
+          th { background: #f3f4f6; }
+        </style>
+      </head>
+      <body>
+        <h1>HRMS Backup Report</h1>
+        <p>Created: ${payload?.createdAtIso || new Date().toISOString()}</p>
+        <h2>Summary</h2>
+        <table><thead><tr><th>Collection</th><th>Count</th></tr></thead><tbody>${summaryRows}</tbody></table>
+        ${sections}
+      </body>
+    </html>
+  `;
+
+  const blob = new Blob([html], { type: "application/msword;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `hrms-backup-${new Date().toISOString().slice(0, 10)}.doc`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+async function refreshBackupStatus() {
+  const snapshots = await listBackupSnapshots(5);
+  latestBackup = snapshots[0] || null;
+  if (!backupStatusLabel) return;
+  if (!latestBackup) {
+    backupStatusLabel.textContent = "No backup yet";
+    return;
+  }
+  const timeLabel = toTimeLabel(latestBackup.createdAt) || latestBackup.createdAtIso || "-";
+  backupStatusLabel.textContent = `Latest backup: ${timeLabel}`;
+}
+
+async function backupNow() {
+  const result = await createBackupSnapshot(actor);
+  latestBackup = { id: result.id, payload: result.snapshot, createdAtIso: result.snapshot.createdAtIso };
+  if (backupStatusLabel) backupStatusLabel.textContent = `Latest backup: ${result.snapshot.createdAtIso}`;
+}
+
 async function loadReports() {
   const [employees, leaves, departments, positions, attendance, payroll] = await Promise.all([
     listEmployees(),
@@ -509,9 +663,90 @@ async function loadReports() {
 
 loadReports();
 
+async function initBackupPanel() {
+  await refreshBackupStatus();
+  try {
+    const daily = await runDailyBackup(actor);
+    if (!daily.skipped) {
+      await refreshBackupStatus();
+    }
+  } catch (_) {
+    // no-op for UI flow
+  }
+}
+
+void initBackupPanel();
+
 exportExcelBtn.addEventListener("click", () => {
   if (reportData) exportToCsv(reportData);
 });
 exportPdfBtn.addEventListener("click", () => {
   if (reportData) exportToPdf(reportData);
+});
+
+backupNowBtn?.addEventListener("click", async () => {
+  await backupNow();
+  showToast("success", "Backup created successfully.");
+});
+
+backupExcelBtn?.addEventListener("click", async () => {
+  if (!latestBackup?.payload) {
+    const snapshots = await listBackupSnapshots(1);
+    latestBackup = snapshots[0] || null;
+  }
+  if (!latestBackup?.payload) {
+    showToast("error", "No backup available yet.");
+    return;
+  }
+  backupToCsv(latestBackup.payload);
+});
+
+backupWordBtn?.addEventListener("click", async () => {
+  if (!latestBackup?.payload) {
+    const snapshots = await listBackupSnapshots(1);
+    latestBackup = snapshots[0] || null;
+  }
+  if (!latestBackup?.payload) {
+    showToast("error", "No backup available yet.");
+    return;
+  }
+  backupToWord(latestBackup.payload);
+});
+
+restoreLatestBtn?.addEventListener("click", async () => {
+  const snapshots = await listBackupSnapshots(1);
+  const latest = snapshots[0];
+  if (!latest?.id) {
+    showToast("error", "No backup to restore.");
+    return;
+  }
+  const confirmed = window.confirm("Restore latest backup now? This will replace current data.");
+  if (!confirmed) return;
+  await restoreBackupById(latest.id);
+  showToast("success", "Restore completed. Refreshing page...");
+  window.location.reload();
+});
+
+restoreFileBtn?.addEventListener("click", () => {
+  restoreFileInput?.click();
+});
+
+restoreFileInput?.addEventListener("change", async () => {
+  const file = restoreFileInput.files?.[0];
+  if (!file) return;
+  const confirmed = window.confirm("Restore from selected file? This will replace current data.");
+  if (!confirmed) {
+    restoreFileInput.value = "";
+    return;
+  }
+  try {
+    const text = await file.text();
+    const payload = JSON.parse(text);
+    await restoreBackupPayload(payload);
+    restoreFileInput.value = "";
+    showToast("success", "Restore from file completed. Refreshing page...");
+    window.location.reload();
+  } catch (_) {
+    showToast("error", "Invalid backup file.");
+  }
 });

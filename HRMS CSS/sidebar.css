@@ -6,8 +6,8 @@
   display: grid;
   grid-template-columns: 1fr;
   gap: 0;
-  background: linear-gradient(180deg, rgba(15, 118, 110, 0.1), rgba(15, 118, 110, 0.02)), var(--surface);
-  border-right: 1px solid rgba(15, 118, 110, 0.18);
+  background: var(--surface);
+  border-right: 1px solid var(--border);
   box-shadow: 18px 0 34px rgba(15, 23, 42, 0.08);
   min-width: 0;
   overflow: hidden;
@@ -16,8 +16,8 @@
 .sidebar-rail,
 .sidebar-panel {
   border-radius: 24px;
-  border: 1px solid rgba(15, 118, 110, 0.18);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.76), rgba(255, 255, 255, 0.54));
+  border: 1px solid var(--border);
+  background: var(--surface-strong);
   backdrop-filter: blur(14px);
 }
 
@@ -36,8 +36,8 @@
   display: grid;
   place-items: center;
   color: var(--text);
-  border: 1px solid rgba(15, 118, 110, 0.2);
-  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid var(--border);
+  background: var(--surface);
 }
 
 .sidebar-rail-nav {
@@ -58,8 +58,8 @@
 
 .sidebar-rail-link:hover,
 .sidebar-rail-link.active {
-  background: rgba(15, 118, 110, 0.16);
-  border-color: rgba(15, 118, 110, 0.26);
+  background: var(--primary-soft);
+  border-color: var(--border);
   color: var(--text);
   transform: translateY(-1px);
 }
@@ -101,8 +101,8 @@
   width: fit-content;
   padding: 3px 9px;
   border-radius: 999px;
-  border: 1px solid rgba(15, 118, 110, 0.22);
-  background: rgba(15, 118, 110, 0.1);
+  border: 1px solid var(--border);
+  background: var(--primary-soft);
   color: var(--text-muted);
   font-size: 0.72rem;
   text-transform: capitalize;
@@ -115,7 +115,7 @@
   font-weight: 700;
   padding: 4px 2px 8px;
   margin-bottom: 4px;
-  border-bottom: 1px solid rgba(15, 118, 110, 0.14);
+  border-bottom: 1px solid var(--border);
 }
 
 .sidebar-panel-title i {
@@ -145,9 +145,9 @@
 }
 
 .sidebar-section {
-  border: 1px solid rgba(15, 118, 110, 0.2);
+  border: 1px solid var(--border);
   border-radius: 14px;
-  background: linear-gradient(180deg, rgba(15, 118, 110, 0.06), rgba(15, 118, 110, 0.02)), var(--surface-strong);
+  background: var(--surface-strong);
   overflow: hidden;
 }
 
@@ -198,8 +198,8 @@
   place-items: center;
   font-size: 0.7rem;
   color: var(--text-muted);
-  border: 1px solid rgba(15, 118, 110, 0.2);
-  background: rgba(15, 118, 110, 0.14);
+  border: 1px solid var(--border);
+  background: var(--primary-soft);
 }
 
 .sidebar-section-items {
@@ -223,11 +223,11 @@
 .sidebar-link:hover,
 .sidebar-link.active {
   color: var(--text);
-  background: linear-gradient(90deg, rgba(15, 118, 110, 0.2), rgba(15, 118, 110, 0.08));
+  background: var(--primary-soft);
 }
 
 .sidebar-link.active {
-  box-shadow: 0 10px 18px rgba(15, 118, 110, 0.18);
+  box-shadow: 0 10px 18px rgba(11, 18, 32, 0.2);
 }
 
 .sidebar-link i {
@@ -238,7 +238,7 @@
 .sidebar-footer {
   margin-top: auto;
   padding: 10px 2px 2px;
-  border-top: 1px dashed rgba(15, 118, 110, 0.2);
+  border-top: 1px dashed var(--border);
   text-align: center;
   font-size: 0.68rem;
   color: var(--text-muted);
@@ -256,7 +256,7 @@
   left: 2px;
   right: 2px;
   border-radius: 999px;
-  background: linear-gradient(180deg, rgba(15, 118, 110, 0.82), rgba(14, 165, 233, 0.68));
+  background: var(--primary);
   opacity: 1;
 }
 
@@ -318,7 +318,7 @@ body.sidebar-collapsed .sidebar {
 
 [dir="rtl"] .sidebar {
   border-right: none;
-  border-left: 1px solid rgba(15, 118, 110, 0.18);
+  border-left: 1px solid var(--border);
 }
 
 [dir="rtl"] .sidebar-link {
