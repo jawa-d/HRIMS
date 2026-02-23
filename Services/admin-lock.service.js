@@ -77,6 +77,7 @@ export function enforceAdminPagesCode({ role, user, pageLabel = "Admin Page" } =
   });
   input?.focus();
 
-  return false;
+  // Keep the current page alive while locked overlay is displayed.
+  // The caller expects boolean; returning true prevents runtime hard-fail redirection.
+  return true;
 }
-
