@@ -1,4 +1,4 @@
-import { MENU_ITEMS, APP_NAME } from "../app.config.js";
+﻿import { MENU_ITEMS, APP_NAME } from "../app.config.js";
 import { t, translateDom } from "../Languages/i18n.js";
 import { getRole, getUserProfile, getAllowedPages } from "../Aman/guard.js";
 
@@ -6,7 +6,7 @@ const SECTION_DEFS = [
   { key: "main", en: "Main", ar: "\u0627\u0644\u0631\u0626\u064a\u0633\u064a\u0629", items: ["dashboard", "profile"] },
   { key: "people", en: "People Ops", ar: "\u0627\u0644\u0645\u0648\u0627\u0631\u062f \u0627\u0644\u0628\u0634\u0631\u064a\u0629", items: ["employees", "my_leaves", "leaves", "attendance", "timeoff", "payroll", "assets", "tickets", "announcements"] },
   { key: "org", en: "Organization", ar: "\u0627\u0644\u062a\u0646\u0638\u064a\u0645", items: ["orgchart", "departments", "positions", "reports"] },
-  { key: "admin", en: "Administration", ar: "\u0627\u0644\u0625\u062f\u0627\u0631\u0629", items: ["notifications_center", "security_center", "security_map", "system_health", "page_admin", "settings"] }
+  { key: "admin", en: "Administration", ar: "\u0627\u0644\u0625\u062f\u0627\u0631\u0629", items: ["notifications_center", "security_center", "security_map", "system_health", "page_admin", "secure_vault", "settings"] }
 ];
 
 let lastRole = null;
@@ -252,7 +252,7 @@ export function renderSidebar(activeKey) {
         <nav class="sidebar-nav">
           ${buildSidebarSections(items, activeKey)}
         </nav>
-        <div class="sidebar-footer">Developed by Jawad Kadhim © 2025</div>
+        <div class="sidebar-footer" data-i18n="sidebar.footer">${t("sidebar.footer")}</div>
       </div>
     </aside>
     <div class="sidebar-overlay" id="sidebar-overlay"></div>
@@ -285,3 +285,7 @@ export function renderSidebar(activeKey) {
   lastActiveKey = activeKey;
   hasRendered = true;
 }
+
+
+
+

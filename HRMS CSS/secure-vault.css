@@ -1,0 +1,48 @@
+.vault-stats {
+  margin-bottom: var(--space-4);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.vault-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.vault-stat strong {
+  font-size: 1.4rem;
+}
+
+.vault-toolbar {
+  margin-bottom: var(--space-3);
+}
+
+.vault-table td,
+.vault-table th {
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.vault-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.vault-secret {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.2px;
+}
+
+.vault-actions {
+  display: inline-flex;
+  gap: 8px;
+}
+
+@media (max-width: 860px) {
+  .vault-stats {
+    grid-template-columns: 1fr;
+  }
+}

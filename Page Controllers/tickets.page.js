@@ -6,6 +6,7 @@ import { openModal } from "../Collaboration interface/ui-modal.js";
 import { showToast } from "../Collaboration interface/ui-toast.js";
 import { showTableSkeleton } from "../Collaboration interface/ui-skeleton.js";
 import { canDo } from "../Services/permissions.service.js";
+import { getTablePrefs, saveTablePrefs } from "../Services/table-tools.service.js";
 import { listEmployees } from "../Services/employees.service.js";
 import { createNotification } from "../Services/notifications.service.js";
 import { listUsers } from "../Services/users.service.js";
@@ -31,6 +32,12 @@ const searchInput = document.getElementById("tickets-search");
 const statusFilter = document.getElementById("tickets-status");
 const categoryFilter = document.getElementById("tickets-category");
 const priorityFilter = document.getElementById("tickets-priority");
+const saveViewBtn = document.getElementById("tickets-save-view-btn");
+const resetViewBtn = document.getElementById("tickets-reset-view-btn");
+const viewNameEl = document.getElementById("tickets-view-name");
+const bulkActionEl = document.getElementById("tickets-bulk-action");
+const applyBulkBtn = document.getElementById("tickets-apply-bulk-btn");
+const selectAllEl = document.getElementById("tickets-select-all");
 const bodyEl = document.getElementById("tickets-body");
 const emptyEl = document.getElementById("tickets-empty");
 const kpiTotalEl = document.getElementById("tickets-kpi-total");
@@ -49,7 +56,10 @@ if (!canCreate) addBtn.classList.add("hidden");
 let tickets = [];
 let employees = [];
 let users = [];
+let selectedTicketIds = new Set();
+let slaScanTimer = null;
 let unsubscribeTickets = null;
+const TICKETS_PREF_KEY = "tickets_view_prefs";
 const SLA_TARGET_HOURS = {
   critical: 4,
   high: 8,
@@ -70,6 +80,28 @@ function labelCase(value = "") {
 function canEditTicket(ticket) {
   if (canManage) return true;
   return ticket.requesterUid === user?.uid && ["open", "in_progress"].includes(ticket.status || "open");
+}
+
+function getCurrentFilters() {
+  return {
+    query: String(searchInput?.value || "").trim(),
+    status: statusFilter?.value || "",
+    category: categoryFilter?.value || "",
+    priority: priorityFilter?.value || ""
+  };
+}
+
+function setFilters(view = {}) {
+  if (searchInput) searchInput.value = String(view.query || "");
+  if (statusFilter) statusFilter.value = String(view.status || "");
+  if (categoryFilter) categoryFilter.value = String(view.category || "");
+  if (priorityFilter) priorityFilter.value = String(view.priority || "");
+}
+
+function loadSavedView() {
+  const pref = getTablePrefs(TICKETS_PREF_KEY, {});
+  setFilters(pref);
+  if (viewNameEl) viewNameEl.textContent = pref.name || "Default view";
 }
 
 function filteredTickets() {
@@ -169,6 +201,99 @@ function renderAnalytics(items) {
       .join("");
   }
   if (workloadEmptyEl) workloadEmptyEl.classList.toggle("hidden", rows.length > 0);
+}
+
+function renderSelectAllState(items) {
+  if (!selectAllEl) return;
+  const ids = items.map((item) => item.id);
+  const selectedCount = ids.filter((id) => selectedTicketIds.has(id)).length;
+  selectAllEl.checked = ids.length > 0 && selectedCount === ids.length;
+  selectAllEl.indeterminate = selectedCount > 0 && selectedCount < ids.length;
+}
+
+async function runBulkAction() {
+  if (!canManage || !bulkActionEl || !applyBulkBtn) return;
+  const action = bulkActionEl.value;
+  const ids = Array.from(selectedTicketIds);
+  if (!action || !ids.length) {
+    showToast("error", "Choose action and select tickets first");
+    return;
+  }
+
+  if (action === "close") {
+    const list = tickets.filter((item) => ids.includes(item.id));
+    await Promise.all(list.map((item) => updateTicket(item.id, { ...item, status: "closed" })));
+    showToast("success", `Closed ${list.length} ticket(s)`);
+  }
+
+  if (action === "delete") {
+    if (!canDelete) {
+      showToast("error", "Delete permission required");
+      return;
+    }
+    const confirmed = window.confirm(`Delete ${ids.length} ticket(s) permanently?`);
+    if (!confirmed) return;
+    await Promise.all(ids.map((id) => deleteTicket(id)));
+    showToast("success", `Deleted ${ids.length} ticket(s)`);
+  }
+
+  selectedTicketIds.clear();
+  bulkActionEl.value = "";
+  await loadTicketsData();
+}
+
+function scheduleSlaScan() {
+  if (!canManage) return;
+  if (slaScanTimer) window.clearTimeout(slaScanTimer);
+  slaScanTimer = window.setTimeout(() => {
+    void runSlaAlerts();
+  }, 550);
+}
+
+function getHoursSinceCreated(ticket) {
+  const createdAt = toMillis(ticket.createdAt);
+  if (!createdAt) return 0;
+  return (Date.now() - createdAt) / (1000 * 60 * 60);
+}
+
+async function runSlaAlerts() {
+  if (!users.length || !tickets.length) return;
+  const managers = users.filter((u) => ["super_admin", "hr_admin", "manager"].includes(u.role || ""));
+  const targetsByRole = new Map();
+  managers.forEach((manager) => {
+    const uid = manager.uid || manager.id || "";
+    if (!uid) return;
+    targetsByRole.set(uid, uid);
+  });
+
+  const candidates = tickets.filter((item) => {
+    if (!["open", "in_progress"].includes(item.status || "")) return false;
+    if (item.slaAlertSent) return false;
+    const targetHours = SLA_TARGET_HOURS[item.priority] || SLA_TARGET_HOURS.medium;
+    return getHoursSinceCreated(item) >= targetHours * 0.8;
+  });
+
+  await Promise.all(
+    candidates.map(async (ticket) => {
+      const toUids = new Set(Array.from(targetsByRole.values()));
+      if (ticket.assigneeUid) toUids.add(ticket.assigneeUid);
+      const timeUsed = getHoursSinceCreated(ticket).toFixed(1);
+      const target = SLA_TARGET_HOURS[ticket.priority] || SLA_TARGET_HOURS.medium;
+      await Promise.all(
+        Array.from(toUids).map((toUid) =>
+          createNotification({
+            toUid,
+            title: "SLA Warning",
+            body: `${ticket.subject || "Ticket"} used ${timeUsed}h / ${target}h`,
+            type: "ticket_sla",
+            priority: "high",
+            actionHref: `tickets.html?id=${ticket.id}`
+          })
+        )
+      );
+      await updateTicket(ticket.id, { ...ticket, slaAlertSent: true });
+    })
+  );
 }
 
 function ticketFormContent(ticket = {}) {
@@ -310,6 +435,9 @@ function renderTickets() {
       return `
       <tr>
         <td>
+          <input class="tickets-select" type="checkbox" data-select-ticket="${ticket.id}" ${selectedTicketIds.has(ticket.id) ? "checked" : ""} />
+        </td>
+        <td>
           <div class="tickets-subject">
             <span>${ticket.subject || "-"}</span>
             <small>${ticket.description || "-"}</small>
@@ -336,14 +464,25 @@ function renderTickets() {
   emptyEl.classList.toggle("hidden", items.length > 0);
   renderKpis(items);
   renderAnalytics(items);
+  renderSelectAllState(items);
 
   bodyEl.querySelectorAll("button[data-action]").forEach((button) => {
     button.addEventListener("click", () => handleAction(button.dataset.action, button.dataset.id));
   });
+
+  bodyEl.querySelectorAll("input[data-select-ticket]").forEach((checkbox) => {
+    checkbox.addEventListener("change", () => {
+      const id = checkbox.getAttribute("data-select-ticket");
+      if (!id) return;
+      if (checkbox.checked) selectedTicketIds.add(id);
+      else selectedTicketIds.delete(id);
+      renderSelectAllState(items);
+    });
+  });
 }
 
 async function loadTicketsData() {
-  showTableSkeleton(bodyEl, { rows: 6, cols: 8 });
+  showTableSkeleton(bodyEl, { rows: 6, cols: 9 });
   const scopeUid = canManage ? "" : (user?.uid || "");
   tickets = await listTickets({ scopeUid });
   renderTickets();
@@ -355,6 +494,7 @@ function startRealtimeTickets() {
     (items) => {
       tickets = items;
       renderTickets();
+      scheduleSlaScan();
     },
     () => {
       void loadTicketsData();
@@ -407,6 +547,35 @@ if (searchInput) searchInput.addEventListener("input", renderTickets);
 if (statusFilter) statusFilter.addEventListener("change", renderTickets);
 if (categoryFilter) categoryFilter.addEventListener("change", renderTickets);
 if (priorityFilter) priorityFilter.addEventListener("change", renderTickets);
+if (saveViewBtn) {
+  saveViewBtn.addEventListener("click", () => {
+    const name = window.prompt("View name", "My Ticket View");
+    if (!name) return;
+    saveTablePrefs(TICKETS_PREF_KEY, { ...getCurrentFilters(), name });
+    if (viewNameEl) viewNameEl.textContent = name;
+    showToast("success", "View saved");
+  });
+}
+if (resetViewBtn) {
+  resetViewBtn.addEventListener("click", () => {
+    setFilters({});
+    saveTablePrefs(TICKETS_PREF_KEY, {});
+    if (viewNameEl) viewNameEl.textContent = "Default view";
+    renderTickets();
+  });
+}
+if (applyBulkBtn) applyBulkBtn.addEventListener("click", () => void runBulkAction());
+if (selectAllEl) {
+  selectAllEl.addEventListener("change", () => {
+    const items = filteredTickets();
+    if (selectAllEl.checked) {
+      items.forEach((item) => selectedTicketIds.add(item.id));
+    } else {
+      items.forEach((item) => selectedTicketIds.delete(item.id));
+    }
+    renderTickets();
+  });
+}
 
 window.addEventListener("global-search", (event) => {
   if (searchInput) searchInput.value = event.detail || "";
@@ -418,6 +587,7 @@ window.addEventListener("beforeunload", () => {
 });
 
 (async () => {
+  loadSavedView();
   await loadUsersData();
   await loadEmployeesData();
   startRealtimeTickets();

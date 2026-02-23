@@ -24,6 +24,7 @@ const dictionaries = {
     "nav.security_map": "Security Map",
     "nav.system_health": "System Health",
     "nav.page_admin": "Page Management",
+    "nav.secure_vault": "Secure Vault",
     "nav.settings": "Settings",
     "nav.workspace": "Workspace",
     "nav.my_requests": "My Requests",
@@ -91,6 +92,7 @@ const dictionaries = {
     "dashboard.critical_alerts": "Critical Alerts",
     "nav.language": "AR",
     "nav.theme": "Theme",
+    "sidebar.footer": "All rights reserved to Wadi Al-Rafidain Company © 2026 | Developer: Jawad Kadhim Hadi",
     "login.title": "Welcome back",
     "login.subtitle": "Sign in to your HR workspace",
     "login.email": "Email",
@@ -195,7 +197,9 @@ const dictionaries = {
     "settings.title": "Settings",
     "profile.title": "Profile",
     "page_admin.title": "Page Management",
+    "secure_vault.title": "Secure Vault",
     "page_admin.subtitle": "Enable or pause any page with one button.",
+    "secure_vault.subtitle": "Store critical account credentials with encryption and a private unlock code.",
     "page_admin.page_name": "Page",
     "page_admin.page_path": "Path",
     "page_admin.page_status": "Status",
@@ -286,6 +290,7 @@ const dictionaries = {
     "nav.security_map": "خريطة التهديدات",
     "nav.system_health": "صحة النظام",
     "nav.page_admin": "إدارة الصفحات",
+    "nav.secure_vault": "الخزنة الآمنة",
     "nav.settings": "الإعدادات",
     "nav.workspace": "مساحة العمل",
     "nav.my_requests": "طلباتي",
@@ -353,6 +358,7 @@ const dictionaries = {
     "dashboard.critical_alerts": "تنبيهات حرجة",
     "nav.language": "EN",
     "nav.theme": "المظهر",
+    "sidebar.footer": "جميع الحقوق محفوظة لدى شركة وادي الرافدين © 2026 | المبرمج: Jawad Kadhim Hadi",
     "login.title": "مرحبًا بعودتك",
     "login.subtitle": "سجّل الدخول إلى مساحة عمل الموارد البشرية",
     "login.email": "البريد الإلكتروني",
@@ -457,7 +463,9 @@ const dictionaries = {
     "settings.title": "الإعدادات",
     "profile.title": "الملف الشخصي",
     "page_admin.title": "إدارة الصفحات",
+    "secure_vault.title": "الخزنة الآمنة",
     "page_admin.subtitle": "شغّل أو أوقف أي صفحة بزر واحد.",
+    "secure_vault.subtitle": "خزن بيانات الحسابات المهمة بتشفير وقفل برمز خاص.",
     "page_admin.page_name": "الصفحة",
     "page_admin.page_path": "المسار",
     "page_admin.page_status": "الحالة",
@@ -591,6 +599,8 @@ export function initI18n() {
   applyLanguage();
   applyTheme();
 }
+
+
 
 
 

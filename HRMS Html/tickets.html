@@ -68,6 +68,27 @@
             </select>
           </div>
         </section>
+        <section class="tickets-tools card">
+          <div class="tickets-tools-left">
+            <button class="btn btn-outline" id="tickets-save-view-btn">
+              <i data-lucide="save"></i>
+              Save View
+            </button>
+            <button class="btn btn-ghost" id="tickets-reset-view-btn">
+              <i data-lucide="rotate-ccw"></i>
+              Reset View
+            </button>
+            <span class="text-muted tickets-view-name" id="tickets-view-name">Default view</span>
+          </div>
+          <div class="tickets-tools-right">
+            <select class="select" id="tickets-bulk-action">
+              <option value="">Bulk Actions</option>
+              <option value="close">Close Selected</option>
+              <option value="delete">Delete Selected</option>
+            </select>
+            <button class="btn btn-primary" id="tickets-apply-bulk-btn">Apply</button>
+          </div>
+        </section>
 
         <section class="tickets-kpis">
           <div class="card tickets-kpi">
@@ -140,6 +161,7 @@
             <table class="table tickets-table">
               <thead>
                 <tr>
+                  <th><input type="checkbox" id="tickets-select-all" aria-label="Select all tickets" /></th>
                   <th>Subject</th>
                   <th>Category</th>
                   <th>Priority</th>

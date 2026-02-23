@@ -253,6 +253,14 @@ export function renderNavbar({ user, role }) {
   });
 
   document.addEventListener("keydown", (event) => {
+    const hotkey = (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k";
+    if (hotkey && globalSearch) {
+      event.preventDefault();
+      globalSearch.focus();
+      globalSearch.select();
+      return;
+    }
+
     if (event.key === "Escape" && dropdownOpen) {
       dropdownOpen = false;
       dropdown?.classList.remove("open");

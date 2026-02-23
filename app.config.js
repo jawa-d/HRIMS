@@ -46,6 +46,7 @@ export const MENU_ITEMS = [
   { key: "security_map", labelKey: "nav.security_map", href: "security-map.html", icon: "map-pinned" },
   { key: "system_health", labelKey: "nav.system_health", href: "system-health.html", icon: "activity" },
   { key: "page_admin", labelKey: "nav.page_admin", href: "page-admin.html", icon: "power" },
+  { key: "secure_vault", labelKey: "nav.secure_vault", href: "secure-vault.html", icon: "key-round" },
   { key: "settings", labelKey: "nav.settings", href: "settings.html", icon: "settings" },
   { key: "profile", labelKey: "nav.profile", href: "profile.html", icon: "user" }
 ];
@@ -71,6 +72,7 @@ export const ROLE_PERMISSIONS = {
     "security_map",
     "system_health",
     "page_admin",
+    "secure_vault",
     "settings",
     "profile"
   ],
@@ -135,7 +137,8 @@ export const ACTION_PERMISSIONS = {
     notifications: ["view", "mark_read", "archive", "mark_all"],
     reports: ["view", "export"],
     tickets: ["create", "view", "edit", "assign", "close", "delete", "export"],
-    announcements: ["create", "view", "edit", "publish", "delete"]
+    announcements: ["create", "view", "edit", "publish", "delete"],
+    secure_vault: ["create", "view", "edit", "delete"]
   },
   super_admin: {
     employees: ["*"],
@@ -146,6 +149,7 @@ export const ACTION_PERMISSIONS = {
     reports: ["*"],
     tickets: ["*"],
     announcements: ["*"],
+    secure_vault: ["*"],
     security: ["*"],
     settings: ["*"]
   }

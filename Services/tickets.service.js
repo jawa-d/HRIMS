@@ -27,7 +27,8 @@ function normalizeTicketPayload(payload = {}) {
     requesterUid: String(payload.requesterUid || "").trim(),
     requesterName: String(payload.requesterName || "").trim(),
     requesterEmail: String(payload.requesterEmail || "").trim().toLowerCase(),
-    resolutionNote: String(payload.resolutionNote || "").trim()
+    resolutionNote: String(payload.resolutionNote || "").trim(),
+    slaAlertSent: Boolean(payload.slaAlertSent)
   };
 }
 
