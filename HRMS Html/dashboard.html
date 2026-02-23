@@ -28,200 +28,232 @@
             <p class="text-muted" data-i18n="dashboard.subtitle">Overview of your HR operations</p>
           </div>
         </div>
-        <section class="welcome-banner card">
-          <div class="welcome-content">
-            <div class="welcome-badge">
-              <i data-lucide="sparkles"></i>
-              <span data-i18n="app.name">HRMS</span>
+        <div class="dashboard-canvas">
+          <section class="dashboard-ops-kpis">
+            <div class="summary-card card">
+              <div class="summary-head">
+                <div class="summary-title" data-i18n="dashboard.today_attendance">Today's Attendance</div>
+                <span class="summary-icon"><i data-lucide="clock-3"></i></span>
+              </div>
+              <div class="summary-value" id="kpi-today-attendance">0</div>
+              <div class="summary-foot" data-i18n="dashboard.summary.daily_checkins">Daily check-ins</div>
             </div>
-            <h2>
-              <span data-i18n="dashboard.welcome_title">Welcome,</span>
-              <span id="welcome-name">Team</span>
-            </h2>
-            <p class="text-muted" data-i18n="dashboard.welcome_subtitle">Here is a quick snapshot of your people operations today.</p>
-            <div class="welcome-meta">
-              <div class="welcome-chip">
-                <i data-lucide="calendar"></i>
-                <span id="welcome-date">--</span>
+            <div class="summary-card card">
+              <div class="summary-head">
+                <div class="summary-title" data-i18n="dashboard.pending_approvals">Pending Approvals</div>
+                <span class="summary-icon"><i data-lucide="clipboard-list"></i></span>
               </div>
-              <div class="welcome-chip">
-                <i data-lucide="shield-check"></i>
-                <span data-i18n="dashboard.systems_ready">All systems ready</span>
-              </div>
+              <div class="summary-value" id="kpi-pending-approvals">0</div>
+              <div class="summary-foot" data-i18n="dashboard.summary.requires_action">Requires action</div>
             </div>
-            <div class="welcome-actions">
-              <a class="btn btn-primary" href="employees.html" data-i18n="employees.add">Add Employee</a>
-              <a class="btn btn-ghost" href="reports.html" data-i18n="dashboard.view_reports">View Reports</a>
+            <div class="summary-card card">
+              <div class="summary-head">
+                <div class="summary-title" data-i18n="dashboard.payroll_ready">Payroll Ready</div>
+                <span class="summary-icon"><i data-lucide="wallet"></i></span>
+              </div>
+              <div class="summary-value" id="kpi-payroll-ready">0</div>
+              <div class="summary-foot" data-i18n="dashboard.summary.ready_publish_short">Ready to publish</div>
             </div>
-          </div>
-          <div class="welcome-art">
-            <div class="orbit"></div>
-            <div class="pulse"></div>
-            <div class="stats">
-              <div>
-                <strong id="welcome-total">0</strong>
-                <span class="text-muted" data-i18n="dashboard.total_employees">Total Employees</span>
+            <div class="summary-card card">
+              <div class="summary-head">
+                <div class="summary-title" data-i18n="dashboard.critical_alerts">Critical Alerts</div>
+                <span class="summary-icon"><i data-lucide="siren"></i></span>
               </div>
-              <div>
-                <strong id="welcome-depts">0</strong>
-                <span class="text-muted" data-i18n="dashboard.total_departments">Departments</span>
-              </div>
+              <div class="summary-value" id="kpi-critical-alerts">0</div>
+              <div class="summary-foot" data-i18n="dashboard.summary.security_system">Security and system</div>
             </div>
-          </div>
-        </section>
-        <section class="grid-4 dashboard-ops-kpis">
-          <div class="card summary-card">
-            <div class="text-muted" data-i18n="dashboard.today_attendance">Today's Attendance</div>
-            <div class="summary-value" id="kpi-today-attendance">0</div>
-          </div>
-          <div class="card summary-card">
-            <div class="text-muted" data-i18n="dashboard.pending_approvals">Pending Approvals</div>
-            <div class="summary-value" id="kpi-pending-approvals">0</div>
-          </div>
-          <div class="card summary-card">
-            <div class="text-muted" data-i18n="dashboard.payroll_ready">Payroll Ready</div>
-            <div class="summary-value" id="kpi-payroll-ready">0</div>
-          </div>
-          <div class="card summary-card">
-            <div class="text-muted" data-i18n="dashboard.critical_alerts">Critical Alerts</div>
-            <div class="summary-value" id="kpi-critical-alerts">0</div>
-          </div>
-        </section>
-        <section class="kpi-grid" id="kpi-grid">
-          <a class="kpi-link" href="employees.html">
-            <div class="card kpi-card">
-              <div class="kpi-head">
-                <span data-i18n="dashboard.kpi.employees">Employees</span>
-                <i class="kpi-icon" data-lucide="users"></i>
-              </div>
-              <div class="kpi-meta">
-                <i data-lucide="trending-up"></i>
-                <span data-i18n="dashboard.kpi.employees_meta">Active growth</span>
-              </div>
-              <div class="kpi-value" id="kpi-employees">0</div>
-            </div>
-          </a>
-          <a class="kpi-link" href="departments.html">
-            <div class="card kpi-card">
-              <div class="kpi-head">
-                <span data-i18n="dashboard.kpi.departments">Departments</span>
-                <i class="kpi-icon" data-lucide="building-2"></i>
-              </div>
-              <div class="kpi-meta">
-                <i data-lucide="layers"></i>
-                <span data-i18n="dashboard.kpi.departments_meta">Org structure</span>
-              </div>
-              <div class="kpi-value" id="kpi-departments">0</div>
-            </div>
-          </a>
-          <a class="kpi-link" href="positions.html">
-            <div class="card kpi-card">
-              <div class="kpi-head">
-                <span data-i18n="dashboard.kpi.positions">Positions</span>
-                <i class="kpi-icon" data-lucide="briefcase"></i>
-              </div>
-              <div class="kpi-meta">
+          </section>
+          <section class="welcome-banner card">
+            <div class="welcome-content">
+              <div class="welcome-badge">
                 <i data-lucide="sparkles"></i>
-                <span data-i18n="dashboard.kpi.positions_meta">Open roles</span>
+                <span data-i18n="app.name">HRMS</span>
               </div>
-              <div class="kpi-value" id="kpi-positions">0</div>
+              <h2>
+                <span data-i18n="dashboard.welcome_title">Welcome,</span>
+                <span id="welcome-name">Team</span>
+              </h2>
+              <p class="text-muted" data-i18n="dashboard.welcome_subtitle">Here is a quick snapshot of your people operations today.</p>
+              <div class="welcome-meta">
+                <div class="welcome-chip">
+                  <i data-lucide="calendar"></i>
+                  <span id="welcome-date">--</span>
+                </div>
+                <div class="welcome-chip">
+                  <i data-lucide="shield-check"></i>
+                  <span data-i18n="dashboard.systems_ready">All systems ready</span>
+                </div>
+              </div>
+              <div class="welcome-actions">
+                <a class="btn btn-primary" href="employees.html" data-i18n="employees.add">Add Employee</a>
+                <a class="btn btn-ghost" href="reports.html" data-i18n="dashboard.view_reports">View Reports</a>
+              </div>
             </div>
-          </a>
-          <a class="kpi-link" href="leaves.html">
-            <div class="card kpi-card">
-              <div class="kpi-head">
-                <span data-i18n="dashboard.kpi.leaves">Leave Requests</span>
-                <i class="kpi-icon" data-lucide="calendar-check-2"></i>
+            <div class="welcome-art">
+              <div class="orbit"></div>
+              <div class="pulse"></div>
+              <div class="stats">
+                <div>
+                  <strong id="welcome-total">0</strong>
+                  <span class="text-muted" data-i18n="dashboard.total_employees">Total Employees</span>
+                </div>
+                <div>
+                  <strong id="welcome-depts">0</strong>
+                  <span class="text-muted" data-i18n="dashboard.total_departments">Departments</span>
+                </div>
               </div>
-              <div class="kpi-meta">
-                <i data-lucide="clock-4"></i>
-                <span data-i18n="dashboard.kpi.leaves_meta">Pending reviews</span>
-              </div>
-              <div class="kpi-value" id="kpi-leaves">0</div>
             </div>
-          </a>
-          <a class="kpi-link" href="payroll.html">
-            <div class="card kpi-card">
-              <div class="kpi-head">
-                <span data-i18n="dashboard.kpi.payroll">Payrolls</span>
-                <i class="kpi-icon" data-lucide="wallet"></i>
+          </section>
+          <section class="spotlight-grid">
+            <article class="card spotlight-card spotlight-card-primary">
+              <div class="spotlight-label" data-i18n="dashboard.spotlight.built_label">Built by developers</div>
+              <h3 data-i18n="dashboard.spotlight.soft_ui_title">Soft UI HR Dashboard</h3>
+              <p data-i18n="dashboard.spotlight.soft_ui_desc">From teams, payroll, attendance and workflow approvals in one place.</p>
+              <a href="reports.html" class="spotlight-link"><span data-i18n="dashboard.spotlight.read_more">Read More</span> <i data-lucide="arrow-right"></i></a>
+            </article>
+            <article class="card spotlight-card spotlight-card-dark">
+              <div class="spotlight-label" data-i18n="dashboard.spotlight.confidence_label">Work with confidence</div>
+              <h3 data-i18n="dashboard.spotlight.live_insights_title">Operate with live HR insights</h3>
+              <p data-i18n="dashboard.spotlight.live_insights_desc">Track workforce performance and turn actions into decisions fast.</p>
+              <a href="system-health.html" class="spotlight-link"><span data-i18n="dashboard.spotlight.open_center">Open Center</span> <i data-lucide="arrow-right"></i></a>
+            </article>
+          </section>
+          <section class="kpi-grid" id="kpi-grid">
+            <a class="kpi-link" href="employees.html">
+              <div class="card kpi-card">
+                <div class="kpi-head">
+                  <span data-i18n="dashboard.kpi.employees">Employees</span>
+                  <i class="kpi-icon" data-lucide="users"></i>
+                </div>
+                <div class="kpi-meta">
+                  <i data-lucide="trending-up"></i>
+                  <span data-i18n="dashboard.kpi.employees_meta">Active growth</span>
+                </div>
+                <div class="kpi-value" id="kpi-employees">0</div>
               </div>
-              <div class="kpi-meta">
-                <i data-lucide="credit-card"></i>
-                <span data-i18n="dashboard.kpi.payroll_meta">Ready to publish</span>
+            </a>
+            <a class="kpi-link" href="departments.html">
+              <div class="card kpi-card">
+                <div class="kpi-head">
+                  <span data-i18n="dashboard.kpi.departments">Departments</span>
+                  <i class="kpi-icon" data-lucide="building-2"></i>
+                </div>
+                <div class="kpi-meta">
+                  <i data-lucide="layers"></i>
+                  <span data-i18n="dashboard.kpi.departments_meta">Org structure</span>
+                </div>
+                <div class="kpi-value" id="kpi-departments">0</div>
               </div>
-              <div class="kpi-value" id="kpi-payroll">0</div>
+            </a>
+            <a class="kpi-link" href="positions.html">
+              <div class="card kpi-card">
+                <div class="kpi-head">
+                  <span data-i18n="dashboard.kpi.positions">Positions</span>
+                  <i class="kpi-icon" data-lucide="briefcase"></i>
+                </div>
+                <div class="kpi-meta">
+                  <i data-lucide="sparkles"></i>
+                  <span data-i18n="dashboard.kpi.positions_meta">Open roles</span>
+                </div>
+                <div class="kpi-value" id="kpi-positions">0</div>
+              </div>
+            </a>
+            <a class="kpi-link" href="leaves.html">
+              <div class="card kpi-card">
+                <div class="kpi-head">
+                  <span data-i18n="dashboard.kpi.leaves">Leave Requests</span>
+                  <i class="kpi-icon" data-lucide="calendar-check-2"></i>
+                </div>
+                <div class="kpi-meta">
+                  <i data-lucide="clock-4"></i>
+                  <span data-i18n="dashboard.kpi.leaves_meta">Pending reviews</span>
+                </div>
+                <div class="kpi-value" id="kpi-leaves">0</div>
+              </div>
+            </a>
+            <a class="kpi-link" href="payroll.html">
+              <div class="card kpi-card">
+                <div class="kpi-head">
+                  <span data-i18n="dashboard.kpi.payroll">Payrolls</span>
+                  <i class="kpi-icon" data-lucide="wallet"></i>
+                </div>
+                <div class="kpi-meta">
+                  <i data-lucide="credit-card"></i>
+                  <span data-i18n="dashboard.kpi.payroll_meta">Ready to publish</span>
+                </div>
+                <div class="kpi-value" id="kpi-payroll">0</div>
+              </div>
+            </a>
+            <a class="kpi-link" href="attendance.html">
+              <div class="card kpi-card">
+                <div class="kpi-head">
+                  <span data-i18n="dashboard.kpi.attendance">Attendance</span>
+                  <i class="kpi-icon" data-lucide="clock-3"></i>
+                </div>
+                <div class="kpi-meta">
+                  <i data-lucide="activity"></i>
+                  <span data-i18n="dashboard.kpi.attendance_meta">Daily check-ins</span>
+                </div>
+                <div class="kpi-value" id="kpi-attendance">0</div>
+              </div>
+            </a>
+          </section>
+          <section class="dashboard-grid">
+            <div class="card chart-card">
+              <h3 class="section-title">
+                <i data-lucide="line-chart"></i>
+                <span data-i18n="dashboard.headcount_trend">Headcount Trend</span>
+              </h3>
+              <canvas id="headcount-chart"></canvas>
             </div>
-          </a>
-          <a class="kpi-link" href="attendance.html">
-            <div class="card kpi-card">
-              <div class="kpi-head">
-                <span data-i18n="dashboard.kpi.attendance">Attendance</span>
-                <i class="kpi-icon" data-lucide="clock-3"></i>
-              </div>
-              <div class="kpi-meta">
+            <div class="card chart-card">
+              <h3 class="section-title">
+                <i data-lucide="pie-chart"></i>
+                <span data-i18n="dashboard.leave_status">Leave Status</span>
+              </h3>
+              <canvas id="leave-chart"></canvas>
+            </div>
+          </section>
+          <section class="grid-3">
+            <div class="card chart-card">
+              <h3 class="section-title">
+                <i data-lucide="network"></i>
+                <span data-i18n="dashboard.department_headcount">Department Headcount</span>
+              </h3>
+              <canvas id="department-chart"></canvas>
+            </div>
+            <div class="card chart-card">
+              <h3 class="section-title">
+                <i data-lucide="bar-chart-3"></i>
+                <span data-i18n="dashboard.attendance_status">Attendance Status</span>
+              </h3>
+              <canvas id="attendance-chart"></canvas>
+            </div>
+            <div class="card chart-card">
+              <h3 class="section-title">
+                <i data-lucide="area-chart"></i>
+                <span data-i18n="dashboard.payroll_trend">Payroll Trend</span>
+              </h3>
+              <canvas id="payroll-chart"></canvas>
+            </div>
+          </section>
+          <section class="grid-2">
+            <div class="card">
+              <h3 class="section-title">
                 <i data-lucide="activity"></i>
-                <span data-i18n="dashboard.kpi.attendance_meta">Daily check-ins</span>
-              </div>
-              <div class="kpi-value" id="kpi-attendance">0</div>
+                <span data-i18n="dashboard.recent_activity">Recent Activity</span>
+              </h3>
+              <div id="activity-list" class="stack"></div>
             </div>
-          </a>
-        </section>
-        <section class="dashboard-grid">
-          <div class="card chart-card">
-            <h3 class="section-title">
-              <i data-lucide="line-chart"></i>
-              <span data-i18n="dashboard.headcount_trend">Headcount Trend</span>
-            </h3>
-            <canvas id="headcount-chart"></canvas>
-          </div>
-          <div class="card chart-card">
-            <h3 class="section-title">
-              <i data-lucide="pie-chart"></i>
-              <span data-i18n="dashboard.leave_status">Leave Status</span>
-            </h3>
-            <canvas id="leave-chart"></canvas>
-          </div>
-        </section>
-        <section class="grid-3">
-          <div class="card chart-card">
-            <h3 class="section-title">
-              <i data-lucide="network"></i>
-              <span data-i18n="dashboard.department_headcount">Department Headcount</span>
-            </h3>
-            <canvas id="department-chart"></canvas>
-          </div>
-          <div class="card chart-card">
-            <h3 class="section-title">
-              <i data-lucide="bar-chart-3"></i>
-              <span data-i18n="dashboard.attendance_status">Attendance Status</span>
-            </h3>
-            <canvas id="attendance-chart"></canvas>
-          </div>
-          <div class="card chart-card">
-            <h3 class="section-title">
-              <i data-lucide="area-chart"></i>
-              <span data-i18n="dashboard.payroll_trend">Payroll Trend</span>
-            </h3>
-            <canvas id="payroll-chart"></canvas>
-          </div>
-        </section>
-        <section class="grid-2">
-          <div class="card">
-            <h3 class="section-title">
-              <i data-lucide="activity"></i>
-              <span data-i18n="dashboard.recent_activity">Recent Activity</span>
-            </h3>
-            <div id="activity-list" class="stack"></div>
-          </div>
-          <div class="card">
-            <h3 class="section-title" data-i18n="nav.notifications">
-              <i data-lucide="bell"></i>
-              <span data-i18n="nav.notifications">Notifications</span>
-            </h3>
-            <div id="notifications-list" class="stack"></div>
-          </div>
-        </section>
+            <div class="card">
+              <h3 class="section-title" data-i18n="nav.notifications">
+                <i data-lucide="bell"></i>
+                <span data-i18n="nav.notifications">Notifications</span>
+              </h3>
+              <div id="notifications-list" class="stack"></div>
+            </div>
+          </section>
+        </div>
       </main>
     </div>
   </div>

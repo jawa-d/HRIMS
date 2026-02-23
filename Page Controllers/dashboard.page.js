@@ -41,6 +41,25 @@ const welcomeDepts = document.getElementById("welcome-depts");
 
 let activityItems = [];
 let notificationItems = [];
+let chartRenderToken = 0;
+
+function detectPerformanceMode() {
+  const nav = typeof navigator !== "undefined" ? navigator : {};
+  const prefersReduced = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+  const lowCpu = typeof nav.hardwareConcurrency === "number" && nav.hardwareConcurrency <= 4;
+  const lowMemory = typeof nav.deviceMemory === "number" && nav.deviceMemory <= 4;
+  const saveData = Boolean(nav.connection && nav.connection.saveData);
+  return Boolean(prefersReduced || lowCpu || lowMemory || saveData);
+}
+
+function scheduleWork(fn, delay = 0) {
+  const run = () => window.setTimeout(fn, delay);
+  if (typeof window.requestIdleCallback === "function") {
+    window.requestIdleCallback(run, { timeout: 300 });
+    return;
+  }
+  window.requestAnimationFrame(run);
+}
 
 function renderActivity(items) {
   activityItems = items;
@@ -73,7 +92,7 @@ function renderNotifications(items) {
           <div class="text-muted">${item.body}</div>
         </div>
         <div style="display:flex; gap:8px;">
-          <span class="badge">P:${item.priority || "medium"}</span>
+          <span class="badge">${t("dashboard.notifications.priority_prefix")}:${t(`notifications.priority.${String(item.priority || "medium").toLowerCase()}`)}</span>
           ${item.isRead ? "" : `<button class="btn btn-ghost" data-id="${item.id}">${t("notifications.mark_read")}</button>`}
         </div>
       </div>
@@ -91,6 +110,13 @@ function renderNotifications(items) {
 
 function normalizeLeaveStatus(status = "") {
   return status === "pending" ? "submitted" : status;
+}
+
+function translateLeaveStatus(status = "") {
+  const normalized = normalizeLeaveStatus(status);
+  const key = `common.status.${normalized}`;
+  const value = t(key);
+  return value === key ? normalized : value;
 }
 
 function isToday(value) {
@@ -122,6 +148,13 @@ function applyDashboardSearch(query) {
 }
 
 async function loadDashboard() {
+  const performanceMode = detectPerformanceMode();
+  if (performanceMode) {
+    document.body.classList.add("performance-mode");
+  } else {
+    document.body.classList.remove("performance-mode");
+  }
+
   if (welcomeName) welcomeName.textContent = user?.name || "Team";
   if (welcomeDate) {
     const today = new Date();
@@ -181,79 +214,74 @@ async function loadDashboard() {
 
   renderActivity([
     ...employees.slice(0, 3).map((emp) => ({
-      title: emp.fullName || emp.empId || "Employee",
-      subtitle: "Added to directory"
+      title: emp.fullName || emp.empId || t("dashboard.activity.employee_fallback"),
+      subtitle: t("dashboard.activity.added_to_directory")
     })),
     ...leaves.slice(0, 3).map((leave) => ({
-      title: `Leave ${normalizeLeaveStatus(leave.status || "submitted")}`,
-      subtitle: leave.reason || "Request update"
+      title: `${t("dashboard.activity.leave_request")}: ${translateLeaveStatus(leave.status || "submitted")}`,
+      subtitle: leave.reason || t("dashboard.activity.request_update")
     }))
   ]);
 
   renderNotifications(notifications.slice(0, 5));
 
   if (window.Chart) {
+    const currentToken = ++chartRenderToken;
+    const css = getComputedStyle(document.documentElement);
+    const chartText = css.getPropertyValue("--text-muted").trim() || "#475569";
+    const chartPrimary = css.getPropertyValue("--primary").trim() || "#0f766e";
+    const chartAccent = css.getPropertyValue("--accent").trim() || "#0ea5e9";
+    const chartBorder = css.getPropertyValue("--border").trim() || "rgba(15, 23, 42, 0.14)";
+    const chartSoft = css.getPropertyValue("--primary-soft").trim() || "rgba(15, 118, 110, 0.14)";
+
     window.Chart.defaults.font.family = "Manrope, Cairo, sans-serif";
-    window.Chart.defaults.color = "#1f2937";
+    window.Chart.defaults.color = chartText;
     window.Chart.defaults.interaction = { mode: "index", intersect: false };
     window.Chart.defaults.hover = { mode: "index", intersect: false };
     window.Chart.defaults.elements.line.tension = 0.35;
     window.Chart.defaults.elements.point.radius = 3;
     window.Chart.defaults.elements.point.hoverRadius = 6;
     window.Chart.defaults.elements.point.hitRadius = 12;
-    const chartDefaults = { responsive: true, maintainAspectRatio: false };
-
-    new window.Chart(document.getElementById("headcount-chart"), {
-      type: "line",
-      data: {
-        labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
-        datasets: [{ label: "Headcount", data: [12, 18, 20, 24, 28, employees.length], borderColor: "#0038a8", backgroundColor: "rgba(0, 56, 168, 0.2)", fill: true }]
+    const chartDefaults = {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: performanceMode ? false : { duration: 520 },
+      plugins: {
+        legend: {
+          labels: {
+            color: chartText
+          }
+        }
       },
-      options: chartDefaults
-    });
+      scales: {
+        x: {
+          grid: { color: chartBorder }
+        },
+        y: {
+          grid: { color: chartBorder }
+        }
+      }
+    };
 
     const approved = leaves.filter((l) => normalizeLeaveStatus(l.status) === "approved").length;
     const inFlow = leaves.filter((l) => ["submitted", "manager_review", "hr_review"].includes(normalizeLeaveStatus(l.status))).length;
     const rejected = leaves.filter((l) => normalizeLeaveStatus(l.status) === "rejected").length;
-    new window.Chart(document.getElementById("leave-chart"), {
-      type: "doughnut",
-      data: {
-        labels: ["Approved", "In Review", "Rejected"],
-        datasets: [{ data: [approved, inFlow, rejected], backgroundColor: ["#00c2a8", "#0038a8", "#0b1220"] }]
-      },
-      options: chartDefaults
-    });
 
     const departmentNames = new Map(departments.map((dept) => [dept.id, dept.name || dept.id]));
+    const departmentByName = new Map(departments.map((dept) => [String(dept.name || "").trim(), dept.name || dept.id]));
     const deptCounts = employees.reduce((acc, emp) => {
       const raw = (emp.departmentId || "").trim();
       const byId = departmentNames.get(raw);
-      const byName = departments.find((dept) => dept.name === raw)?.name;
+      const byName = departmentByName.get(raw);
       const label = byId || byName || raw || "Unassigned";
       acc[label] = (acc[label] || 0) + 1;
       return acc;
     }, {});
     const deptLabels = Object.keys(deptCounts);
-    new window.Chart(document.getElementById("department-chart"), {
-      type: "bar",
-      data: {
-        labels: deptLabels.length ? deptLabels : ["No data"],
-        datasets: [{ label: "Employees", data: deptLabels.length ? deptLabels.map((label) => deptCounts[label]) : [0], backgroundColor: "#0038a8" }]
-      },
-      options: chartDefaults
-    });
 
     const present = attendance.filter((item) => item.status === "present").length;
     const late = attendance.filter((item) => item.status === "late").length;
     const absent = attendance.filter((item) => item.status === "absent").length;
-    new window.Chart(document.getElementById("attendance-chart"), {
-      type: "bar",
-      data: {
-        labels: ["Present", "Late", "Absent"],
-        datasets: [{ label: "Attendance", data: [present, late, absent], backgroundColor: ["#00c2a8", "#ffb347", "#0b1220"] }]
-      },
-      options: chartDefaults
-    });
 
     const payrollByMonth = payroll.reduce((acc, entry) => {
       const month = (entry.month || "Unknown").trim();
@@ -264,13 +292,61 @@ async function loadDashboard() {
     const payrollLabels = Object.keys(payrollByMonth).sort();
     const recentLabels = payrollLabels.slice(-6);
     const payrollTotals = recentLabels.map((month) => payrollByMonth[month]);
-    new window.Chart(document.getElementById("payroll-chart"), {
-      type: "line",
-      data: {
-        labels: recentLabels.length ? recentLabels : ["No data"],
-        datasets: [{ label: "Net Payroll", data: payrollTotals.length ? payrollTotals : [0], borderColor: "#0038a8", backgroundColor: "rgba(0, 56, 168, 0.15)", fill: true }]
-      },
-      options: chartDefaults
+    const chartQueue = [
+      () => new window.Chart(document.getElementById("headcount-chart"), {
+        type: "line",
+        data: {
+          labels: [
+            t("dashboard.chart.month.jan"),
+            t("dashboard.chart.month.feb"),
+            t("dashboard.chart.month.mar"),
+            t("dashboard.chart.month.apr"),
+            t("dashboard.chart.month.may"),
+            t("dashboard.chart.month.jun")
+          ],
+          datasets: [{ label: t("dashboard.chart.headcount_label"), data: [12, 18, 20, 24, 28, employees.length], borderColor: chartPrimary, backgroundColor: chartSoft, fill: true }]
+        },
+        options: chartDefaults
+      }),
+      () => new window.Chart(document.getElementById("leave-chart"), {
+        type: "doughnut",
+        data: {
+          labels: [t("dashboard.chart.leave.approved"), t("dashboard.chart.leave.in_review"), t("dashboard.chart.leave.rejected")],
+          datasets: [{ data: [approved, inFlow, rejected], backgroundColor: [chartAccent, chartPrimary, chartText] }]
+        },
+        options: chartDefaults
+      }),
+      () => new window.Chart(document.getElementById("department-chart"), {
+        type: "bar",
+        data: {
+          labels: deptLabels.length ? deptLabels : [t("dashboard.chart.no_data")],
+          datasets: [{ label: t("dashboard.chart.department_label"), data: deptLabels.length ? deptLabels.map((label) => deptCounts[label]) : [0], backgroundColor: chartPrimary }]
+        },
+        options: chartDefaults
+      }),
+      () => new window.Chart(document.getElementById("attendance-chart"), {
+        type: "bar",
+        data: {
+          labels: [t("dashboard.chart.attendance.present"), t("dashboard.chart.attendance.late"), t("dashboard.chart.attendance.absent")],
+          datasets: [{ label: t("dashboard.chart.attendance_label"), data: [present, late, absent], backgroundColor: [chartAccent, "#f59e0b", chartText] }]
+        },
+        options: chartDefaults
+      }),
+      () => new window.Chart(document.getElementById("payroll-chart"), {
+        type: "line",
+        data: {
+          labels: recentLabels.length ? recentLabels : [t("dashboard.chart.no_data")],
+          datasets: [{ label: t("dashboard.chart.payroll_label"), data: payrollTotals.length ? payrollTotals : [0], borderColor: chartPrimary, backgroundColor: chartSoft, fill: true }]
+        },
+        options: chartDefaults
+      })
+    ];
+
+    chartQueue.forEach((render, index) => {
+      scheduleWork(() => {
+        if (currentToken !== chartRenderToken) return;
+        render();
+      }, performanceMode ? index * 18 : index * 44);
     });
   }
 

@@ -1,4 +1,4 @@
-﻿import { MENU_ITEMS, APP_NAME } from "../app.config.js";
+import { MENU_ITEMS } from "../app.config.js";
 import { t, translateDom } from "../Languages/i18n.js";
 import { getRole, getUserProfile, getAllowedPages } from "../Aman/guard.js";
 
@@ -13,121 +13,115 @@ let lastRole = null;
 let lastItemsKey = null;
 let lastActiveKey = null;
 let hasRendered = false;
-let sidebarEnhancementsPromise = null;
+
+function isPerformanceMode() {
+  const nav = typeof navigator !== "undefined" ? navigator : {};
+  const prefersReduced = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+  const lowCpu = typeof nav.hardwareConcurrency === "number" && nav.hardwareConcurrency <= 4;
+  const lowMemory = typeof nav.deviceMemory === "number" && nav.deviceMemory <= 4;
+  const saveData = Boolean(nav.connection && nav.connection.saveData);
+  const bodyOptIn = typeof document !== "undefined" && document.body?.classList.contains("performance-mode");
+  return Boolean(prefersReduced || lowCpu || lowMemory || saveData || bodyOptIn);
+}
 
 function isArabic() {
   const lang = document.documentElement.getAttribute("lang") || "en";
   return lang.startsWith("ar");
 }
 
-function loadScript(src) {
-  return new Promise((resolve, reject) => {
-    if (document.querySelector(`script[src="${src}"]`)) {
-      resolve();
-      return;
-    }
-    const script = document.createElement("script");
-    script.src = src;
-    script.async = true;
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error(`Failed to load script: ${src}`));
-    document.head.appendChild(script);
+function stopAnimations(element) {
+  if (!element || typeof element.getAnimations !== "function") return;
+  element.getAnimations().forEach((animation) => animation.cancel());
+}
+
+function animateElement(element, keyframes, options) {
+  if (!element || typeof element.animate !== "function") return;
+  stopAnimations(element);
+  element.animate(keyframes, {
+    fill: "both",
+    easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+    ...options
   });
 }
 
-function loadStyle(href) {
-  return new Promise((resolve) => {
-    if (document.querySelector(`link[href="${href}"]`)) {
-      resolve();
-      return;
-    }
-    const link = document.createElement("link");
-    link.rel = "stylesheet";
-    link.href = href;
-    link.onload = () => resolve();
-    link.onerror = () => resolve();
-    document.head.appendChild(link);
-  });
-}
+function animateSidebar(root, activeKey, options = {}) {
+  if (typeof Element === "undefined") return;
+  if (isPerformanceMode()) return;
 
-function ensureSidebarEnhancements() {
-  if (sidebarEnhancementsPromise) return sidebarEnhancementsPromise;
-
-  sidebarEnhancementsPromise = Promise.all([
-    loadStyle("https://cdn.jsdelivr.net/npm/simplebar@6.2.7/dist/simplebar.min.css"),
-    loadScript("https://cdn.jsdelivr.net/npm/simplebar@6.2.7/dist/simplebar.min.js"),
-    loadScript("https://cdn.jsdelivr.net/npm/animejs@3.2.2/lib/anime.min.js")
-  ]).catch(() => null);
-
-  return sidebarEnhancementsPromise;
-}
-
-function setupSimpleBar(root) {
-  const nav = root.querySelector(".sidebar-nav");
-  if (!nav || !window.SimpleBar) return;
-  if (nav.dataset.simplebarReady === "true") return;
-
-  nav.dataset.simplebarReady = "true";
-  new window.SimpleBar(nav, { autoHide: false });
-}
-
-function animateSidebar(root, activeKey) {
-  if (!window.anime) return;
-
-  const dir = isArabic() ? 10 : -10;
+  const dir = isArabic() ? 1 : -1;
+  const full = options.full !== false;
   const links = Array.from(root.querySelectorAll(".sidebar-link"));
   const sections = Array.from(root.querySelectorAll(".sidebar-section"));
+  const counts = Array.from(root.querySelectorAll(".sidebar-section-count"));
+  const titles = Array.from(root.querySelectorAll(".sidebar-section-title"));
   const panel = root.querySelector(".sidebar-panel");
+  const header = root.querySelector(".sidebar-head");
+  const panelTitle = root.querySelector(".sidebar-panel-title");
+  const footer = root.querySelector(".sidebar-footer");
   const active = root.querySelector(`.sidebar-link[data-key="${activeKey}"]`);
+  const activeIcon = active ? active.querySelector("i") : null;
+  const activeLabel = active ? active.querySelector("span") : null;
 
-  window.anime.remove(links);
-  window.anime.remove(sections);
-  if (panel) window.anime.remove(panel);
-  if (active) window.anime.remove(active);
+  if (full) {
+    animateElement(panel, [
+      { transform: `translateX(${18 * dir}px) scale(0.985)`, opacity: 0 },
+      { transform: "translateX(0) scale(1)", opacity: 1 }
+    ], { duration: 540, delay: 0 });
 
-  if (panel) {
-    window.anime({
-      targets: panel,
-      translateX: [dir * 1.4, 0],
-      opacity: [0, 1],
-      duration: 420,
-      easing: "easeOutCubic"
+    [header, panelTitle].filter(Boolean).forEach((element, index) => {
+      animateElement(element, [
+        { transform: "translateY(-10px)", opacity: 0 },
+        { transform: "translateY(0)", opacity: 1 }
+      ], { duration: 380, delay: 120 + index * 90 });
     });
+
+    sections.forEach((section, index) => {
+      animateElement(section, [
+        { transform: "translateY(14px)", opacity: 0 },
+        { transform: "translateY(0)", opacity: 1 }
+      ], { duration: 440, delay: 170 + index * 55 });
+    });
+
+    [...titles, ...counts].forEach((element, index) => {
+      animateElement(element, [
+        { transform: `translateX(${8 * dir}px)`, opacity: 0 },
+        { transform: "translateX(0)", opacity: 1 }
+      ], { duration: 320, delay: 260 + index * 18 });
+    });
+
+    links.forEach((link, index) => {
+      animateElement(link, [
+        { transform: `translateX(${16 * dir}px)`, opacity: 0 },
+        { transform: "translateX(0)", opacity: 1 }
+      ], { duration: 420, delay: 250 + index * 18 });
+    });
+
+    animateElement(footer, [
+      { transform: "translateY(10px)", opacity: 0 },
+      { transform: "translateY(0)", opacity: 1 }
+    ], { duration: 360, delay: 420 });
   }
 
-  window.anime({
-    targets: sections,
-    translateY: [8, 0],
-    opacity: [0, 1],
-    duration: 360,
-    delay: window.anime.stagger(38),
-    easing: "easeOutQuad"
-  });
+  animateElement(active, [
+    { transform: `translateX(${6 * dir}px) scale(0.975)` },
+    { transform: "translateX(0) scale(1)" }
+  ], { duration: 460, delay: 0 });
 
-  window.anime({
-    targets: links,
-    translateX: [dir, 0],
-    opacity: [0, 1],
-    duration: 460,
-    delay: window.anime.stagger(20),
-    easing: "easeOutCubic"
-  });
+  animateElement(activeIcon, [
+    { transform: `rotate(${-10 * dir}deg) scale(0.82)` },
+    { transform: "rotate(0deg) scale(1.06)", offset: 0.65 },
+    { transform: "rotate(0deg) scale(1)" }
+  ], { duration: 560, easing: "cubic-bezier(0.34, 1.56, 0.64, 1)" });
 
-  if (active) {
-    window.anime({
-      targets: active,
-      scale: [0.97, 1],
-      duration: 340,
-      easing: "easeOutBack"
-    });
-  }
+  animateElement(activeLabel, [
+    { letterSpacing: "0em" },
+    { letterSpacing: ".02em", offset: 0.5 },
+    { letterSpacing: "0em" }
+  ], { duration: 520, easing: "ease-out" });
 }
 
-function enhanceSidebar(root, activeKey) {
-  ensureSidebarEnhancements().then(() => {
-    setupSimpleBar(root);
-    animateSidebar(root, activeKey);
-  });
+function enhanceSidebar(root, activeKey, options) {
+  animateSidebar(root, activeKey, options);
 }
 
 function getSectionLabel(section) {
@@ -227,7 +221,7 @@ export function renderSidebar(activeKey) {
         if (hasActive) section.setAttribute("open", "");
       });
 
-      enhanceSidebar(root, activeKey);
+      enhanceSidebar(root, activeKey, { full: false });
       lastActiveKey = activeKey;
     }
     return;
@@ -238,7 +232,7 @@ export function renderSidebar(activeKey) {
       <div class="sidebar-panel">
         <div class="sidebar-head">
           <div class="sidebar-brand">
-            <div class="sidebar-logo">${APP_NAME}</div>
+            <div class="sidebar-logo">${t("app.name")}</div>
             <div class="sidebar-role">${roleLabel}</div>
           </div>
           <button class="sidebar-close-btn" id="sidebar-close-btn" aria-label="Close sidebar">
@@ -278,13 +272,14 @@ export function renderSidebar(activeKey) {
     window.lucide.createIcons();
   }
 
-  enhanceSidebar(root, activeKey);
+  enhanceSidebar(root, activeKey, { full: true });
 
   lastRole = role;
   lastItemsKey = itemsKey;
   lastActiveKey = activeKey;
   hasRendered = true;
 }
+
 
 
 
