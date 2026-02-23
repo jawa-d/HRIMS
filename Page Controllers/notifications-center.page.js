@@ -13,6 +13,7 @@ import {
   unarchiveNotification
 } from "../Services/notifications.service.js";
 import { logSecurityEvent } from "../Services/security-audit.service.js";
+import { enforceAdminPagesCode } from "../Services/admin-lock.service.js";
 
 if (!enforceAuth("notifications_center")) {
   throw new Error("Unauthorized");
@@ -21,6 +22,11 @@ if (!enforceAuth("notifications_center")) {
 initI18n();
 const user = getUserProfile();
 const role = getRole();
+
+if (!enforceAdminPagesCode({ role, user, pageLabel: "Notifications Center" })) {
+  throw new Error("Admin pages code required");
+}
+
 renderNavbar({ user, role });
 renderSidebar("notifications_center");
 

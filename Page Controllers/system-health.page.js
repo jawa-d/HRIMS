@@ -4,6 +4,7 @@ import { renderNavbar } from "../Collaboration interface/ui-navbar.js";
 import { renderSidebar } from "../Collaboration interface/ui-sidebar.js";
 import { showToast } from "../Collaboration interface/ui-toast.js";
 import { loadSystemHealthData } from "../Services/system-health.service.js";
+import { enforceAdminPagesCode } from "../Services/admin-lock.service.js";
 
 if (!enforceAuth("system_health")) {
   throw new Error("Unauthorized");
@@ -12,6 +13,11 @@ if (!enforceAuth("system_health")) {
 initI18n();
 const user = getUserProfile();
 const role = getRole();
+
+if (!enforceAdminPagesCode({ role, user, pageLabel: "System Health" })) {
+  throw new Error("Admin pages code required");
+}
+
 renderNavbar({ user, role });
 renderSidebar("system_health");
 

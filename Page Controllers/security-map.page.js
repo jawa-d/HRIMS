@@ -5,6 +5,7 @@ import { renderSidebar } from "../Collaboration interface/ui-sidebar.js";
 import { showToast } from "../Collaboration interface/ui-toast.js";
 import { listSecurityEvents } from "../Services/security-audit.service.js";
 import { buildThreatMap, runAIDefense, listAIReports, countBlockedActors } from "../Services/security-defense.service.js";
+import { enforceAdminPagesCode } from "../Services/admin-lock.service.js";
 
 if (!enforceAuth("security_map")) {
   throw new Error("Unauthorized");
@@ -13,6 +14,11 @@ if (!enforceAuth("security_map")) {
 initI18n();
 const user = getUserProfile();
 const role = getRole();
+
+if (!enforceAdminPagesCode({ role, user, pageLabel: "Security Map" })) {
+  throw new Error("Admin pages code required");
+}
+
 renderNavbar({ user, role });
 renderSidebar("security_map");
 

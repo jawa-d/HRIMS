@@ -74,6 +74,32 @@ html[data-theme="dark"] {
   padding: var(--space-2) 0;
 }
 
+.org-department {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, var(--surface), var(--surface-strong));
+  padding: var(--space-3);
+}
+
+.org-department-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.org-department-title {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--text);
+}
+
+.org-department-tree {
+  display: grid;
+  gap: var(--space-3);
+}
+
 .org-node {
   border-left: 3px solid var(--org-node-border);
   padding-left: var(--space-4);

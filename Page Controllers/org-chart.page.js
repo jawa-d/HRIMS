@@ -30,6 +30,7 @@ let departments = [];
 let positions = [];
 let parentMap = new Map();
 let unsubscribers = [];
+const UNASSIGNED_DEPARTMENT_ID = "__unassigned__";
 let dataReady = {
   employees: false,
   departments: false,
@@ -54,27 +55,53 @@ function resolveManagerId(raw) {
   return "";
 }
 
-function buildHierarchy() {
+function normalizeDepartmentId(value) {
+  return String(value || "").trim() || UNASSIGNED_DEPARTMENT_ID;
+}
+
+function buildHierarchyByDepartment() {
   const nodes = new Map();
   const childrenMap = new Map();
+  const deptMembers = new Map();
+  const deptNameMap = new Map(departments.map((dept) => [dept.id, dept.name || dept.id]));
+
   employees.forEach((emp) => {
     nodes.set(emp.id, { ...emp, id: emp.id });
     childrenMap.set(emp.id, []);
+    const deptId = normalizeDepartmentId(emp.departmentId);
+    if (!deptMembers.has(deptId)) deptMembers.set(deptId, []);
+    deptMembers.get(deptId).push(emp.id);
   });
 
   employees.forEach((emp) => {
     const managerId = resolveManagerId(emp.managerId);
-    if (managerId && childrenMap.has(managerId)) {
+    const empDeptId = normalizeDepartmentId(emp.departmentId);
+    const managerDeptId = normalizeDepartmentId(nodes.get(managerId)?.departmentId);
+    if (managerId && childrenMap.has(managerId) && empDeptId === managerDeptId) {
       childrenMap.get(managerId).push(emp.id);
       parentMap.set(emp.id, managerId);
     }
   });
 
-  const roots = employees
-    .filter((emp) => !resolveManagerId(emp.managerId))
-    .map((emp) => emp.id);
+  const departmentOrder = [
+    ...departments.map((dept) => dept.id),
+    ...Array.from(deptMembers.keys()).filter((deptId) => !deptNameMap.has(deptId))
+  ];
 
-  return { nodes, childrenMap, roots };
+  const departmentGroups = departmentOrder
+    .map((deptId) => {
+      const memberIds = deptMembers.get(deptId) || [];
+      const roots = memberIds.filter((id) => !parentMap.has(id));
+      return {
+        id: deptId,
+        label: deptId === UNASSIGNED_DEPARTMENT_ID ? "Unassigned Department" : deptNameMap.get(deptId) || deptId,
+        roots,
+        memberCount: memberIds.length
+      };
+    })
+    .filter((group) => group.memberCount > 0);
+
+  return { nodes, childrenMap, departmentGroups };
 }
 
 function createNode(id, nodes, childrenMap, maps) {
@@ -121,20 +148,39 @@ function createNode(id, nodes, childrenMap, maps) {
   return node;
 }
 
+function createDepartmentSection(group, nodes, childrenMap, maps) {
+  const section = document.createElement("section");
+  section.className = "org-department";
+  section.dataset.name = group.label.toLowerCase();
+  section.innerHTML = `
+    <div class="org-department-head">
+      <h4 class="org-department-title">${group.label}</h4>
+      <span class="chip">${group.memberCount} Employees</span>
+    </div>
+    <div class="org-department-tree"></div>
+  `;
+
+  const tree = section.querySelector(".org-department-tree");
+  group.roots.forEach((rootId) => {
+    tree.appendChild(createNode(rootId, nodes, childrenMap, maps));
+  });
+  return section;
+}
+
 function renderTree() {
   treeRoot.innerHTML = "";
   parentMap = new Map();
   const maps = buildMaps();
-  const { nodes, childrenMap, roots } = buildHierarchy();
+  const { nodes, childrenMap, departmentGroups } = buildHierarchyByDepartment();
 
-  if (!roots.length) {
+  if (!departmentGroups.length) {
     emptyState.classList.remove("hidden");
     return;
   }
 
   emptyState.classList.add("hidden");
-  roots.forEach((rootId) => {
-    treeRoot.appendChild(createNode(rootId, nodes, childrenMap, maps));
+  departmentGroups.forEach((group) => {
+    treeRoot.appendChild(createDepartmentSection(group, nodes, childrenMap, maps));
   });
 
   treeRoot.querySelectorAll("[data-toggle='collapse']").forEach((button) => {
@@ -162,7 +208,10 @@ function expandAncestors(nodeId) {
 function applySearch() {
   const query = (searchInput?.value || "").trim().toLowerCase();
   const nodes = treeRoot.querySelectorAll(".org-node");
+  const departmentsEls = treeRoot.querySelectorAll(".org-department");
+
   nodes.forEach((node) => node.classList.remove("org-highlight"));
+  departmentsEls.forEach((section) => section.classList.remove("hidden"));
   if (!query) return;
 
   nodes.forEach((node) => {
@@ -170,6 +219,12 @@ function applySearch() {
       node.classList.add("org-highlight");
       expandAncestors(node.dataset.id);
     }
+  });
+
+  departmentsEls.forEach((section) => {
+    const byDepartment = section.dataset.name.includes(query);
+    const hasMatchedNode = section.querySelector(".org-node.org-highlight");
+    section.classList.toggle("hidden", !byDepartment && !hasMatchedNode);
   });
 }
 

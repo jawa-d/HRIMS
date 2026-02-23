@@ -11,21 +11,27 @@ import {
   collectScheduleTransitions
 } from "../Services/page-availability.service.js";
 import { logSecurityEvent, listSecurityEvents } from "../Services/security-audit.service.js";
+import { enforceAdminPagesCode } from "../Services/admin-lock.service.js";
 
 if (!enforceAuth("page_admin")) {
   throw new Error("Unauthorized");
 }
 
-initI18n();
 const user = getUserProfile();
 const role = getRole();
 
 if (!["super_admin", "hr_admin"].includes(role)) {
+  initI18n();
   showToast("error", t("page_admin.restricted"));
   window.location.href = getDefaultPage(role, user);
   throw new Error("Forbidden");
 }
 
+if (!enforceAdminPagesCode({ role, user, pageLabel: "Page Management" })) {
+  throw new Error("Admin pages code required");
+}
+
+initI18n();
 renderNavbar({ user, role });
 renderSidebar("page_admin");
 

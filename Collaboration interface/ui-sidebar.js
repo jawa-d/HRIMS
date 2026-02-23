@@ -3,20 +3,131 @@ import { t, translateDom } from "../Languages/i18n.js";
 import { getRole, getUserProfile, getAllowedPages } from "../Aman/guard.js";
 
 const SECTION_DEFS = [
-  { key: "main", en: "Main", ar: "الرئيسية", items: ["dashboard", "profile"] },
-  { key: "people", en: "People Ops", ar: "الموارد البشرية", items: ["employees", "my_leaves", "leaves", "attendance", "timeoff", "payroll", "assets"] },
-  { key: "org", en: "Organization", ar: "التنظيم", items: ["orgchart", "departments", "positions", "reports"] },
-  { key: "admin", en: "Administration", ar: "الإدارة", items: ["notifications_center", "security_center", "security_map", "system_health", "page_admin", "settings"] }
+  { key: "main", en: "Main", ar: "\u0627\u0644\u0631\u0626\u064a\u0633\u064a\u0629", items: ["dashboard", "profile"] },
+  { key: "people", en: "People Ops", ar: "\u0627\u0644\u0645\u0648\u0627\u0631\u062f \u0627\u0644\u0628\u0634\u0631\u064a\u0629", items: ["employees", "my_leaves", "leaves", "attendance", "timeoff", "payroll", "assets"] },
+  { key: "org", en: "Organization", ar: "\u0627\u0644\u062a\u0646\u0638\u064a\u0645", items: ["orgchart", "departments", "positions", "reports"] },
+  { key: "admin", en: "Administration", ar: "\u0627\u0644\u0625\u062f\u0627\u0631\u0629", items: ["notifications_center", "security_center", "security_map", "system_health", "page_admin", "settings"] }
 ];
 
 let lastRole = null;
 let lastItemsKey = null;
 let lastActiveKey = null;
 let hasRendered = false;
+let sidebarEnhancementsPromise = null;
 
 function isArabic() {
   const lang = document.documentElement.getAttribute("lang") || "en";
   return lang.startsWith("ar");
+}
+
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    if (document.querySelector(`script[src="${src}"]`)) {
+      resolve();
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = src;
+    script.async = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error(`Failed to load script: ${src}`));
+    document.head.appendChild(script);
+  });
+}
+
+function loadStyle(href) {
+  return new Promise((resolve) => {
+    if (document.querySelector(`link[href="${href}"]`)) {
+      resolve();
+      return;
+    }
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = href;
+    link.onload = () => resolve();
+    link.onerror = () => resolve();
+    document.head.appendChild(link);
+  });
+}
+
+function ensureSidebarEnhancements() {
+  if (sidebarEnhancementsPromise) return sidebarEnhancementsPromise;
+
+  sidebarEnhancementsPromise = Promise.all([
+    loadStyle("https://cdn.jsdelivr.net/npm/simplebar@6.2.7/dist/simplebar.min.css"),
+    loadScript("https://cdn.jsdelivr.net/npm/simplebar@6.2.7/dist/simplebar.min.js"),
+    loadScript("https://cdn.jsdelivr.net/npm/animejs@3.2.2/lib/anime.min.js")
+  ]).catch(() => null);
+
+  return sidebarEnhancementsPromise;
+}
+
+function setupSimpleBar(root) {
+  const nav = root.querySelector(".sidebar-nav");
+  if (!nav || !window.SimpleBar) return;
+  if (nav.dataset.simplebarReady === "true") return;
+
+  nav.dataset.simplebarReady = "true";
+  new window.SimpleBar(nav, { autoHide: false });
+}
+
+function animateSidebar(root, activeKey) {
+  if (!window.anime) return;
+
+  const dir = isArabic() ? 10 : -10;
+  const links = Array.from(root.querySelectorAll(".sidebar-link"));
+  const sections = Array.from(root.querySelectorAll(".sidebar-section"));
+  const panel = root.querySelector(".sidebar-panel");
+  const active = root.querySelector(`.sidebar-link[data-key="${activeKey}"]`);
+
+  window.anime.remove(links);
+  window.anime.remove(sections);
+  if (panel) window.anime.remove(panel);
+  if (active) window.anime.remove(active);
+
+  if (panel) {
+    window.anime({
+      targets: panel,
+      translateX: [dir * 1.4, 0],
+      opacity: [0, 1],
+      duration: 420,
+      easing: "easeOutCubic"
+    });
+  }
+
+  window.anime({
+    targets: sections,
+    translateY: [8, 0],
+    opacity: [0, 1],
+    duration: 360,
+    delay: window.anime.stagger(38),
+    easing: "easeOutQuad"
+  });
+
+  window.anime({
+    targets: links,
+    translateX: [dir, 0],
+    opacity: [0, 1],
+    duration: 460,
+    delay: window.anime.stagger(20),
+    easing: "easeOutCubic"
+  });
+
+  if (active) {
+    window.anime({
+      targets: active,
+      scale: [0.97, 1],
+      duration: 340,
+      easing: "easeOutBack"
+    });
+  }
+}
+
+function enhanceSidebar(root, activeKey) {
+  ensureSidebarEnhancements().then(() => {
+    setupSimpleBar(root);
+    animateSidebar(root, activeKey);
+  });
 }
 
 function getSectionLabel(section) {
@@ -38,7 +149,7 @@ function buildSidebarSections(items, activeKey) {
 
     const links = sectionItems
       .map((item) => {
-        const delayIndex = Math.min(animationIndex, 10);
+        const delayIndex = Math.min(animationIndex, 20);
         const markup = `
           <a class="sidebar-link ${activeKey === item.key ? "active" : ""}" data-key="${item.key}" href="${item.href}" style="--i:${delayIndex}">
             <i data-lucide="${item.icon}"></i>
@@ -50,9 +161,13 @@ function buildSidebarSections(items, activeKey) {
       })
       .join("");
 
+    const sectionCount = sectionItems.length;
     return `
       <details class="sidebar-section" ${openAttr}>
-        <summary class="sidebar-section-title">${getSectionLabel(section)}</summary>
+        <summary class="sidebar-section-title">
+          <span>${getSectionLabel(section)}</span>
+          <span class="sidebar-section-count">${sectionCount}</span>
+        </summary>
         <div class="sidebar-section-items">${links}</div>
       </details>
     `;
@@ -63,7 +178,7 @@ function buildSidebarSections(items, activeKey) {
 
   const restLinks = rest
     .map((item) => {
-      const delayIndex = Math.min(animationIndex, 10);
+      const delayIndex = Math.min(animationIndex, 20);
       const markup = `
         <a class="sidebar-link ${activeKey === item.key ? "active" : ""}" data-key="${item.key}" href="${item.href}" style="--i:${delayIndex}">
           <i data-lucide="${item.icon}"></i>
@@ -75,10 +190,13 @@ function buildSidebarSections(items, activeKey) {
     })
     .join("");
 
-  const moreLabel = isArabic() ? "أخرى" : "More";
+  const moreLabel = isArabic() ? "\u0623\u062e\u0631\u0649" : "More";
   return `${sections}
     <details class="sidebar-section">
-      <summary class="sidebar-section-title">${moreLabel}</summary>
+      <summary class="sidebar-section-title">
+        <span>${moreLabel}</span>
+        <span class="sidebar-section-count">${rest.length}</span>
+      </summary>
       <div class="sidebar-section-items">${restLinks}</div>
     </details>
   `;
@@ -90,6 +208,7 @@ export function renderSidebar(activeKey) {
 
   const role = getRole();
   const profile = getUserProfile();
+  const roleLabel = String(role || "employee").replace(/_/g, " ");
   const allowed = getAllowedPages(role, profile);
   const items = MENU_ITEMS.filter((item) => allowed.includes(item.key));
   const itemsKey = items.map((item) => item.key).join("|");
@@ -108,6 +227,7 @@ export function renderSidebar(activeKey) {
         if (hasActive) section.setAttribute("open", "");
       });
 
+      enhanceSidebar(root, activeKey);
       lastActiveKey = activeKey;
     }
     return;
@@ -115,16 +235,25 @@ export function renderSidebar(activeKey) {
 
   root.innerHTML = `
     <aside class="sidebar">
-      <div class="sidebar-head">
-        <div class="sidebar-logo">${APP_NAME}</div>
-        <button class="sidebar-close-btn" id="sidebar-close-btn" aria-label="Close sidebar">
-          <i data-lucide="x"></i>
-        </button>
+      <div class="sidebar-panel">
+        <div class="sidebar-head">
+          <div class="sidebar-brand">
+            <div class="sidebar-logo">${APP_NAME}</div>
+            <div class="sidebar-role">${roleLabel}</div>
+          </div>
+          <button class="sidebar-close-btn" id="sidebar-close-btn" aria-label="Close sidebar">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <div class="sidebar-panel-title">
+          <i data-lucide="sparkles"></i>
+          <span>${isArabic() ? "\u0627\u0644\u0642\u0627\u0626\u0645\u0629" : "Menu"}</span>
+        </div>
+        <nav class="sidebar-nav">
+          ${buildSidebarSections(items, activeKey)}
+        </nav>
+        <div class="sidebar-footer">Developed by Jawad Kadhim © 2025</div>
       </div>
-      <nav class="sidebar-nav">
-        ${buildSidebarSections(items, activeKey)}
-      </nav>
-      <div class="sidebar-footer">Developed by Jawad Kadhim © 2025</div>
     </aside>
     <div class="sidebar-overlay" id="sidebar-overlay"></div>
   `;
@@ -149,10 +278,10 @@ export function renderSidebar(activeKey) {
     window.lucide.createIcons();
   }
 
+  enhanceSidebar(root, activeKey);
+
   lastRole = role;
   lastItemsKey = itemsKey;
   lastActiveKey = activeKey;
   hasRendered = true;
 }
-
-

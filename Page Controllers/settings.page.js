@@ -7,6 +7,7 @@ import { showToast } from "../Collaboration interface/ui-toast.js";
 import { ROLES, ROLE_PERMISSIONS, MENU_ITEMS, STORAGE_KEYS } from "../app.config.js";
 import { listUsers, upsertUser, deleteUser } from "../Services/users.service.js";
 import { logSecurityEvent } from "../Services/security-audit.service.js";
+import { enforceAdminPagesCode } from "../Services/admin-lock.service.js";
 
 if (!enforceAuth("settings")) {
   throw new Error("Unauthorized");
@@ -15,6 +16,11 @@ if (!enforceAuth("settings")) {
 initI18n();
 const user = getUserProfile();
 const role = getRole();
+
+if (!enforceAdminPagesCode({ role, user, pageLabel: "Settings" })) {
+  throw new Error("Admin pages code required");
+}
+
 renderNavbar({ user, role });
 renderSidebar("settings");
 if (window.lucide?.createIcons) {

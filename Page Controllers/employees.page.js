@@ -9,6 +9,8 @@ import { canDo } from "../Services/permissions.service.js";
 import { saveTablePrefs, getTablePrefs, paginate, exportRowsToCsv } from "../Services/table-tools.service.js";
 import { trackUxEvent } from "../Services/telemetry.service.js";
 import { logSecurityEvent } from "../Services/security-audit.service.js";
+import { listDepartments } from "../Services/departments.service.js";
+import { listPositions } from "../Services/positions.service.js";
 import {
   listEmployees,
   createEmployee,
@@ -55,6 +57,8 @@ if (!canCreate && restoreButton) restoreButton.classList.add("hidden");
 const PREF_KEY = "employees_table";
 const prefs = getTablePrefs(PREF_KEY, { query: "", status: "", page: 1, pageSize: 10 });
 let employees = [];
+let departments = [];
+let positions = [];
 
 searchInput.value = prefs.query || "";
 statusFilter.value = prefs.status || "";
@@ -112,7 +116,7 @@ function renderEmployees() {
         <td>${emp.empId || emp.id}</td>
         <td><a href="employee-details.html?id=${emp.id}">${emp.fullName || "-"}</a></td>
         <td>${emp.email || "-"}</td>
-        <td>${emp.departmentId || "-"}</td>
+        <td>${departments.find((dept) => dept.id === emp.departmentId)?.name || emp.departmentId || "-"}</td>
         <td><span class="badge">${emp.isArchived ? "archived" : (emp.status || "active")}</span></td>
         <td>
           ${
@@ -139,14 +143,56 @@ function renderEmployees() {
   });
 }
 
+function getDepartmentCode(departmentId) {
+  const dept = departments.find((item) => item.id === departmentId);
+  const source = (dept?.code || dept?.name || departmentId || "EMP").toString();
+  const normalized = source.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 4);
+  return normalized || "EMP";
+}
+
+function generateEmployeeId(departmentId, excludeId = "") {
+  const prefix = getDepartmentCode(departmentId);
+  let max = 0;
+  employees.forEach((emp) => {
+    if (!emp || emp.id === excludeId) return;
+    const value = String(emp.empId || "");
+    const match = value.match(new RegExp(`^${prefix}-(\\d+)$`));
+    if (!match) return;
+    const serial = Number(match[1]);
+    if (Number.isFinite(serial) && serial > max) max = serial;
+  });
+  return `${prefix}-${String(max + 1).padStart(3, "0")}`;
+}
+
 function employeeFormContent(emp = {}) {
+  const departmentOptions = [
+    `<option value="">Select department</option>`,
+    ...departments.map(
+      (dept) => `<option value="${dept.id}" ${emp.departmentId === dept.id ? "selected" : ""}>${dept.name || dept.id}</option>`
+    ),
+    ...(emp.departmentId && !departments.find((dept) => dept.id === emp.departmentId)
+      ? [`<option value="${emp.departmentId}" selected>${emp.departmentId}</option>`]
+      : [])
+  ].join("");
+
+  const positionOptions = [
+    `<option value="">Select position</option>`,
+    ...positions.map(
+      (position) =>
+        `<option value="${position.id}" ${emp.positionId === position.id ? "selected" : ""}>${position.name || position.id}</option>`
+    ),
+    ...(emp.positionId && !positions.find((position) => position.id === emp.positionId)
+      ? [`<option value="${emp.positionId}" selected>${emp.positionId}</option>`]
+      : [])
+  ].join("");
+
   return `
-    <label>رقم الموظف<input class="input" id="emp-id" value="${emp.empId || ""}" /></label>
+    <label>رقم الموظف<input class="input" id="emp-id" value="${emp.empId || ""}" readonly /></label>
     <label>الاسم الكامل<input class="input" id="emp-name" value="${emp.fullName || ""}" /></label>
     <label>البريد الإلكتروني<input class="input" id="emp-email" value="${emp.email || ""}" /></label>
     <label>الهاتف<input class="input" id="emp-phone" value="${emp.phone || ""}" /></label>
-    <label>رقم القسم<input class="input" id="emp-dept" value="${emp.departmentId || ""}" /></label>
-    <label>رقم الوظيفة<input class="input" id="emp-position" value="${emp.positionId || ""}" /></label>
+    <label>Department<select class="select" id="emp-dept">${departmentOptions}</select></label>
+    <label>Position<select class="select" id="emp-position">${positionOptions}</select></label>
     <label>الراتب الأساسي<input class="input" id="emp-salary" type="number" value="${emp.salaryBase || 0}" /></label>
     <label>المخصصات<input class="input" id="emp-allowances" type="number" value="${emp.allowances || 0}" /></label>
     <label>تاريخ المباشرة<input class="input" id="emp-join" type="date" value="${emp.joinDate || ""}" /></label>
@@ -174,6 +220,31 @@ function collectEmployeeForm() {
   };
 }
 
+function bindEmployeeFormAutoId(emp) {
+  const idInput = document.getElementById("emp-id");
+  const departmentSelect = document.getElementById("emp-dept");
+  if (!idInput || !departmentSelect) return;
+
+  const isEdit = Boolean(emp?.id);
+  if (isEdit) {
+    if (!idInput.value && departmentSelect.value) {
+      idInput.value = generateEmployeeId(departmentSelect.value, emp.id);
+    }
+    return;
+  }
+
+  if (!departmentSelect.value && departments.length) {
+    departmentSelect.value = departments[0].id;
+  }
+
+  const applyGeneratedId = () => {
+    idInput.value = generateEmployeeId(departmentSelect.value);
+  };
+
+  departmentSelect.addEventListener("change", applyGeneratedId);
+  applyGeneratedId();
+}
+
 function openEmployeeModal(emp) {
   openModal({
     title: emp ? t("common.edit") : t("employees.add"),
@@ -184,6 +255,13 @@ function openEmployeeModal(emp) {
         className: "btn btn-primary",
         onClick: async () => {
           const payload = collectEmployeeForm();
+          if (!payload.departmentId) {
+            showToast("error", "Department is required");
+            return;
+          }
+          if (!emp) {
+            payload.empId = generateEmployeeId(payload.departmentId);
+          }
           const duplicate = await hasEmployeeDuplicate(payload, emp?.id || "");
           if (duplicate.exists) {
             const fieldLabelMap = {
@@ -236,6 +314,7 @@ function openEmployeeModal(emp) {
       { label: t("common.cancel"), className: "btn btn-ghost" }
     ]
   });
+  bindEmployeeFormAutoId(emp);
 }
 
 async function handleRowAction(action, id) {
@@ -313,6 +392,12 @@ async function loadEmployees() {
   showTableSkeleton(tbody, { rows: 6, cols: 6 });
   employees = await listEmployees({ includeArchived: true });
   renderEmployees();
+}
+
+async function loadReferenceData() {
+  const [departmentsData, positionsData] = await Promise.all([listDepartments(), listPositions()]);
+  departments = departmentsData;
+  positions = positionsData;
 }
 
 async function backupEmployees() {
@@ -396,4 +481,10 @@ window.addEventListener("global-search", (event) => {
 });
 
 trackUxEvent({ event: "page_open", module: "employees" });
-loadEmployees();
+(async () => {
+  await loadReferenceData();
+  await loadEmployees();
+})();
+
+
+

@@ -4,6 +4,7 @@ import { renderNavbar } from "../Collaboration interface/ui-navbar.js";
 import { renderSidebar } from "../Collaboration interface/ui-sidebar.js";
 import { listSecurityEvents } from "../Services/security-audit.service.js";
 import { listUiErrors, listUxEvents } from "../Services/telemetry.service.js";
+import { enforceAdminPagesCode } from "../Services/admin-lock.service.js";
 
 if (!enforceAuth("security_center")) {
   throw new Error("Unauthorized");
@@ -12,6 +13,11 @@ if (!enforceAuth("security_center")) {
 initI18n();
 const user = getUserProfile();
 const role = getRole();
+
+if (!enforceAdminPagesCode({ role, user, pageLabel: "Security Center" })) {
+  throw new Error("Admin pages code required");
+}
+
 renderNavbar({ user, role });
 renderSidebar("security_center");
 
