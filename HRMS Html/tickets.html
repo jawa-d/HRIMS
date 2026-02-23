@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HRMS | Tickets</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../HRMS%20CSS/tokens.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/global.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/components.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/navbar.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/sidebar.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/modal.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/toast.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/tickets.css" />
+</head>
+<body data-page="tickets">
+  <div id="app" class="app-shell">
+    <div id="sidebar-root"></div>
+    <div class="main-content">
+      <div id="navbar-root"></div>
+      <main class="page">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title" data-i18n="tickets.title">Tickets</h1>
+            <p class="text-muted">Create and track internal IT/HR requests with clear ownership and SLA status.</p>
+          </div>
+          <button class="btn btn-primary" id="tickets-add-btn">
+            <i data-lucide="plus"></i>
+            New Ticket
+          </button>
+        </div>
+
+        <section class="tickets-filters card">
+          <div class="tickets-filter-field">
+            <label class="text-muted" for="tickets-search">Search</label>
+            <input class="input" id="tickets-search" type="search" placeholder="Subject, requester, assignee" />
+          </div>
+          <div class="tickets-filter-field">
+            <label class="text-muted" for="tickets-status">Status</label>
+            <select class="select" id="tickets-status">
+              <option value="">All</option>
+              <option value="open">Open</option>
+              <option value="in_progress">In Progress</option>
+              <option value="resolved">Resolved</option>
+              <option value="closed">Closed</option>
+            </select>
+          </div>
+          <div class="tickets-filter-field">
+            <label class="text-muted" for="tickets-category">Category</label>
+            <select class="select" id="tickets-category">
+              <option value="">All</option>
+              <option value="hr">HR</option>
+              <option value="it">IT</option>
+              <option value="general">General</option>
+            </select>
+          </div>
+          <div class="tickets-filter-field">
+            <label class="text-muted" for="tickets-priority">Priority</label>
+            <select class="select" id="tickets-priority">
+              <option value="">All</option>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+              <option value="critical">Critical</option>
+            </select>
+          </div>
+        </section>
+
+        <section class="tickets-kpis">
+          <div class="card tickets-kpi">
+            <div class="text-muted">Total</div>
+            <div class="kpi-value" id="tickets-kpi-total">0</div>
+          </div>
+          <div class="card tickets-kpi">
+            <div class="text-muted">Open</div>
+            <div class="kpi-value" id="tickets-kpi-open">0</div>
+          </div>
+          <div class="card tickets-kpi">
+            <div class="text-muted">In Progress</div>
+            <div class="kpi-value" id="tickets-kpi-progress">0</div>
+          </div>
+          <div class="card tickets-kpi">
+            <div class="text-muted">Resolved</div>
+            <div class="kpi-value" id="tickets-kpi-resolved">0</div>
+          </div>
+        </section>
+
+        <section class="tickets-analytics">
+          <div class="card tickets-analytics-card">
+            <div class="text-muted">SLA Compliance</div>
+            <div class="kpi-value" id="tickets-analytics-sla">0%</div>
+            <small class="text-muted">Resolved within priority targets</small>
+          </div>
+          <div class="card tickets-analytics-card">
+            <div class="text-muted">Avg. Close Time</div>
+            <div class="kpi-value" id="tickets-analytics-avg-close">0h</div>
+            <small class="text-muted">From create to resolved/closed</small>
+          </div>
+          <div class="card tickets-analytics-card">
+            <div class="text-muted">Top Category</div>
+            <div class="kpi-value" id="tickets-analytics-top-category">-</div>
+            <small class="text-muted" id="tickets-analytics-top-category-meta">No data</small>
+          </div>
+        </section>
+
+        <section class="card tickets-workload-card">
+          <div class="card-header">
+            <h3 class="section-title">
+              <i data-lucide="users-round"></i>
+              Team Workload
+            </h3>
+          </div>
+          <div class="tickets-table-wrap">
+            <table class="table tickets-workload-table">
+              <thead>
+                <tr>
+                  <th>Assignee</th>
+                  <th>Open</th>
+                  <th>In Progress</th>
+                  <th>Total Active</th>
+                </tr>
+              </thead>
+              <tbody id="tickets-workload-body"></tbody>
+            </table>
+          </div>
+          <div id="tickets-workload-empty" class="empty-state hidden">No active workload right now.</div>
+        </section>
+
+        <section class="card">
+          <div class="card-header">
+            <h3 class="section-title">
+              <i data-lucide="ticket"></i>
+              Ticket Queue
+            </h3>
+          </div>
+          <div class="tickets-table-wrap">
+            <table class="table tickets-table">
+              <thead>
+                <tr>
+                  <th>Subject</th>
+                  <th>Category</th>
+                  <th>Priority</th>
+                  <th>Status</th>
+                  <th>Requester</th>
+                  <th>Assignee</th>
+                  <th>Updated</th>
+                  <th data-i18n="common.actions">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="tickets-body"></tbody>
+            </table>
+          </div>
+          <div id="tickets-empty" class="empty-state hidden">No tickets found for the selected filters.</div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script type="module" src="../Page%20Controllers/tickets.page.js"></script>
+</body>
+</html>

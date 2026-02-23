@@ -39,6 +39,8 @@ export const MENU_ITEMS = [
   { key: "departments", labelKey: "nav.departments", href: "departments.html", icon: "building" },
   { key: "positions", labelKey: "nav.positions", href: "positions.html", icon: "briefcase" },
   { key: "reports", labelKey: "nav.reports", href: "reports.html", icon: "bar-chart" },
+  { key: "tickets", labelKey: "nav.tickets", href: "tickets.html", icon: "ticket" },
+  { key: "announcements", labelKey: "nav.announcements", href: "announcements.html", icon: "megaphone" },
   { key: "notifications_center", labelKey: "nav.notifications_center", href: "notifications-center.html", icon: "bell-ring" },
   { key: "security_center", labelKey: "nav.security_center", href: "security-center.html", icon: "shield-alert" },
   { key: "security_map", labelKey: "nav.security_map", href: "security-map.html", icon: "map-pinned" },
@@ -62,6 +64,8 @@ export const ROLE_PERMISSIONS = {
     "departments",
     "positions",
     "reports",
+    "tickets",
+    "announcements",
     "notifications_center",
     "security_center",
     "security_map",
@@ -79,6 +83,8 @@ export const ROLE_PERMISSIONS = {
     "timeoff",
     "orgchart",
     "reports",
+    "tickets",
+    "announcements",
     "notifications_center",
     "security_center",
     "security_map",
@@ -93,6 +99,8 @@ export const ROLE_PERMISSIONS = {
     "assets",
     "timeoff",
     "orgchart",
+    "tickets",
+    "announcements",
     "notifications_center",
     "profile"
   ]
@@ -105,7 +113,9 @@ export const ACTION_PERMISSIONS = {
     payroll: ["view_own"],
     attendance: ["view_own"],
     notifications: ["view", "mark_read", "archive"],
-    reports: ["view_own"]
+    reports: ["view_own"],
+    tickets: ["create", "view_own", "edit_own"],
+    announcements: ["view"]
   },
   manager: {
     employees: ["view", "edit"],
@@ -113,7 +123,9 @@ export const ACTION_PERMISSIONS = {
     payroll: ["view"],
     attendance: ["view", "edit"],
     notifications: ["view", "mark_read", "archive", "mark_all"],
-    reports: ["view", "export"]
+    reports: ["view", "export"],
+    tickets: ["create", "view", "edit", "assign", "close"],
+    announcements: ["create", "view", "edit", "publish"]
   },
   hr_admin: {
     employees: ["create", "view", "edit", "delete", "export"],
@@ -121,7 +133,9 @@ export const ACTION_PERMISSIONS = {
     payroll: ["create", "view", "edit", "delete", "publish", "export"],
     attendance: ["create", "view", "edit", "delete", "export"],
     notifications: ["view", "mark_read", "archive", "mark_all"],
-    reports: ["view", "export"]
+    reports: ["view", "export"],
+    tickets: ["create", "view", "edit", "assign", "close", "delete", "export"],
+    announcements: ["create", "view", "edit", "publish", "delete"]
   },
   super_admin: {
     employees: ["*"],
@@ -130,6 +144,8 @@ export const ACTION_PERMISSIONS = {
     attendance: ["*"],
     notifications: ["*"],
     reports: ["*"],
+    tickets: ["*"],
+    announcements: ["*"],
     security: ["*"],
     settings: ["*"]
   }

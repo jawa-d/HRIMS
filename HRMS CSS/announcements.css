@@ -1,0 +1,112 @@
+.ann-filters {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.ann-filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ann-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+
+.ann-kpi {
+  padding: var(--space-4);
+}
+
+.ann-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.ann-card {
+  display: grid;
+  gap: 10px;
+}
+
+.ann-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.ann-card-title {
+  margin: 0;
+  font-size: 1.02rem;
+}
+
+.ann-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.ann-body {
+  color: var(--text);
+  white-space: pre-wrap;
+  line-height: 1.52;
+}
+
+.ann-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.ann-actions {
+  display: inline-flex;
+  gap: 8px;
+}
+
+.ann-status-published {
+  background: rgba(34, 197, 94, 0.16);
+  color: #166534;
+}
+
+.ann-status-draft {
+  background: rgba(59, 130, 246, 0.16);
+  color: #1d4ed8;
+}
+
+.ann-status-archived {
+  background: rgba(100, 116, 139, 0.18);
+  color: #334155;
+}
+
+.ann-pin {
+  background: rgba(249, 115, 22, 0.16);
+  color: #9a3412;
+}
+
+@media (max-width: 1200px) {
+  .ann-filters {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .ann-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ann-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .ann-filters,
+  .ann-kpis {
+    grid-template-columns: 1fr;
+  }
+}
+
