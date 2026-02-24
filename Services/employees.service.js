@@ -24,8 +24,18 @@ function normalizeListOptions(options = {}) {
 
 export async function listEmployees(options = {}) {
   const { includeArchived } = normalizeListOptions(options);
-  const snap = await getDocs(query(employeesRef, orderBy("createdAt", "desc")));
-  const items = snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+  let items = [];
+  try {
+    const snap = await getDocs(query(employeesRef, orderBy("createdAt", "desc")));
+    items = snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+  } catch (_) {
+    try {
+      const snap = await getDocs(employeesRef);
+      items = snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+    } catch (_) {
+      items = [];
+    }
+  }
   if (includeArchived) return items;
   return items.filter((item) => !item.isArchived);
 }

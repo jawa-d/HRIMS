@@ -192,7 +192,10 @@ function renderTable() {
     btn.addEventListener("click", () => {
       const id = btn.dataset.id;
       const action = btn.dataset.action;
-      void handleAction(action, id);
+      void handleAction(action, id).catch((error) => {
+        console.error("Vault action failed:", error);
+        showToast("error", "Vault action failed");
+      });
     });
   });
 }
@@ -324,6 +327,11 @@ window.addEventListener("beforeunload", () => {
 });
 
 (async () => {
-  startRealtime();
-  if (!entries.length) await loadEntries();
+  try {
+    startRealtime();
+    if (!entries.length) await loadEntries();
+  } catch (error) {
+    console.error("Vault page init failed:", error);
+    showToast("error", "Could not load secure vault");
+  }
 })();

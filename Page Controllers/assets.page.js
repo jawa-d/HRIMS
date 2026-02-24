@@ -225,7 +225,12 @@ function renderAssets() {
 
   if (canManage) {
     tbody.querySelectorAll("button[data-action]").forEach((button) => {
-      button.addEventListener("click", () => handleAction(button.dataset.action, button.dataset.id));
+      button.addEventListener("click", () => {
+        void handleAction(button.dataset.action, button.dataset.id).catch((error) => {
+          console.error("Asset action failed:", error);
+          showToast("error", "Asset action failed");
+        });
+      });
     });
   }
 }
@@ -253,6 +258,11 @@ window.addEventListener("global-search", (event) => {
 });
 
 (async () => {
-  await loadEmployees();
-  await loadAssets();
+  try {
+    await loadEmployees();
+    await loadAssets();
+  } catch (error) {
+    console.error("Assets page init failed:", error);
+    showToast("error", "Could not load assets data");
+  }
 })();

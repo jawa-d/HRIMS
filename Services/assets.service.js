@@ -14,8 +14,17 @@ import {
 const assetsRef = collection(db, "assets");
 
 export async function listAssets() {
-  const snap = await getDocs(query(assetsRef, orderBy("createdAt", "desc")));
-  return snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+  try {
+    const snap = await getDocs(query(assetsRef, orderBy("createdAt", "desc")));
+    return snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+  } catch (_) {
+    try {
+      const snap = await getDocs(assetsRef);
+      return snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+    } catch (_) {
+      return [];
+    }
+  }
 }
 
 export async function getAsset(id) {

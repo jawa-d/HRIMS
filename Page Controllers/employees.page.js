@@ -139,7 +139,12 @@ function renderEmployees() {
   renderPagination(paged);
 
   tbody.querySelectorAll("button[data-action]").forEach((button) => {
-    button.addEventListener("click", () => handleRowAction(button.dataset.action, button.dataset.id));
+    button.addEventListener("click", () => {
+      void handleRowAction(button.dataset.action, button.dataset.id).catch((error) => {
+        console.error("Employee action failed:", error);
+        showToast("error", "Employee action failed");
+      });
+    });
   });
 }
 
@@ -482,8 +487,13 @@ window.addEventListener("global-search", (event) => {
 
 trackUxEvent({ event: "page_open", module: "employees" });
 (async () => {
-  await loadReferenceData();
-  await loadEmployees();
+  try {
+    await loadReferenceData();
+    await loadEmployees();
+  } catch (error) {
+    console.error("Employees page init failed:", error);
+    showToast("error", "Could not load employees data");
+  }
 })();
 
 

@@ -19,8 +19,20 @@ export async function listAttendance(filter = {}) {
   if (filter.employeeId) {
     constraints.push(where("employeeId", "==", filter.employeeId));
   }
-  const snap = await getDocs(query(attendanceRef, ...constraints));
-  return snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+  try {
+    const snap = await getDocs(query(attendanceRef, ...constraints));
+    return snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+  } catch (_) {
+    try {
+      const fallback = [];
+      if (filter.employeeId) fallback.push(where("employeeId", "==", filter.employeeId));
+      const q = fallback.length ? query(attendanceRef, ...fallback) : attendanceRef;
+      const snap = await getDocs(q);
+      return snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+    } catch (_) {
+      return [];
+    }
+  }
 }
 
 export async function getAttendance(id) {

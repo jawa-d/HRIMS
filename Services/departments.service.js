@@ -15,8 +15,17 @@ import {
 const departmentsRef = collection(db, "departments");
 
 export async function listDepartments() {
-  const snap = await getDocs(query(departmentsRef, orderBy("createdAt", "desc")));
-  return snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+  try {
+    const snap = await getDocs(query(departmentsRef, orderBy("createdAt", "desc")));
+    return snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+  } catch (_) {
+    try {
+      const snap = await getDocs(departmentsRef);
+      return snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+    } catch (_) {
+      return [];
+    }
+  }
 }
 
 export function watchDepartments(onChange, onError) {

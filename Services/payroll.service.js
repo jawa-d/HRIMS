@@ -25,14 +25,18 @@ export async function listPayroll(filter = {}) {
   if (filter.employeeId) constraints.push(where("employeeId", "==", filter.employeeId));
   if (filter.month) constraints.push(where("month", "==", filter.month));
 
-  const snap = constraints.length ? await getDocs(query(payrollRef, ...constraints)) : await getDocs(payrollRef);
-  return snap.docs
-    .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
-    .sort((a, b) => {
-      const monthSort = String(b.month || "").localeCompare(String(a.month || ""));
-      if (monthSort !== 0) return monthSort;
-      return tsToMillis(b.createdAt) - tsToMillis(a.createdAt);
-    });
+  try {
+    const snap = constraints.length ? await getDocs(query(payrollRef, ...constraints)) : await getDocs(payrollRef);
+    return snap.docs
+      .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
+      .sort((a, b) => {
+        const monthSort = String(b.month || "").localeCompare(String(a.month || ""));
+        if (monthSort !== 0) return monthSort;
+        return tsToMillis(b.createdAt) - tsToMillis(a.createdAt);
+      });
+  } catch (_) {
+    return [];
+  }
 }
 
 export async function getPayroll(id) {

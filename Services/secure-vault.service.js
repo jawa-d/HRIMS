@@ -39,8 +39,12 @@ export async function listVaultEntries() {
     const snap = await getDocs(q);
     return snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
   } catch (_) {
-    const snap = await getDocs(vaultRef);
-    return snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() })).sort(byUpdatedAtDesc);
+    try {
+      const snap = await getDocs(vaultRef);
+      return snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() })).sort(byUpdatedAtDesc);
+    } catch (_) {
+      return [];
+    }
   }
 }
 

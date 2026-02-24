@@ -11,8 +11,12 @@ import {
 const timeoffRef = collection(db, "timeoff_balances");
 
 export async function listTimeoffBalances() {
-  const snap = await getDocs(timeoffRef);
-  return snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+  try {
+    const snap = await getDocs(timeoffRef);
+    return snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+  } catch (_) {
+    return [];
+  }
 }
 
 export async function getTimeoffBalance(employeeId) {

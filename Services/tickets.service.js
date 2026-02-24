@@ -52,9 +52,13 @@ export async function listTickets(filter = {}) {
     const snap = await getDocs(q);
     return snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
   } catch (_) {
-    const q = constraints.length ? query(ticketsRef, ...constraints) : ticketsRef;
-    const snap = await getDocs(q);
-    return snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() })).sort(byCreatedAtDesc);
+    try {
+      const q = constraints.length ? query(ticketsRef, ...constraints) : ticketsRef;
+      const snap = await getDocs(q);
+      return snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() })).sort(byCreatedAtDesc);
+    } catch (_) {
+      return [];
+    }
   }
 }
 

@@ -467,7 +467,12 @@ function renderTickets() {
   renderSelectAllState(items);
 
   bodyEl.querySelectorAll("button[data-action]").forEach((button) => {
-    button.addEventListener("click", () => handleAction(button.dataset.action, button.dataset.id));
+    button.addEventListener("click", () => {
+      void handleAction(button.dataset.action, button.dataset.id).catch((error) => {
+        console.error("Ticket action failed:", error);
+        showToast("error", "Ticket action failed");
+      });
+    });
   });
 
   bodyEl.querySelectorAll("input[data-select-ticket]").forEach((checkbox) => {
@@ -587,9 +592,14 @@ window.addEventListener("beforeunload", () => {
 });
 
 (async () => {
-  loadSavedView();
-  await loadUsersData();
-  await loadEmployeesData();
-  startRealtimeTickets();
-  if (!tickets.length) await loadTicketsData();
+  try {
+    loadSavedView();
+    await loadUsersData();
+    await loadEmployeesData();
+    startRealtimeTickets();
+    if (!tickets.length) await loadTicketsData();
+  } catch (error) {
+    console.error("Tickets page init failed:", error);
+    showToast("error", "Could not load tickets data");
+  }
 })();

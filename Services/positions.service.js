@@ -15,8 +15,17 @@ import {
 const positionsRef = collection(db, "positions");
 
 export async function listPositions() {
-  const snap = await getDocs(query(positionsRef, orderBy("createdAt", "desc")));
-  return snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+  try {
+    const snap = await getDocs(query(positionsRef, orderBy("createdAt", "desc")));
+    return snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+  } catch (_) {
+    try {
+      const snap = await getDocs(positionsRef);
+      return snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+    } catch (_) {
+      return [];
+    }
+  }
 }
 
 export function watchPositions(onChange, onError) {

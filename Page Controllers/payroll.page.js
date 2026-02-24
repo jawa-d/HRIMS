@@ -251,9 +251,14 @@ function attachActionEvents() {
     button.addEventListener("click", async () => {
       const entryId = button.dataset.id;
       if (!entryId || !canManage) return;
-      await deletePayroll(entryId);
-      showToast("success", "Payroll entry deleted");
-      await loadPayroll();
+      try {
+        await deletePayroll(entryId);
+        showToast("success", "Payroll entry deleted");
+        await loadPayroll();
+      } catch (error) {
+        console.error("Payroll delete failed:", error);
+        showToast("error", "Payroll delete failed");
+      }
     });
   });
 }
@@ -440,6 +445,11 @@ window.addEventListener("global-search", (event) => {
 });
 
 (async () => {
-  await loadEmployees();
-  await loadPayroll();
+  try {
+    await loadEmployees();
+    await loadPayroll();
+  } catch (error) {
+    console.error("Payroll page init failed:", error);
+    showToast("error", "Could not load payroll data");
+  }
 })();

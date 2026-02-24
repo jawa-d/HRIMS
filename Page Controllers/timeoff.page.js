@@ -143,7 +143,12 @@ function renderTable() {
 
   if (canManage) {
     tbody.querySelectorAll("button[data-action]").forEach((button) => {
-      button.addEventListener("click", () => handleBalanceAction(button.dataset.action, button.dataset.id));
+      button.addEventListener("click", () => {
+        void handleBalanceAction(button.dataset.action, button.dataset.id).catch((error) => {
+          console.error("Timeoff action failed:", error);
+          showToast("error", "Timeoff action failed");
+        });
+      });
     });
   }
 }
@@ -283,6 +288,11 @@ window.addEventListener("global-search", (event) => {
 });
 
 (async () => {
-  await loadData();
-  await loadBalances();
+  try {
+    await loadData();
+    await loadBalances();
+  } catch (error) {
+    console.error("Timeoff page init failed:", error);
+    showToast("error", "Could not load timeoff data");
+  }
 })();
