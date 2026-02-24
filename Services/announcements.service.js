@@ -14,6 +14,29 @@ import {
 } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
 const announcementsRef = collection(db, "announcements");
+const LOCAL_ANNOUNCEMENTS_KEY = "hrms_announcements_local";
+
+function nowTs() {
+  return { seconds: Math.floor(Date.now() / 1000), nanoseconds: 0 };
+}
+
+function readLocalAnnouncements() {
+  try {
+    const raw = localStorage.getItem(LOCAL_ANNOUNCEMENTS_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+function writeLocalAnnouncements(items) {
+  localStorage.setItem(LOCAL_ANNOUNCEMENTS_KEY, JSON.stringify(items));
+}
+
+function localId() {
+  return `local_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
 
 function normalizeAnnouncementPayload(payload = {}) {
   return {
@@ -53,7 +76,8 @@ export async function listAnnouncements(filter = {}) {
       const snap = await getDocs(q);
       return snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() })).sort(byCreatedAtDesc);
     } catch (_) {
-      return [];
+      const local = readLocalAnnouncements();
+      return status ? local.filter((item) => String(item.status || "").toLowerCase() === status) : local;
     }
   }
 }
@@ -76,8 +100,13 @@ export function watchAnnouncements(onChange, onError, filter = {}) {
 }
 
 export async function getAnnouncement(id) {
-  const snap = await getDoc(doc(db, "announcements", id));
-  return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+  try {
+    const snap = await getDoc(doc(db, "announcements", id));
+    if (snap.exists()) return { id: snap.id, ...snap.data() };
+  } catch (_) {
+    // Fallback to local cache.
+  }
+  return readLocalAnnouncements().find((item) => item.id === id) || null;
 }
 
 export async function createAnnouncement(payload) {
@@ -86,17 +115,48 @@ export async function createAnnouncement(payload) {
     createdAt: ts(),
     updatedAt: ts()
   };
-  const ref = await addDoc(announcementsRef, data);
-  return ref.id;
+  try {
+    const ref = await addDoc(announcementsRef, data);
+    return ref.id;
+  } catch (_) {
+    const id = localId();
+    const localData = {
+      ...normalizeAnnouncementPayload(payload),
+      id,
+      createdAt: nowTs(),
+      updatedAt: nowTs()
+    };
+    writeLocalAnnouncements([localData, ...readLocalAnnouncements()].sort(byCreatedAtDesc));
+    return id;
+  }
 }
 
 export async function updateAnnouncement(id, payload) {
-  await updateDoc(doc(db, "announcements", id), {
-    ...normalizeAnnouncementPayload(payload),
-    updatedAt: ts()
-  });
+  try {
+    await updateDoc(doc(db, "announcements", id), {
+      ...normalizeAnnouncementPayload(payload),
+      updatedAt: ts()
+    });
+  } catch (_) {
+    const current = readLocalAnnouncements();
+    const next = current.map((item) =>
+      item.id === id
+        ? {
+          ...item,
+          ...normalizeAnnouncementPayload(payload),
+          updatedAt: nowTs()
+        }
+        : item
+    );
+    writeLocalAnnouncements(next.sort(byCreatedAtDesc));
+  }
 }
 
 export async function deleteAnnouncement(id) {
-  await deleteDoc(doc(db, "announcements", id));
+  try {
+    await deleteDoc(doc(db, "announcements", id));
+  } catch (_) {
+    const current = readLocalAnnouncements();
+    writeLocalAnnouncements(current.filter((item) => item.id !== id));
+  }
 }
