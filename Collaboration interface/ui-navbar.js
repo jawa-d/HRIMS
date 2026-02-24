@@ -77,6 +77,14 @@ export function renderNavbar({ user, role }) {
   let notificationItems = [];
   let searchResults = [];
 
+  const runSafely = async (task, fallback = null) => {
+    try {
+      return await task();
+    } catch (_) {
+      return fallback;
+    }
+  };
+
   const renderNotifications = (items) => {
     notificationItems = items;
     if (countLabel) countLabel.textContent = items.length ? `${items.length}` : "";
@@ -110,14 +118,16 @@ export function renderNavbar({ user, role }) {
 
     listEl.querySelectorAll("button[data-id]").forEach((button) => {
       button.addEventListener("click", async () => {
-        await markNotificationRead(button.dataset.id);
-        button.closest(".notification-item")?.classList.add("is-read");
+        await runSafely(async () => {
+          await markNotificationRead(button.dataset.id);
+          button.closest(".notification-item")?.classList.add("is-read");
+        });
       });
     });
   };
 
   const updateCount = async () => {
-    const count = await getUnreadCount();
+    const count = await runSafely(() => getUnreadCount(), 0);
     countEl.textContent = String(count);
     countEl.style.display = count > 0 ? "grid" : "none";
   };
@@ -211,7 +221,7 @@ export function renderNavbar({ user, role }) {
       dropdown.setAttribute("aria-hidden", dropdownOpen ? "false" : "true");
     }
     if (dropdownOpen && !notificationItems.length) {
-      const items = await listNotifications();
+      const items = await runSafely(() => listNotifications(), []);
       renderNotifications(items);
     }
   };
@@ -327,7 +337,7 @@ export function renderNavbar({ user, role }) {
       }
 
       searchTimer = setTimeout(async () => {
-        const results = await searchGlobal(value, 7);
+        const results = await runSafely(() => searchGlobal(value, 7), []);
         renderGlobalResults(results);
       }, 200);
     });

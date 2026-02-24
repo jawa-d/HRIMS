@@ -56,9 +56,13 @@ export async function listNotifications(options = {}) {
     const items = snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
     return normalizeNotifications(items, { includeArchived });
   } catch (_) {
-    const snap = await getDocs(query(notificationsRef, where("toUid", "==", uid)));
-    const items = snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() })).sort(byCreatedAtDesc);
-    return normalizeNotifications(items, { includeArchived });
+    try {
+      const snap = await getDocs(query(notificationsRef, where("toUid", "==", uid)));
+      const items = snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() })).sort(byCreatedAtDesc);
+      return normalizeNotifications(items, { includeArchived });
+    } catch (_) {
+      return [];
+    }
   }
 }
 
@@ -74,11 +78,15 @@ export async function getUnreadCount() {
     const snap = await getDocs(q);
     return snap.docs.filter((docSnap) => docSnap.data()?.isArchived !== true).length;
   } catch (_) {
-    const snap = await getDocs(query(notificationsRef, where("toUid", "==", uid)));
-    return snap.docs.filter((docSnap) => {
-      const data = docSnap.data() || {};
-      return data.isRead === false && data.isArchived !== true;
-    }).length;
+    try {
+      const snap = await getDocs(query(notificationsRef, where("toUid", "==", uid)));
+      return snap.docs.filter((docSnap) => {
+        const data = docSnap.data() || {};
+        return data.isRead === false && data.isArchived !== true;
+      }).length;
+    } catch (_) {
+      return 0;
+    }
   }
 }
 
