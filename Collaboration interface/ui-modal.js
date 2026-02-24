@@ -39,7 +39,11 @@ export function openModal({ title, content, actions = [] }) {
     button.className = action.className || "btn btn-primary";
     button.textContent = action.label || "OK";
     button.addEventListener("click", () => {
-      if (action.onClick) action.onClick();
+      if (action.onClick) {
+        Promise.resolve(action.onClick()).catch((error) => {
+          console.error("Modal action failed:", error);
+        });
+      }
       if (!action.keepOpen) closeModal();
     });
     actionsRoot.appendChild(button);

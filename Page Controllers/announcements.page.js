@@ -49,6 +49,15 @@ let users = [];
 let unsubscribeAnnouncements = null;
 const COMPANY_NAME_AR = "\u0634\u0631\u0643\u0629 \u0648\u0627\u062F\u064A \u0627\u0644\u0631\u0627\u0641\u062F\u064A\u0646 \u0644\u0644\u062A\u0623\u0645\u064A\u0646 \u0627\u0644\u062A\u0643\u0627\u0641\u0644\u064A";
 
+async function runSafely(task, fallback = null) {
+  try {
+    return await task();
+  } catch (error) {
+    console.error("Announcements operation failed:", error);
+    return fallback;
+  }
+}
+
 function normalizeWhatsAppNumber(value) {
   const cleaned = String(value || "").replace(/[^\d+]/g, "").trim();
   if (!cleaned) return "";
@@ -322,12 +331,14 @@ function renderAnnouncements() {
   renderKpis(items);
 
   listEl.querySelectorAll("button[data-action]").forEach((button) => {
-    button.addEventListener("click", () => handleAction(button.dataset.action, button.dataset.id));
+    button.addEventListener("click", () => {
+      void runSafely(() => handleAction(button.dataset.action, button.dataset.id), null);
+    });
   });
 }
 
 async function loadAnnouncementsData() {
-  announcements = await listAnnouncements();
+  announcements = await runSafely(() => listAnnouncements(), []);
   renderAnnouncements();
 }
 
@@ -344,7 +355,7 @@ function startRealtimeAnnouncements() {
 }
 
 async function loadUsersData() {
-  users = await listUsers();
+  users = await runSafely(() => listUsers(), []);
 }
 
 function isTargetRole(targetRole, audience) {
@@ -387,7 +398,7 @@ window.addEventListener("beforeunload", () => {
 });
 
 (async () => {
-  await loadUsersData();
+  await runSafely(() => loadUsersData(), []);
   startRealtimeAnnouncements();
-  if (!announcements.length) await loadAnnouncementsData();
+  if (!announcements.length) await runSafely(() => loadAnnouncementsData(), null);
 })();

@@ -48,9 +48,13 @@ export async function listAnnouncements(filter = {}) {
     const snap = await getDocs(q);
     return snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
   } catch (_) {
-    const q = constraints.length ? query(announcementsRef, ...constraints) : announcementsRef;
-    const snap = await getDocs(q);
-    return snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() })).sort(byCreatedAtDesc);
+    try {
+      const q = constraints.length ? query(announcementsRef, ...constraints) : announcementsRef;
+      const snap = await getDocs(q);
+      return snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() })).sort(byCreatedAtDesc);
+    } catch (_) {
+      return [];
+    }
   }
 }
 

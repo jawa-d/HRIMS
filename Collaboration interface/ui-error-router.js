@@ -66,6 +66,16 @@ function isLikelyNetworkError(message = "") {
   );
 }
 
+function isLikelyPermissionError(message = "", reason = null) {
+  const text = String(message || "").toLowerCase();
+  const code = String(reason?.code || "").toLowerCase();
+  return (
+    text.includes("missing or insufficient permissions") ||
+    text.includes("permission-denied") ||
+    code.includes("permission-denied")
+  );
+}
+
 export function initErrorRouter() {
   if (window.__hrmsErrorRouterReady) return;
   window.__hrmsErrorRouterReady = true;
@@ -128,6 +138,12 @@ export function initErrorRouter() {
 
     if (!navigator.onLine || isLikelyNetworkError(message)) {
       openOfflinePage("request_failure");
+      return;
+    }
+
+    if (isLikelyPermissionError(message, reason)) {
+      event.preventDefault?.();
+      console.warn("Suppressed permission-related promise rejection:", reason || message);
       return;
     }
 
