@@ -42,7 +42,13 @@ export function getAllowedPages(role = getRole(), profile = getUserProfile()) {
 
 
 export function isAuthenticated() {
-  return true;
+  const session = localStorage.getItem(STORAGE_KEYS.session);
+  const profile = getStoredProfile();
+  if (session !== "1") return false;
+  if (!profile || typeof profile !== "object") return false;
+  const uid = String(profile.uid || "").trim();
+  const email = String(profile.email || "").trim();
+  return Boolean(uid || email);
 }
 
 export function canAccess(pageKey, role = getRole(), profile = getUserProfile()) {
@@ -57,6 +63,11 @@ export function getDefaultPage(role = getRole(), profile = getUserProfile()) {
 }
 
 export function enforceAuth(pageKey) {
+  if (!isAuthenticated()) {
+    const returnTo = window.location.pathname.split("/").pop() || "dashboard.html";
+    window.location.href = `login.html?next=${encodeURIComponent(returnTo)}`;
+    return false;
+  }
   if (pageKey && !isPageEnabled(pageKey)) {
     const returnTo = window.location.pathname.split("/").pop() || "dashboard.html";
     window.location.href = `maintenance.html?page=${encodeURIComponent(pageKey)}&from=${encodeURIComponent(returnTo)}`;

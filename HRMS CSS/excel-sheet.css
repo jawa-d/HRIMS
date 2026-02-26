@@ -1,0 +1,201 @@
+.excel-kpi,
+.excel-table-card {
+  animation: excel-fade-up 420ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.excel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.excel-actions .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.excel-kpis {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+
+.excel-kpi h3 {
+  margin-top: 6px;
+  font-size: 1.35rem;
+  color: color-mix(in srgb, var(--text) 86%, var(--primary));
+}
+
+.excel-table-card {
+  padding: var(--space-4);
+  border: 1px solid color-mix(in srgb, var(--primary-soft) 35%, var(--border));
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--surface-strong) 94%, var(--primary-soft)),
+    var(--surface-strong)
+  );
+  box-shadow: 0 12px 28px color-mix(in srgb, var(--primary) 10%, transparent);
+}
+
+.excel-table-wrap {
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-strong);
+  max-height: calc(100vh - 280px);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--surface) 55%, transparent);
+}
+
+.excel-table {
+  width: 100%;
+  min-width: 1380px;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.excel-table th,
+.excel-table td {
+  border-bottom: 1px solid var(--border);
+  border-inline-end: 1px solid var(--border);
+  padding: 8px;
+}
+
+.excel-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--primary-soft) 34%, var(--surface-strong)),
+    color-mix(in srgb, var(--surface-strong) 92%, var(--accent-soft))
+  );
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.excel-table tbody tr:nth-child(even) {
+  background: color-mix(in srgb, var(--surface) 72%, transparent);
+}
+
+.excel-table tbody tr {
+  transition: background var(--transition-fast), transform var(--transition-fast);
+}
+
+.excel-table tbody tr:hover {
+  background: color-mix(in srgb, var(--primary-soft) 32%, transparent);
+}
+
+.excel-table .sticky-col {
+  position: sticky;
+  inset-inline-start: 0;
+  z-index: 4;
+  min-width: 220px;
+  width: 220px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--surface-strong) 86%, var(--primary-soft)),
+    color-mix(in srgb, var(--surface-strong) 96%, transparent)
+  );
+}
+
+.excel-table td.sticky-col {
+  z-index: 2;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.excel-cell {
+  display: grid;
+  gap: 6px;
+}
+
+.excel-month-total {
+  width: fit-content;
+  min-width: 64px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--text) 88%, var(--primary));
+  border: 1px solid color-mix(in srgb, var(--primary) 24%, var(--border));
+  background: color-mix(in srgb, var(--primary-soft) 40%, var(--surface));
+  line-height: 1;
+  transition: transform var(--transition-fast);
+}
+
+.excel-month-input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--text);
+  padding: 5px 8px;
+  font-size: 0.82rem;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
+}
+
+.excel-month-input:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--primary) 60%, var(--border));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-soft) 70%, transparent);
+  transform: translateY(-1px);
+}
+
+.excel-row-total {
+  font-weight: 700;
+  color: color-mix(in srgb, var(--text) 84%, var(--primary));
+  background: color-mix(in srgb, var(--accent-soft) 34%, transparent);
+}
+
+.excel-value-pop {
+  animation: excel-value-pop 360ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.excel-empty {
+  padding: var(--space-6);
+  text-align: center;
+  color: var(--text-muted);
+}
+
+@keyframes excel-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes excel-value-pop {
+  0% {
+    transform: scale(0.94);
+    filter: saturate(0.8);
+  }
+  65% {
+    transform: scale(1.07);
+    filter: saturate(1.1);
+  }
+  100% {
+    transform: scale(1);
+    filter: saturate(1);
+  }
+}
+
+@media (max-width: 900px) {
+  .excel-kpis {
+    grid-template-columns: 1fr;
+  }
+
+  .excel-actions {
+    width: 100%;
+  }
+
+  .excel-actions .btn {
+    flex: 1;
+    justify-content: center;
+  }
+}

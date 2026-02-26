@@ -21,7 +21,7 @@ function mapLoginError(error) {
   if (code === "auth/configuration-not-found") {
     return "Firebase Auth is not configured for this project. Enable Authentication and Email/Password in Firebase Console.";
   }
-  if (code === "auth/email-not-enabled") return "هذا الايميل غير مفعل في النظام.";
+  if (code === "auth/email-not-enabled") return "This email is not enabled in the system.";
   if (code === "auth/invalid-email") return "Invalid email format.";
   if (code === "auth/invalid-credential" || code === "auth/wrong-password") return "Invalid email or password.";
   if (code === "auth/user-disabled") return "Your account is inactive. Contact HR administrator.";
@@ -176,3 +176,4 @@ function initNetworkBackground() {
   window.addEventListener("resize", resize, { passive: true });
   document.addEventListener("visibilitychange", onVisibilityChange);
 }
+

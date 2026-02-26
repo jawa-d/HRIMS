@@ -1,0 +1,223 @@
+import { enforceAuth, getUserProfile, getRole } from "../Aman/guard.js";
+import { initI18n } from "../Languages/i18n.js";
+import { renderNavbar } from "../Collaboration interface/ui-navbar.js";
+import { renderSidebar } from "../Collaboration interface/ui-sidebar.js";
+import { showToast } from "../Collaboration interface/ui-toast.js";
+import { listEmployees } from "../Services/employees.service.js";
+
+if (!enforceAuth("excel_sheet")) {
+  throw new Error("Unauthorized");
+}
+
+initI18n();
+const user = getUserProfile();
+const role = getRole();
+renderNavbar({ user, role });
+renderSidebar("excel_sheet");
+
+const STORAGE_KEY = "hrms_excel_sheet_inputs_v1";
+const locale = document.documentElement.lang?.startsWith("ar") ? "ar-IQ" : "en-US";
+const months = Array.from({ length: 12 }, (_, index) =>
+  new Date(2026, index, 1).toLocaleDateString(locale, { month: "short" })
+);
+const numberFormatter = new Intl.NumberFormat(locale, {
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 2
+});
+
+const headerRow = document.getElementById("excel-header-row");
+const body = document.getElementById("excel-body");
+const emptyState = document.getElementById("excel-empty");
+const employeesCountEl = document.getElementById("excel-employees-count");
+const grandTotalEl = document.getElementById("excel-grand-total");
+const resetBtn = document.getElementById("excel-reset-btn");
+const exportBtn = document.getElementById("excel-export-btn");
+
+let employees = [];
+let sheetState = loadState();
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : {};
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch (_) {
+    return {};
+  }
+}
+
+function saveState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(sheetState));
+}
+
+function formatNumber(value) {
+  const numeric = Number(value || 0);
+  return numberFormatter.format(Number.isFinite(numeric) ? numeric : 0);
+}
+
+function toNumeric(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric < 0) return 0;
+  return numeric;
+}
+
+function getEmployeeInputs(employeeId) {
+  const row = Array.isArray(sheetState[employeeId]) ? sheetState[employeeId] : [];
+  return Array.from({ length: 12 }, (_, index) => toNumeric(row[index] || 0));
+}
+
+function cumulativeFromInputs(inputs) {
+  let running = 0;
+  return inputs.map((value) => {
+    running += toNumeric(value);
+    return running;
+  });
+}
+
+function buildHeader() {
+  const monthHeaders = months.map((label) => `<th>${label}</th>`).join("");
+  headerRow.innerHTML = `
+    <th class="sticky-col">Employee Name</th>
+    ${monthHeaders}
+    <th>Year Total</th>
+  `;
+}
+
+function buildRow(employee) {
+  const inputs = getEmployeeInputs(employee.id);
+  const cumulative = cumulativeFromInputs(inputs);
+  const cells = months
+    .map(
+      (_, index) => `
+        <td>
+          <div class="excel-cell">
+            <span class="excel-month-total" data-month-total="${index}">${formatNumber(cumulative[index])}</span>
+            <input
+              class="excel-month-input"
+              type="number"
+              min="0"
+              step="0.01"
+              data-employee-id="${employee.id}"
+              data-month-index="${index}"
+              value="${inputs[index] || ""}"
+              placeholder="+0"
+            />
+          </div>
+        </td>
+      `
+    )
+    .join("");
+
+  return `
+    <tr data-employee-id="${employee.id}">
+      <td class="sticky-col">${employee.fullName || employee.email || employee.empId || employee.id}</td>
+      ${cells}
+      <td class="excel-row-total" data-row-total>${formatNumber(cumulative[11] || 0)}</td>
+    </tr>
+  `;
+}
+
+function updateRow(employeeId) {
+  const row = body.querySelector(`tr[data-employee-id="${employeeId}"]`);
+  if (!row) return;
+  const inputs = getEmployeeInputs(employeeId);
+  const cumulative = cumulativeFromInputs(inputs);
+
+  const flashValue = (element) => {
+    if (!element) return;
+    element.classList.remove("excel-value-pop");
+    void element.offsetWidth;
+    element.classList.add("excel-value-pop");
+  };
+
+  row.querySelectorAll("[data-month-total]").forEach((element) => {
+    const monthIndex = Number(element.dataset.monthTotal);
+    element.textContent = formatNumber(cumulative[monthIndex] || 0);
+    flashValue(element);
+  });
+  const totalCell = row.querySelector("[data-row-total]");
+  if (totalCell) {
+    totalCell.textContent = formatNumber(cumulative[11] || 0);
+    flashValue(totalCell);
+  }
+}
+
+function updateSummary() {
+  employeesCountEl.textContent = formatNumber(employees.length);
+  const grand = employees.reduce((sum, employee) => {
+    const rowInputs = getEmployeeInputs(employee.id);
+    const rowTotal = cumulativeFromInputs(rowInputs)[11] || 0;
+    return sum + rowTotal;
+  }, 0);
+  grandTotalEl.textContent = formatNumber(grand);
+}
+
+function renderTable() {
+  buildHeader();
+  body.innerHTML = employees.map((employee) => buildRow(employee)).join("");
+  emptyState.classList.toggle("hidden", employees.length > 0);
+  updateSummary();
+}
+
+function handleCellInput(event) {
+  const input = event.target.closest(".excel-month-input");
+  if (!input) return;
+  const employeeId = input.dataset.employeeId;
+  const monthIndex = Number(input.dataset.monthIndex);
+  if (!employeeId || Number.isNaN(monthIndex)) return;
+
+  const rowInputs = getEmployeeInputs(employeeId);
+  rowInputs[monthIndex] = toNumeric(input.value);
+  sheetState[employeeId] = rowInputs;
+  saveState();
+  updateRow(employeeId);
+  updateSummary();
+}
+
+function exportCsv() {
+  const headers = ["Employee", ...months, "Year Total"];
+  const lines = [headers.join(",")];
+
+  employees.forEach((employee) => {
+    const name = employee.fullName || employee.email || employee.empId || employee.id;
+    const cumulative = cumulativeFromInputs(getEmployeeInputs(employee.id));
+    const row = [name, ...cumulative.map((value) => value.toFixed(2)), (cumulative[11] || 0).toFixed(2)];
+    lines.push(row.map((value) => `"${String(value).replace(/"/g, "\"\"")}"`).join(","));
+  });
+
+  const blob = new Blob([`\uFEFF${lines.join("\n")}`], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "excel-sheet-cumulative.csv";
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+function resetAllInputs() {
+  if (!window.confirm("Reset all monthly inputs for all employees?")) return;
+  sheetState = {};
+  saveState();
+  renderTable();
+  showToast("success", "Sheet reset completed");
+}
+
+async function init() {
+  try {
+    const rows = await listEmployees();
+    employees = rows
+      .slice()
+      .sort((a, b) => (a.fullName || "").localeCompare(b.fullName || "", locale));
+    renderTable();
+  } catch (error) {
+    console.error("Failed to load excel sheet employees:", error);
+    showToast("error", "Failed to load employees");
+  }
+}
+
+body.addEventListener("input", handleCellInput);
+resetBtn?.addEventListener("click", resetAllInputs);
+exportBtn?.addEventListener("click", exportCsv);
+
+if (window.lucide?.createIcons) window.lucide.createIcons();
+void init();

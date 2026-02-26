@@ -10,10 +10,10 @@ import {
   markNotificationRead,
   markAllNotificationsRead,
   archiveNotification,
-  unarchiveNotification
+  unarchiveNotification,
+  watchNotifications
 } from "../Services/notifications.service.js";
 import { logSecurityEvent } from "../Services/security-audit.service.js";
-import { enforceAdminPagesCode } from "../Services/admin-lock.service.js";
 
 if (!enforceAuth("notifications_center")) {
   throw new Error("Unauthorized");
@@ -22,10 +22,6 @@ if (!enforceAuth("notifications_center")) {
 initI18n();
 const user = getUserProfile();
 const role = getRole();
-
-if (!enforceAdminPagesCode({ role, user, pageLabel: "Notifications Center" })) {
-  throw new Error("Admin pages code required");
-}
 
 renderNavbar({ user, role });
 renderSidebar("notifications_center");
@@ -45,6 +41,7 @@ const emptyEl = document.getElementById("notif-empty");
 if (!canMarkAll) markAllBtn.classList.add("hidden");
 
 let notifications = [];
+let unsubscribeNotifications = null;
 
 function formatDate(item) {
   const seconds = item?.createdAt?.seconds || 0;
@@ -126,6 +123,25 @@ async function loadNotifications() {
   applyFilters();
 }
 
+function stopRealtimeNotifications() {
+  if (typeof unsubscribeNotifications === "function") {
+    unsubscribeNotifications();
+    unsubscribeNotifications = null;
+  }
+}
+
+function startRealtimeNotifications() {
+  const includeArchived = archivedToggle.checked;
+  stopRealtimeNotifications();
+  unsubscribeNotifications = watchNotifications(
+    (items) => {
+      notifications = items;
+      applyFilters();
+    },
+    { includeArchived }
+  );
+}
+
 markAllBtn.addEventListener("click", async () => {
   await markAllNotificationsRead();
   await logSecurityEvent({
@@ -147,8 +163,14 @@ statusFilter.addEventListener("change", applyFilters);
 typeFilter.addEventListener("change", applyFilters);
 priorityFilter.addEventListener("change", applyFilters);
 archivedToggle.addEventListener("change", loadNotifications);
+archivedToggle.addEventListener("change", startRealtimeNotifications);
+
+window.addEventListener("beforeunload", () => {
+  stopRealtimeNotifications();
+});
 
 trackUxEvent({ event: "page_open", module: "notifications_center" });
 loadNotifications();
+startRealtimeNotifications();
 
 if (window.lucide?.createIcons) window.lucide.createIcons();
