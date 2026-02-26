@@ -27,6 +27,7 @@ export function openModal({ title, content, actions = [] }) {
   modalRoot.querySelector("#modal-title").textContent = title || "";
   const body = modalRoot.querySelector("#modal-body");
   body.innerHTML = "";
+  body.scrollTop = 0;
   if (typeof content === "string") {
     body.innerHTML = content;
   } else if (content instanceof HTMLElement) {

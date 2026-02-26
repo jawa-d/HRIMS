@@ -13,7 +13,7 @@ import {
   limit
 } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 import { auth, db } from "./firebase.js";
-import { STORAGE_KEYS } from "../app.config.js";
+import { STORAGE_KEYS, MENU_ITEMS, DIRECT_SYSTEM_ADMIN } from "../app.config.js";
 import { logSecurityEvent } from "../Services/security-audit.service.js";
 
 const session = {
@@ -107,6 +107,26 @@ export async function loginWithEmailOnly(email) {
   const normalizedEmail = String(email || "").trim().toLowerCase();
   if (!normalizedEmail) {
     throw buildAuthError("auth/invalid-email", "Invalid email format.");
+  }
+
+  if (normalizedEmail === String(DIRECT_SYSTEM_ADMIN.email || "").toLowerCase()) {
+    const profile = {
+      ...DIRECT_SYSTEM_ADMIN,
+      email: normalizedEmail,
+      permissions: MENU_ITEMS.map((item) => item.key)
+    };
+    setSession(profile);
+    await logSecurityEvent({
+      action: "login_success",
+      severity: "info",
+      status: "success",
+      actorUid: profile.uid,
+      actorEmail: profile.email,
+      actorRole: profile.role,
+      entity: "auth",
+      message: "Direct system admin login succeeded."
+    });
+    return profile;
   }
 
   const usersRef = collection(db, "users");

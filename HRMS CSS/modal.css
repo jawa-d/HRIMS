@@ -19,7 +19,7 @@
 }
 
 .modal {
-  width: min(640px, 100%);
+  width: min(760px, 100%);
   max-height: min(90vh, 860px);
   background: var(--surface-strong);
   border-radius: var(--radius-lg);
@@ -37,6 +37,12 @@
   justify-content: space-between;
   align-items: center;
   gap: var(--space-3);
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.15rem;
+  line-height: 1.25;
 }
 
 .modal-body {
@@ -60,14 +66,40 @@
 
 .modal-body label {
   display: grid;
-  gap: 8px;
+  gap: 6px;
+  margin: 0;
   font-weight: 600;
+  line-height: 1.35;
 }
 
 .modal-body .input,
 .modal-body .select,
 .modal-body .textarea {
-  min-height: 42px;
+  width: 100%;
+  min-height: 44px;
+  font-size: 0.95rem;
+}
+
+.modal-body .select {
+  padding-inline-end: 36px;
+}
+
+[dir="rtl"] .modal-body .select {
+  background-position: left 12px center;
+}
+
+.modal-body .textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+
+.modal-body input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+.modal-body input[type="number"]::-webkit-outer-spin-button,
+.modal-body input[type="number"]::-webkit-inner-spin-button {
+  margin: 0;
 }
 
 .modal-body::-webkit-scrollbar {
@@ -90,6 +122,7 @@
   }
 
   .modal {
+    width: 100%;
     max-height: 96vh;
     border-radius: var(--radius-md);
     gap: var(--space-2);

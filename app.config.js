@@ -40,7 +40,9 @@ export const MENU_ITEMS = [
   { key: "positions", labelKey: "nav.positions", href: "positions.html", icon: "briefcase" },
   { key: "reports", labelKey: "nav.reports", href: "reports.html", icon: "bar-chart" },
   { key: "excel_sheet", labelKey: "nav.excel_sheet", href: "excel-sheet.html", icon: "sheet" },
+  { key: "employee_360", labelKey: "nav.employee_360", href: "employee-360.html", icon: "contact-round" },
   { key: "tickets", labelKey: "nav.tickets", href: "tickets.html", icon: "ticket" },
+  { key: "help_desk", labelKey: "nav.hr_tickets", href: "help-desk.html", icon: "life-buoy" },
   { key: "announcements", labelKey: "nav.announcements", href: "announcements.html", icon: "megaphone" },
   { key: "notifications_center", labelKey: "nav.notifications_center", href: "notifications-center.html", icon: "bell-ring" },
   { key: "security_center", labelKey: "nav.security_center", href: "security-center.html", icon: "shield-alert" },
@@ -67,7 +69,9 @@ export const ROLE_PERMISSIONS = {
     "positions",
     "reports",
     "excel_sheet",
+    "employee_360",
     "tickets",
+    "help_desk",
     "announcements",
     "notifications_center",
     "security_center",
@@ -88,7 +92,9 @@ export const ROLE_PERMISSIONS = {
     "orgchart",
     "reports",
     "excel_sheet",
+    "employee_360",
     "tickets",
+    "help_desk",
     "announcements",
     "notifications_center",
     "security_center",
@@ -104,7 +110,9 @@ export const ROLE_PERMISSIONS = {
     "assets",
     "timeoff",
     "orgchart",
+    "employee_360",
     "tickets",
+    "help_desk",
     "announcements",
     "notifications_center",
     "profile"
@@ -162,3 +170,11 @@ export const DEFAULT_LANGUAGE = "ar";
 export const DEFAULT_THEME = "light";
 
 export const APP_NAME = "Wadi Al-Rafidain";
+
+export const DIRECT_SYSTEM_ADMIN = {
+  uid: "direct-super-admin",
+  name: "System Admin",
+  email: "admin@hrms.local",
+  role: "super_admin",
+  status: "active"
+};

@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HRMS | Help Desk</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../HRMS%20CSS/tokens.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/global.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/components.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/navbar.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/sidebar.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/toast.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/help-desk.css" />
+</head>
+<body data-page="help_desk">
+  <div id="app" class="app-shell">
+    <div id="sidebar-root"></div>
+    <div class="main-content">
+      <div id="navbar-root"></div>
+      <main class="page">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title" data-i18n="help_desk.title">Help Desk</h1>
+            <p class="text-muted">Internal support for HR, IT, and operational requests.</p>
+          </div>
+        </div>
+
+        <section class="grid-2">
+          <article class="card helpdesk-create">
+            <div class="card-header">
+              <h3 class="section-title">
+                <i data-lucide="plus-circle"></i>
+                New Ticket
+              </h3>
+            </div>
+            <form id="helpdesk-form" class="helpdesk-form">
+              <label>
+                <span>Subject</span>
+                <input class="input" id="helpdesk-subject" required />
+              </label>
+              <label>
+                <span>Description</span>
+                <textarea class="textarea" id="helpdesk-description" rows="4" required></textarea>
+              </label>
+              <div class="helpdesk-form-grid">
+                <label>
+                  <span>Category</span>
+                  <select class="select" id="helpdesk-category">
+                    <option value="hr">HR</option>
+                    <option value="it">IT</option>
+                    <option value="general">General</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Priority</span>
+                  <select class="select" id="helpdesk-priority">
+                    <option value="low">Low</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="high">High</option>
+                    <option value="critical">Critical</option>
+                  </select>
+                </label>
+              </div>
+              <button class="btn btn-primary" type="submit" id="helpdesk-submit-btn">
+                <i data-lucide="send-horizontal"></i>
+                Submit Ticket
+              </button>
+            </form>
+          </article>
+
+          <article class="card helpdesk-kpis">
+            <div class="card-header">
+              <h3 class="section-title">
+                <i data-lucide="activity"></i>
+                Ticket Status
+              </h3>
+            </div>
+            <div class="grid-3">
+              <div class="helpdesk-kpi">
+                <span class="text-muted">Open</span>
+                <strong id="helpdesk-kpi-open">0</strong>
+              </div>
+              <div class="helpdesk-kpi">
+                <span class="text-muted">In Progress</span>
+                <strong id="helpdesk-kpi-progress">0</strong>
+              </div>
+              <div class="helpdesk-kpi">
+                <span class="text-muted">Resolved/Closed</span>
+                <strong id="helpdesk-kpi-resolved">0</strong>
+              </div>
+            </div>
+            <div class="helpdesk-filters">
+              <input class="input" id="helpdesk-search" placeholder="Search tickets..." />
+              <select class="select" id="helpdesk-status-filter">
+                <option value="">All Status</option>
+                <option value="open">Open</option>
+                <option value="in_progress">In Progress</option>
+                <option value="resolved">Resolved</option>
+                <option value="closed">Closed</option>
+              </select>
+              <select class="select" id="helpdesk-priority-filter">
+                <option value="">All Priority</option>
+                <option value="critical">Critical</option>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+              </select>
+              <label class="helpdesk-toggle">
+                <input type="checkbox" id="helpdesk-my-only" />
+                <span>Only My Tickets</span>
+              </label>
+            </div>
+          </article>
+        </section>
+
+        <section class="card">
+          <div class="card-header">
+            <h3 class="section-title">
+              <i data-lucide="list-checks"></i>
+              Tickets Queue
+            </h3>
+          </div>
+          <div id="helpdesk-list" class="helpdesk-list"></div>
+          <div id="helpdesk-empty" class="empty-state hidden">No tickets found</div>
+        </section>
+      </main>
+    </div>
+  </div>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script type="module" src="../Page%20Controllers/help-desk.page.js"></script>
+</body>
+</html>

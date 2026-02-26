@@ -4,7 +4,7 @@ import { getRole, getUserProfile, getAllowedPages } from "../Aman/guard.js";
 
 const SECTION_DEFS = [
   { key: "main", en: "Main", ar: "\u0627\u0644\u0631\u0626\u064a\u0633\u064a\u0629", items: ["dashboard", "profile"] },
-  { key: "people", en: "People Ops", ar: "\u0627\u0644\u0645\u0648\u0627\u0631\u062f \u0627\u0644\u0628\u0634\u0631\u064a\u0629", items: ["employees", "my_leaves", "leaves", "attendance", "timeoff", "payroll", "excel_sheet", "assets", "tickets", "announcements"] },
+  { key: "people", en: "People Ops", ar: "\u0627\u0644\u0645\u0648\u0627\u0631\u062f \u0627\u0644\u0628\u0634\u0631\u064a\u0629", items: ["employees", "employee_360", "my_leaves", "leaves", "attendance", "timeoff", "payroll", "excel_sheet", "assets", "tickets", "help_desk", "announcements"] },
   { key: "org", en: "Organization", ar: "\u0627\u0644\u062a\u0646\u0638\u064a\u0645", items: ["orgchart", "departments", "positions", "reports"] },
   { key: "admin", en: "Administration", ar: "\u0627\u0644\u0625\u062f\u0627\u0631\u0629", items: ["notifications_center", "security_center", "security_map", "system_health", "page_admin", "secure_vault", "settings"] }
 ];
