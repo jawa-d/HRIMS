@@ -142,13 +142,13 @@
 
 .sidebar-active-indicator {
   position: absolute;
-  inset-inline: 0;
+  inset-inline: 2px;
   top: 0;
   height: 40px;
   border-radius: 12px;
   background: linear-gradient(90deg, color-mix(in srgb, var(--primary-soft) 90%, transparent), color-mix(in srgb, var(--accent-soft) 72%, transparent));
-  border: 1px solid color-mix(in srgb, var(--primary) 50%, var(--border));
-  box-shadow: 0 8px 20px color-mix(in srgb, var(--primary) 22%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary) 36%, var(--border));
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--primary) 16%, transparent);
   opacity: 0;
   pointer-events: none;
   z-index: 0;
@@ -182,14 +182,16 @@
   font-size: 0.9rem;
 }
 
-.sidebar-link:hover,
-.sidebar-link.active {
+.sidebar-link:hover {
   color: var(--text);
   border-color: color-mix(in srgb, var(--primary) 44%, var(--border));
   background: color-mix(in srgb, var(--primary-soft) 82%, transparent);
 }
 
 .sidebar-link.active {
+  color: var(--text);
+  background: transparent;
+  border-color: transparent;
   font-weight: 600;
 }
 
