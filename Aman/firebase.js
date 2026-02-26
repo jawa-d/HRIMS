@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-import { getAuth } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
 import { getFirestore, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 import { getStorage } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-storage.js";
 
@@ -17,5 +17,14 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
 const ts = () => serverTimestamp();
+
+// Bootstrap an authenticated Firebase session for direct-entry mode.
+if (!auth.currentUser) {
+  try {
+    await signInAnonymously(auth);
+  } catch (error) {
+    console.error("Firebase anonymous auth failed:", error);
+  }
+}
 
 export { app, auth, db, storage, ts };

@@ -173,7 +173,7 @@ export async function logout(redirect = true) {
   await signOut(auth);
   clearSession();
   if (redirect) {
-    window.location.href = "login.html";
+    window.location.href = "dashboard.html";
   }
 }
 

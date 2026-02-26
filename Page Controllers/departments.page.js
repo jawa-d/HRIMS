@@ -135,6 +135,14 @@ async function loadDepartments() {
   renderDepartments();
 }
 
+function mapDepartmentsLoadError(error) {
+  const code = String(error?.code || error?.message || "").toLowerCase();
+  if (code.includes("permission-denied")) return "FireStore rules تمنع قراءة departments (permission-denied).";
+  if (code.includes("unauthenticated")) return "لا يوجد تسجيل دخول Firebase صالح لقراءة البيانات.";
+  if (code.includes("operation-not-allowed")) return "Anonymous Auth غير مفعل في Firebase Authentication.";
+  return `فشل تحميل الأقسام: ${error?.message || "unknown error"}`;
+}
+
 addButton.addEventListener("click", () => openDepartmentModal());
 if (searchInput) {
   searchInput.addEventListener("input", renderDepartments);
@@ -147,4 +155,11 @@ window.addEventListener("global-search", (event) => {
   renderDepartments();
 });
 if (roleEl) roleEl.textContent = canManage ? "Manage departments" : "View only";
-loadDepartments();
+(async () => {
+  try {
+    await loadDepartments();
+  } catch (error) {
+    console.error("Departments load failed:", error);
+    showToast("error", mapDepartmentsLoadError(error));
+  }
+})();

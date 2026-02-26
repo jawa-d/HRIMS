@@ -18,12 +18,12 @@ export async function listDepartments() {
   try {
     const snap = await getDocs(query(departmentsRef, orderBy("createdAt", "desc")));
     return snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
-  } catch (_) {
+  } catch (primaryError) {
     try {
       const snap = await getDocs(departmentsRef);
       return snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
-    } catch (_) {
-      return [];
+    } catch (fallbackError) {
+      throw fallbackError || primaryError;
     }
   }
 }

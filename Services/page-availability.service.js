@@ -1,4 +1,10 @@
 import { STORAGE_KEYS, MENU_ITEMS } from "../app.config.js";
+import { db, ts } from "../Aman/firebase.js";
+import {
+  doc,
+  getDoc,
+  setDoc
+} from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
 const IMMUTABLE_PAGES = new Set(["dashboard", "settings", "page_admin"]);
 const SENSITIVE_PAGES = new Set(["security_center", "security_map", "notifications_center", "settings"]);
@@ -9,6 +15,11 @@ const SYSTEM_ACTOR = {
   role: "system",
   email: ""
 };
+const SETTINGS_DOC = doc(db, "app_settings", "page_availability");
+
+let syncPromise = null;
+let pendingWriteTimer = 0;
+let lastRemoteMap = null;
 
 function normalizeDateInput(value) {
   if (!value) return "";
@@ -67,6 +78,96 @@ function writeAvailabilityMap(map) {
   localStorage.setItem(STORAGE_KEYS.pageAvailability, JSON.stringify(map));
 }
 
+function normalizeMap(raw) {
+  const source = raw && typeof raw === "object" ? raw : {};
+  const normalized = {};
+  Object.keys(source).forEach((key) => {
+    normalized[key] = normalizeRecord(source[key], true);
+  });
+  return normalized;
+}
+
+function mergeMaps(localMap, remoteMap) {
+  const next = { ...remoteMap };
+  Object.keys(localMap).forEach((key) => {
+    const localRecord = normalizeRecord(localMap[key], true);
+    const remoteRecord = normalizeRecord(remoteMap[key], true);
+    const localUpdated = Number(localRecord.updatedAt || 0);
+    const remoteUpdated = Number(remoteRecord.updatedAt || 0);
+    next[key] = localUpdated >= remoteUpdated ? localRecord : remoteRecord;
+  });
+  return next;
+}
+
+async function pullRemoteMap() {
+  const snap = await getDoc(SETTINGS_DOC);
+  if (!snap.exists()) return null;
+  const data = snap.data() || {};
+  return normalizeMap(data.map || {});
+}
+
+async function pushRemoteMap(map) {
+  await setDoc(
+    SETTINGS_DOC,
+    {
+      map,
+      updatedAt: ts()
+    },
+    { merge: true }
+  );
+}
+
+export function initPageAvailabilitySync() {
+  if (syncPromise) return syncPromise;
+  syncPromise = (async () => {
+    const localMap = normalizeMap(readAvailabilityMap());
+    let remoteMap = null;
+    try {
+      remoteMap = await pullRemoteMap();
+    } catch (_) {
+      return localMap;
+    }
+
+    if (!remoteMap) {
+      try {
+        await pushRemoteMap(localMap);
+      } catch (_) {
+        // ignore remote sync failures
+      }
+      lastRemoteMap = localMap;
+      return localMap;
+    }
+
+    const merged = mergeMaps(localMap, remoteMap);
+    writeAvailabilityMap(merged);
+    lastRemoteMap = merged;
+    if (JSON.stringify(merged) !== JSON.stringify(remoteMap)) {
+      try {
+        await pushRemoteMap(merged);
+      } catch (_) {
+        // ignore remote sync failures
+      }
+    }
+    return merged;
+  })();
+  return syncPromise;
+}
+
+function scheduleRemoteWrite(map) {
+  if (pendingWriteTimer) {
+    window.clearTimeout(pendingWriteTimer);
+  }
+  pendingWriteTimer = window.setTimeout(async () => {
+    pendingWriteTimer = 0;
+    try {
+      await pushRemoteMap(map);
+      lastRemoteMap = map;
+    } catch (_) {
+      // ignore remote sync failures
+    }
+  }, 250);
+}
+
 export function isImmutablePage(pageKey) {
   return IMMUTABLE_PAGES.has(pageKey);
 }
@@ -122,6 +223,7 @@ function applySchedules(map) {
 }
 
 function getMapWithSchedules() {
+  initPageAvailabilitySync();
   const map = readAvailabilityMap();
   return applySchedules(map).map;
 }
@@ -194,10 +296,12 @@ export function setPageEnabled(pageKey, enabled, options = {}) {
 
   map[pageKey] = next;
   writeAvailabilityMap(map);
+  scheduleRemoteWrite(map);
   return true;
 }
 
 export function listPageAvailability() {
+  initPageAvailabilitySync();
   const map = getMapWithSchedules();
   return MENU_ITEMS.map((item) => ({
     ...item,

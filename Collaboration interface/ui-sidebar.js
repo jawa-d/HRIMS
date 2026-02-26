@@ -1,4 +1,4 @@
-import { MENU_ITEMS } from "../app.config.js";
+import { MENU_ITEMS, APP_NAME } from "../app.config.js";
 import { t, translateDom } from "../Languages/i18n.js";
 import { getRole, getUserProfile, getAllowedPages } from "../Aman/guard.js";
 
@@ -13,6 +13,21 @@ let lastRole = null;
 let lastItemsKey = null;
 let lastActiveKey = null;
 let hasRendered = false;
+let gsapLib = null;
+let gsapLoadPromise = null;
+
+async function ensureGsap() {
+  if (gsapLib) return gsapLib;
+  if (!gsapLoadPromise) {
+    gsapLoadPromise = import("https://cdn.jsdelivr.net/npm/gsap@3.12.5/+esm")
+      .then((mod) => {
+        gsapLib = mod.gsap || mod.default || null;
+        return gsapLib;
+      })
+      .catch(() => null);
+  }
+  return gsapLoadPromise;
+}
 
 function isPerformanceMode() {
   const nav = typeof navigator !== "undefined" ? navigator : {};
@@ -52,7 +67,6 @@ function animateSidebar(root, activeKey, options = {}) {
   const full = options.full !== false;
   const links = Array.from(root.querySelectorAll(".sidebar-link"));
   const sections = Array.from(root.querySelectorAll(".sidebar-section"));
-  const counts = Array.from(root.querySelectorAll(".sidebar-section-count"));
   const titles = Array.from(root.querySelectorAll(".sidebar-section-title"));
   const panel = root.querySelector(".sidebar-panel");
   const header = root.querySelector(".sidebar-head");
@@ -82,7 +96,7 @@ function animateSidebar(root, activeKey, options = {}) {
       ], { duration: 440, delay: 170 + index * 55 });
     });
 
-    [...titles, ...counts].forEach((element, index) => {
+    titles.forEach((element, index) => {
       animateElement(element, [
         { transform: `translateX(${8 * dir}px)`, opacity: 0 },
         { transform: "translateX(0)", opacity: 1 }
@@ -122,9 +136,140 @@ function animateSidebar(root, activeKey, options = {}) {
 
 function enhanceSidebar(root, activeKey, options) {
   animateSidebar(root, activeKey, options);
+  positionActiveIndicator(root, activeKey, false);
+  void enhanceSidebarWithGsap(root, activeKey, options);
+}
+
+function positionActiveIndicator(root, activeKey, animate = true) {
+  const indicator = root.querySelector(".sidebar-active-indicator");
+  const nav = root.querySelector(".sidebar-nav");
+  const active = root.querySelector(`.sidebar-link[data-key="${activeKey}"]`);
+  if (!indicator || !nav || !active) return;
+
+  const navRect = nav.getBoundingClientRect();
+  const activeRect = active.getBoundingClientRect();
+  const top = activeRect.top - navRect.top + nav.scrollTop;
+  const height = activeRect.height;
+
+  if (!gsapLib || !animate || isPerformanceMode()) {
+    indicator.style.opacity = "1";
+    indicator.style.transform = `translateY(${Math.round(top)}px)`;
+    indicator.style.height = `${Math.round(height)}px`;
+    return;
+  }
+
+  gsapLib.to(indicator, {
+    y: Math.round(top),
+    height: Math.max(36, Math.round(height)),
+    opacity: 1,
+    duration: 0.42,
+    ease: "power3.out"
+  });
+}
+
+function bindSidebarAccordion(root) {
+  if (!gsapLib || isPerformanceMode()) return;
+
+  root.querySelectorAll(".sidebar-section").forEach((section) => {
+    if (section.dataset.motionBound === "1") return;
+    section.dataset.motionBound = "1";
+
+    const summary = section.querySelector(".sidebar-section-title");
+    const content = section.querySelector(".sidebar-section-items");
+    if (!summary || !content) return;
+
+    if (section.hasAttribute("open")) {
+      content.style.height = "auto";
+      content.style.opacity = "1";
+    } else {
+      content.style.height = "0px";
+      content.style.opacity = "0";
+    }
+
+    summary.addEventListener("click", (event) => {
+      event.preventDefault();
+
+      const isOpen = section.hasAttribute("open");
+      if (isOpen) {
+        const currentHeight = content.scrollHeight;
+        content.style.height = `${currentHeight}px`;
+        gsapLib.to(content, {
+          height: 0,
+          opacity: 0,
+          duration: 0.32,
+          ease: "power2.inOut",
+          onComplete: () => {
+            section.removeAttribute("open");
+          }
+        });
+        return;
+      }
+
+      section.setAttribute("open", "");
+      content.style.height = "0px";
+      content.style.opacity = "0";
+      const targetHeight = content.scrollHeight;
+      gsapLib.to(content, {
+        height: targetHeight,
+        opacity: 1,
+        duration: 0.36,
+        ease: "power2.out",
+        onComplete: () => {
+          content.style.height = "auto";
+        }
+      });
+    });
+  });
+}
+
+function bindSidebarLinkInteractions(root, activeKey) {
+  if (!gsapLib || isPerformanceMode()) return;
+
+  const links = Array.from(root.querySelectorAll(".sidebar-link"));
+  links.forEach((link) => {
+    if (link.dataset.interactiveBound === "1") return;
+    link.dataset.interactiveBound = "1";
+
+    link.addEventListener("mouseenter", () => {
+      gsapLib.to(link, { x: isArabic() ? -4 : 4, duration: 0.18, ease: "power2.out" });
+    });
+    link.addEventListener("mouseleave", () => {
+      if (link.classList.contains("active")) return;
+      gsapLib.to(link, { x: 0, duration: 0.22, ease: "power2.out" });
+    });
+  });
+}
+
+async function enhanceSidebarWithGsap(root, activeKey, options = {}) {
+  const gsap = await ensureGsap();
+  if (!gsap || isPerformanceMode()) return;
+
+  bindSidebarLinkInteractions(root, activeKey);
+
+  const full = options.full !== false;
+  const panel = root.querySelector(".sidebar-panel");
+  const title = root.querySelector(".sidebar-panel-title");
+  const sections = root.querySelectorAll(".sidebar-section");
+  const links = root.querySelectorAll(".sidebar-link");
+
+  if (full) {
+    const dir = isArabic() ? 1 : -1;
+    gsap.fromTo(panel, { x: 24 * dir, opacity: 0.2 }, { x: 0, opacity: 1, duration: 0.52, ease: "power3.out" });
+    gsap.fromTo(title, { y: -10, opacity: 0 }, { y: 0, opacity: 1, duration: 0.35, ease: "power2.out", delay: 0.12 });
+    gsap.fromTo(sections, { y: 12, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4, stagger: 0.06, ease: "power2.out", delay: 0.15 });
+    gsap.fromTo(links, { x: 8 * dir, opacity: 0 }, { x: 0, opacity: 1, duration: 0.28, stagger: 0.02, ease: "power2.out", delay: 0.2 });
+  }
+
+  positionActiveIndicator(root, activeKey, true);
+  const nav = root.querySelector(".sidebar-nav");
+  if (nav && !nav.dataset.indicatorBound) {
+    nav.dataset.indicatorBound = "1";
+    nav.addEventListener("scroll", () => positionActiveIndicator(root, lastActiveKey || activeKey, false), { passive: true });
+  }
 }
 
 function getSectionLabel(section) {
+  if (section.key === "main") return isArabic() ? "\u0627\u0644\u0645\u0646\u0635\u0629" : "Platform";
   return isArabic() ? section.ar : section.en;
 }
 
@@ -137,9 +282,6 @@ function buildSidebarSections(items, activeKey) {
     const sectionItems = section.items.map((key) => byKey.get(key)).filter(Boolean);
     if (!sectionItems.length) return "";
     sectionItems.forEach((item) => consumed.add(item.key));
-
-    const hasActive = sectionItems.some((item) => item.key === activeKey);
-    const openAttr = hasActive || sectionIndex < 2 ? "open" : "";
 
     const links = sectionItems
       .map((item) => {
@@ -155,15 +297,13 @@ function buildSidebarSections(items, activeKey) {
       })
       .join("");
 
-    const sectionCount = sectionItems.length;
     return `
-      <details class="sidebar-section" ${openAttr}>
-        <summary class="sidebar-section-title">
+      <section class="sidebar-section">
+        <div class="sidebar-section-title">
           <span>${getSectionLabel(section)}</span>
-          <span class="sidebar-section-count">${sectionCount}</span>
-        </summary>
+        </div>
         <div class="sidebar-section-items">${links}</div>
-      </details>
+      </section>
     `;
   }).join("");
 
@@ -186,13 +326,12 @@ function buildSidebarSections(items, activeKey) {
 
   const moreLabel = isArabic() ? "\u0623\u062e\u0631\u0649" : "More";
   return `${sections}
-    <details class="sidebar-section">
-      <summary class="sidebar-section-title">
+    <section class="sidebar-section">
+      <div class="sidebar-section-title">
         <span>${moreLabel}</span>
-        <span class="sidebar-section-count">${rest.length}</span>
-      </summary>
+      </div>
       <div class="sidebar-section-items">${restLinks}</div>
-    </details>
+    </section>
   `;
 }
 
@@ -203,6 +342,14 @@ export function renderSidebar(activeKey) {
   const role = getRole();
   const profile = getUserProfile();
   const roleLabel = String(role || "employee").replace(/_/g, " ");
+  const userName = String(profile?.name || "shadcn");
+  const userEmail = String(profile?.email || "m@example.com");
+  const initials = userName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() || "")
+    .join("") || "HR";
   const allowed = getAllowedPages(role, profile);
   const items = MENU_ITEMS.filter((item) => allowed.includes(item.key));
   const itemsKey = items.map((item) => item.key).join("|");
@@ -215,12 +362,6 @@ export function renderSidebar(activeKey) {
         link.classList.toggle("active", isActive);
       });
 
-      const sections = root.querySelectorAll(".sidebar-section");
-      sections.forEach((section) => {
-        const hasActive = section.querySelector(`.sidebar-link[data-key="${activeKey}"]`);
-        if (hasActive) section.setAttribute("open", "");
-      });
-
       enhanceSidebar(root, activeKey, { full: false });
       lastActiveKey = activeKey;
     }
@@ -231,21 +372,37 @@ export function renderSidebar(activeKey) {
     <aside class="sidebar">
       <div class="sidebar-panel">
         <div class="sidebar-head">
-          <div class="sidebar-brand">
-            <div class="sidebar-logo">${t("app.name")}</div>
-            <div class="sidebar-role">${roleLabel}</div>
+          <div class="sidebar-brand-card">
+            <div class="sidebar-brand-icon">
+              <i data-lucide="briefcase-business"></i>
+            </div>
+            <div class="sidebar-brand">
+              <div class="sidebar-logo">${APP_NAME}</div>
+              <div class="sidebar-role">${roleLabel}</div>
+            </div>
           </div>
           <button class="sidebar-close-btn" id="sidebar-close-btn" aria-label="Close sidebar">
             <i data-lucide="x"></i>
           </button>
-        </div>
-        <div class="sidebar-panel-title">
-          <i data-lucide="sparkles"></i>
-          <span>${isArabic() ? "\u0627\u0644\u0642\u0627\u0626\u0645\u0629" : "Menu"}</span>
-        </div>
+      </div>
+      <div class="sidebar-panel-title">
+        <i data-lucide="panel-left-open"></i>
+        <span>${isArabic() ? "\u0627\u0644\u0642\u0627\u0626\u0645\u0629" : "Navigation"}</span>
+      </div>
         <nav class="sidebar-nav">
+          <div class="sidebar-active-indicator" aria-hidden="true"></div>
           ${buildSidebarSections(items, activeKey)}
         </nav>
+        <div class="sidebar-user-card">
+          <div class="sidebar-user-avatar">${initials}</div>
+          <div class="sidebar-user-meta">
+            <strong>${userName}</strong>
+            <span>${userEmail}</span>
+          </div>
+          <button class="sidebar-user-action" aria-label="Profile menu">
+            <i data-lucide="chevrons-up-down"></i>
+          </button>
+        </div>
         <div class="sidebar-footer" data-i18n="sidebar.footer">${t("sidebar.footer")}</div>
       </div>
     </aside>
@@ -267,6 +424,14 @@ export function renderSidebar(activeKey) {
       document.body.classList.remove("sidebar-open");
     });
   }
+
+  root.querySelectorAll(".sidebar-link").forEach((link) => {
+    link.addEventListener("click", () => {
+      if (window.innerWidth <= 1100) {
+        document.body.classList.remove("sidebar-open");
+      }
+    });
+  });
 
   if (window.lucide) {
     window.lucide.createIcons();
