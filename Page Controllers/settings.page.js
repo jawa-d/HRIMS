@@ -67,6 +67,30 @@ async function syncRbacRemote() {
   await upsertSettingsRbacConfig({ roleVisibility, userPermissions });
 }
 
+let rbacSyncTimer = null;
+let rbacSyncInFlight = false;
+let lastRbacSyncToastAt = 0;
+
+function syncRbacRemoteSafe() {
+  if (rbacSyncTimer) clearTimeout(rbacSyncTimer);
+  rbacSyncTimer = setTimeout(async () => {
+    if (rbacSyncInFlight) return;
+    rbacSyncInFlight = true;
+    try {
+      await syncRbacRemote();
+    } catch (error) {
+      console.error("RBAC remote sync failed:", error);
+      const now = Date.now();
+      if (now - lastRbacSyncToastAt > 12000) {
+        showToast("info", "RBAC saved locally. Firebase sync will retry later.");
+        lastRbacSyncToastAt = now;
+      }
+    } finally {
+      rbacSyncInFlight = false;
+    }
+  }, 350);
+}
+
 function defaultPagesForRole(roleKey) {
   return roleVisibility[roleKey] || ROLE_PERMISSIONS[roleKey] || [];
 }
@@ -272,7 +296,7 @@ function openUserModal(existing = null) {
 
           userPermissions[uid] = readSelectedPermissions();
           persistRbacLocal();
-          void syncRbacRemote();
+          syncRbacRemoteSafe();
 
           try {
             await upsertUser(uid, {
@@ -324,7 +348,7 @@ function openPermissionsModal(uid) {
         onClick: async () => {
           userPermissions[uid] = readSelectedPermissions();
           persistRbacLocal();
-          void syncRbacRemote();
+          syncRbacRemoteSafe();
           try {
             await upsertUser(uid, { permissions: userPermissions[uid] });
           } catch (_) {
@@ -370,7 +394,7 @@ async function handleUserAction(action, uid) {
     persistUsersDraft();
     delete userPermissions[uid];
     persistRbacLocal();
-    void syncRbacRemote();
+    syncRbacRemoteSafe();
     try {
       await deleteUser(uid);
     } catch (_) {
@@ -433,7 +457,7 @@ rolesTable.addEventListener("change", (event) => {
   else current.delete(key);
   roleVisibility[roleKey] = Array.from(current);
   persistRbacLocal();
-  void syncRbacRemote();
+  syncRbacRemoteSafe();
   renderUsersTable();
   renderSidebar("settings");
   logSecurityEvent({

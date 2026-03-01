@@ -37,6 +37,7 @@ const exportBtn = document.getElementById("excel-export-btn");
 let employees = [];
 let sheetState = {};
 const pendingRowSaves = new Map();
+let sheetMutationVersion = 0;
 
 function formatNumber(value) {
   const numeric = Number(value || 0);
@@ -145,8 +146,10 @@ function queueRowSave(employeeId) {
   const existing = pendingRowSaves.get(employeeId);
   if (existing) clearTimeout(existing);
 
+  const versionAtQueue = sheetMutationVersion;
   const timer = setTimeout(async () => {
     pendingRowSaves.delete(employeeId);
+    if (versionAtQueue !== sheetMutationVersion) return;
     try {
       await upsertExcelSheetInput({
         year: SHEET_YEAR,
@@ -205,6 +208,9 @@ function exportCsv() {
 
 function resetAllInputs() {
   if (!window.confirm("Reset all monthly inputs for all employees?")) return;
+  sheetMutationVersion += 1;
+  pendingRowSaves.forEach((timerId) => clearTimeout(timerId));
+  pendingRowSaves.clear();
   clearExcelSheetYear(SHEET_YEAR)
     .then(() => {
       sheetState = {};

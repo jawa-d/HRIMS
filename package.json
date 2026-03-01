@@ -3,11 +3,43 @@
   "version": "1.0.0",
   "private": true,
   "description": "HRMS static frontend served by Node HTTP server",
-  "main": "server.js",
+  "main": "electron/main.cjs",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "app:dev": "electron .",
+    "app:build:win": "electron-builder --win nsis"
   },
   "engines": {
     "node": ">=18"
+  },
+  "devDependencies": {
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.hrms.desktop",
+    "productName": "HRMS",
+    "files": [
+      "Aman/**/*",
+      "Collaboration interface/**/*",
+      "HRMS CSS/**/*",
+      "HRMS Html/**/*",
+      "Languages/**/*",
+      "Page Controllers/**/*",
+      "Services/**/*",
+      "app.config.js",
+      "index.html",
+      "server.js",
+      "electron/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "HRMS Html/assets/logo.jpg"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
   }
 }

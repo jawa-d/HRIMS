@@ -4,7 +4,7 @@ import { renderNavbar } from "../Collaboration interface/ui-navbar.js";
 import { renderSidebar } from "../Collaboration interface/ui-sidebar.js";
 import { showToast } from "../Collaboration interface/ui-toast.js";
 import { showTableSkeleton } from "../Collaboration interface/ui-skeleton.js";
-import { listPayroll, createPayroll, updatePayroll, deletePayroll } from "../Services/payroll.service.js";
+import { listPayroll, createPayroll, updatePayroll } from "../Services/payroll.service.js";
 import { listEmployees } from "../Services/employees.service.js";
 
 if (!enforceAuth("payroll")) {
@@ -55,7 +55,6 @@ let payrollEntries = [];
 let monthEntries = [];
 let employees = [];
 let currentMonth = "";
-const removedEmployeesByMonth = new Map();
 
 const formatter = new Intl.NumberFormat(undefined, {
   minimumFractionDigits: 2,
@@ -103,13 +102,16 @@ function buildMonthOptions() {
   monthLabelEl.textContent = monthLabelFromKey(currentMonth);
 }
 
+function getScopedEmployees() {
+  if (isEmployee) {
+    return employees.filter((emp) => emp.id === user.uid || emp.empId === user.uid || emp.email === user.email);
+  }
+  return employees;
+}
+
 function getVisibleEmployees() {
   const query = (searchInput.value || "").trim().toLowerCase();
-  let source = employees;
-
-  if (isEmployee) {
-    source = employees.filter((emp) => emp.id === user.uid || emp.empId === user.uid || emp.email === user.email);
-  }
+  const source = getScopedEmployees();
 
   if (!query) return source;
   return source.filter((emp) => {
@@ -127,11 +129,16 @@ function findPayrollEntryForEmployee(emp, list) {
   return matches[0] || null;
 }
 
-function monthRemovedSet(monthKey) {
-  if (!removedEmployeesByMonth.has(monthKey)) {
-    removedEmployeesByMonth.set(monthKey, new Set());
-  }
-  return removedEmployeesByMonth.get(monthKey);
+function removedEmployeeIds(entries = []) {
+  const set = new Set();
+  entries.forEach((entry) => {
+    if (entry?.status !== "removed") return;
+    const id = String(entry.employeeId || "").trim();
+    const code = String(entry.employeeCode || "").trim();
+    if (id) set.add(id);
+    if (code) set.add(code);
+  });
+  return set;
 }
 
 function getRowValues(row) {
@@ -210,9 +217,10 @@ function attachRowEvents() {
 }
 
 function renderPayroll() {
-  const removedSet = monthRemovedSet(currentMonth);
-  const visibleEmployees = getVisibleEmployees().filter((emp) => !removedSet.has(emp.id));
   monthEntries = payrollEntries.filter((entry) => entry.month === currentMonth);
+  const removedSet = removedEmployeeIds(monthEntries);
+  const visibleEmployees = getVisibleEmployees().filter((emp) => !removedSet.has(String(emp.id)) && !removedSet.has(String(emp.empId || "")));
+  const scopedVisibleCount = getScopedEmployees().filter((emp) => !removedSet.has(String(emp.id)) && !removedSet.has(String(emp.empId || ""))).length;
 
   tbody.innerHTML = visibleEmployees
     .map((emp) => {
@@ -251,7 +259,7 @@ function renderPayroll() {
 
   emptyState.classList.toggle("hidden", visibleEmployees.length > 0);
   monthLabelEl.textContent = monthLabelFromKey(currentMonth);
-  renderMonthStatus(visibleEmployees.length);
+  renderMonthStatus(scopedVisibleCount);
   attachRowEvents();
   attachActionEvents();
   updateTotals();
@@ -266,14 +274,35 @@ function attachActionEvents() {
       if (!window.confirm("Delete this payroll row from the selected month?")) return;
 
       try {
+        const employee = employees.find((emp) => String(emp.id) === String(employeeId)) || {};
+        const payload = {
+          employeeId: String(employee.id || employeeId),
+          employeeName: employee.fullName || "",
+          employeeCode: employee.empId || "",
+          month: currentMonth,
+          base: 0,
+          allowancesTotal: 0,
+          deductionsTotal: 0,
+          net: 0,
+          status: "removed"
+        };
+
         if (entryId) {
-          await deletePayroll(entryId);
-          payrollEntries = payrollEntries.filter((entry) => entry.id !== entryId);
+          await updatePayroll(entryId, payload);
+        } else {
+          const existing = findPayrollEntryForEmployee(
+            { id: employeeId, empId: employee.empId || "" },
+            monthEntries
+          );
+          if (existing?.id) {
+            await updatePayroll(existing.id, payload);
+          } else {
+            await createPayroll(payload);
+          }
         }
 
-        monthRemovedSet(currentMonth).add(employeeId);
         showToast("success", "Payroll row deleted");
-        renderPayroll();
+        await loadPayroll();
       } catch (error) {
         console.error("Payroll delete failed:", error);
         showToast("error", "Payroll delete failed");
@@ -282,26 +311,52 @@ function attachActionEvents() {
   });
 }
 
-async function savePayroll(status = "draft") {
+async function savePayroll(status = "draft", overridesByEmployee = null) {
   if (!canManage) return;
 
-  const rows = Array.from(tbody.querySelectorAll("tr"));
-  const tasks = rows.map(async (row) => {
-    const { base, allowances, deductions, net } = getRowValues(row);
-    const employeeId = row.dataset.employeeId;
-    const employeeCode = row.dataset.employeeCode || "";
-    const entryId = row.dataset.entryId;
-    const employee = employees.find((emp) => emp.id === employeeId);
+  const rowMap = new Map(
+    Array.from(tbody.querySelectorAll("tr")).map((row) => [String(row.dataset.employeeId || ""), row])
+  );
+  const removedSet = removedEmployeeIds(monthEntries);
+  const scopedEmployees = getScopedEmployees().filter(
+    (emp) => !removedSet.has(String(emp.id)) && !removedSet.has(String(emp.empId || ""))
+  );
+  const tasks = scopedEmployees.map(async (employee) => {
+    const employeeId = String(employee.id || "");
+    const row = rowMap.get(employeeId) || null;
+    const entry = findPayrollEntryForEmployee(employee, monthEntries);
+    const employeeCode = employee.empId || "";
+    const entryId = row?.dataset.entryId || entry?.id || "";
+    const override = overridesByEmployee && Object.prototype.hasOwnProperty.call(overridesByEmployee, employeeId)
+      ? overridesByEmployee[employeeId]
+      : null;
+
+    const values = override
+      ? {
+        base: safeNumber(override.base),
+        allowances: safeNumber(override.allowances),
+        deductions: safeNumber(override.deductions),
+        net: safeNumber(override.base) + safeNumber(override.allowances) - safeNumber(override.deductions)
+      }
+      : row
+        ? getRowValues(row)
+        : (() => {
+          const base = entry?.base ?? safeNumber(employee.salaryBase);
+          const allowances = entry?.allowancesTotal ?? safeNumber(employee.allowances);
+          const deductions = entry?.deductionsTotal ?? 0;
+          const net = base + allowances - deductions;
+          return { base, allowances, deductions, net };
+        })();
 
     const payload = {
       employeeId,
-      employeeName: employee?.fullName || "",
+      employeeName: employee.fullName || "",
       employeeCode,
       month: currentMonth,
-      base,
-      allowancesTotal: allowances,
-      deductionsTotal: deductions,
-      net,
+      base: values.base,
+      allowancesTotal: values.allowances,
+      deductionsTotal: values.deductions,
+      net: values.net,
       status
     };
 
@@ -313,12 +368,12 @@ async function savePayroll(status = "draft") {
     const existing = findPayrollEntryForEmployee(employee || { id: employeeId, empId: employeeCode }, monthEntries);
     if (existing?.id) {
       await updatePayroll(existing.id, payload);
-      row.dataset.entryId = existing.id;
+      if (row) row.dataset.entryId = existing.id;
       return;
     }
 
     const newId = await createPayroll(payload);
-    row.dataset.entryId = newId;
+    if (row) row.dataset.entryId = newId;
   });
 
   await Promise.all(tasks);
@@ -330,6 +385,31 @@ async function resetPayrollMonth() {
   if (!canManage) return;
   const confirmed = window.confirm("Reset base, allowances, and deductions to 0 for this month?");
   if (!confirmed) return;
+
+  const removedEntries = monthEntries.filter((entry) => entry.status === "removed");
+  if (removedEntries.length) {
+    await Promise.all(
+      removedEntries
+        .filter((entry) => entry.id)
+        .map((entry) =>
+          updatePayroll(entry.id, {
+            ...entry,
+            base: 0,
+            allowancesTotal: 0,
+            deductionsTotal: 0,
+            net: 0,
+            status: "draft"
+          })
+        )
+    );
+    await loadPayroll();
+  }
+
+  const scopedEmployees = getScopedEmployees();
+  const overridesByEmployee = {};
+  scopedEmployees.forEach((emp) => {
+    overridesByEmployee[String(emp.id)] = { base: 0, allowances: 0, deductions: 0 };
+  });
 
   const rows = Array.from(tbody.querySelectorAll("tr"));
   rows.forEach((row) => {
@@ -343,7 +423,7 @@ async function resetPayrollMonth() {
   });
   updateTotals();
 
-  await savePayroll("draft");
+  await savePayroll("draft", overridesByEmployee);
 }
 
 function buildExportData() {
