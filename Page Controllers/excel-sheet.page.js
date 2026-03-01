@@ -4,6 +4,7 @@ import { renderNavbar } from "../Collaboration interface/ui-navbar.js";
 import { renderSidebar } from "../Collaboration interface/ui-sidebar.js";
 import { showToast } from "../Collaboration interface/ui-toast.js";
 import { listEmployees } from "../Services/employees.service.js";
+import { listExcelSheetInputs, upsertExcelSheetInput, clearExcelSheetYear } from "../Services/excel-sheet.service.js";
 
 if (!enforceAuth("excel_sheet")) {
   throw new Error("Unauthorized");
@@ -15,10 +16,10 @@ const role = getRole();
 renderNavbar({ user, role });
 renderSidebar("excel_sheet");
 
-const STORAGE_KEY = "hrms_excel_sheet_inputs_v1";
+const SHEET_YEAR = 2026;
 const locale = document.documentElement.lang?.startsWith("ar") ? "ar-IQ" : "en-US";
 const months = Array.from({ length: 12 }, (_, index) =>
-  new Date(2026, index, 1).toLocaleDateString(locale, { month: "short" })
+  new Date(SHEET_YEAR, index, 1).toLocaleDateString(locale, { month: "short" })
 );
 const numberFormatter = new Intl.NumberFormat(locale, {
   minimumFractionDigits: 0,
@@ -34,21 +35,8 @@ const resetBtn = document.getElementById("excel-reset-btn");
 const exportBtn = document.getElementById("excel-export-btn");
 
 let employees = [];
-let sheetState = loadState();
-
-function loadState() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    const parsed = raw ? JSON.parse(raw) : {};
-    return parsed && typeof parsed === "object" ? parsed : {};
-  } catch (_) {
-    return {};
-  }
-}
-
-function saveState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(sheetState));
-}
+let sheetState = {};
+const pendingRowSaves = new Map();
 
 function formatNumber(value) {
   const numeric = Number(value || 0);
@@ -152,6 +140,27 @@ function updateSummary() {
   grandTotalEl.textContent = formatNumber(grand);
 }
 
+function queueRowSave(employeeId) {
+  if (!employeeId) return;
+  const existing = pendingRowSaves.get(employeeId);
+  if (existing) clearTimeout(existing);
+
+  const timer = setTimeout(async () => {
+    pendingRowSaves.delete(employeeId);
+    try {
+      await upsertExcelSheetInput({
+        year: SHEET_YEAR,
+        employeeId,
+        inputs: getEmployeeInputs(employeeId)
+      });
+    } catch (error) {
+      console.error("Failed to sync excel sheet row:", error);
+    }
+  }, 350);
+
+  pendingRowSaves.set(employeeId, timer);
+}
+
 function renderTable() {
   buildHeader();
   body.innerHTML = employees.map((employee) => buildRow(employee)).join("");
@@ -169,7 +178,7 @@ function handleCellInput(event) {
   const rowInputs = getEmployeeInputs(employeeId);
   rowInputs[monthIndex] = toNumeric(input.value);
   sheetState[employeeId] = rowInputs;
-  saveState();
+  queueRowSave(employeeId);
   updateRow(employeeId);
   updateSummary();
 }
@@ -196,22 +205,32 @@ function exportCsv() {
 
 function resetAllInputs() {
   if (!window.confirm("Reset all monthly inputs for all employees?")) return;
-  sheetState = {};
-  saveState();
-  renderTable();
-  showToast("success", "Sheet reset completed");
+  clearExcelSheetYear(SHEET_YEAR)
+    .then(() => {
+      sheetState = {};
+      renderTable();
+      showToast("success", "Sheet reset completed");
+    })
+    .catch((error) => {
+      console.error("Failed to reset excel sheet:", error);
+      showToast("error", "Could not reset sheet on Firebase");
+    });
 }
 
 async function init() {
   try {
-    const rows = await listEmployees();
+    const [rows, remoteState] = await Promise.all([
+      listEmployees(),
+      listExcelSheetInputs(SHEET_YEAR)
+    ]);
     employees = rows
       .slice()
       .sort((a, b) => (a.fullName || "").localeCompare(b.fullName || "", locale));
+    sheetState = remoteState || {};
     renderTable();
   } catch (error) {
     console.error("Failed to load excel sheet employees:", error);
-    showToast("error", "Failed to load employees");
+    showToast("error", "Failed to load excel sheet from Firebase");
   }
 }
 

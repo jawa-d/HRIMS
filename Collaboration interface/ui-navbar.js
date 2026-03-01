@@ -15,6 +15,7 @@ import {
 
 export function renderNavbar({ user, role }) {
   initNavigationEnhancements();
+  const SIDEBAR_PREF_KEY = "hrms_sidebar_pref";
 
   const root = document.getElementById("navbar-root");
   if (!root) return;
@@ -214,6 +215,41 @@ export function renderNavbar({ user, role }) {
     searchResultsEl.setAttribute("aria-hidden", "false");
   };
 
+  const readSidebarPref = () => {
+    try {
+      return localStorage.getItem(SIDEBAR_PREF_KEY) || "";
+    } catch (_) {
+      return "";
+    }
+  };
+
+  const writeSidebarPref = (value) => {
+    try {
+      localStorage.setItem(SIDEBAR_PREF_KEY, value);
+    } catch (_) {
+      // Ignore storage write issues.
+    }
+  };
+
+  const applySidebarStateForViewport = () => {
+    const isMobile = window.innerWidth <= 1100;
+    if (isMobile) {
+      document.body.classList.remove("sidebar-collapsed");
+      return;
+    }
+
+    document.body.classList.remove("sidebar-open");
+    const pref = readSidebarPref();
+    document.body.classList.toggle("sidebar-collapsed", pref === "collapsed");
+  };
+
+  const refreshLayout = () => {
+    // Force responsive/layout recalculation after sidebar width changes.
+    requestAnimationFrame(() => {
+      window.dispatchEvent(new Event("resize"));
+    });
+  };
+
   const openNotifications = async () => {
     dropdownOpen = !dropdownOpen;
     if (dropdown) {
@@ -296,13 +332,20 @@ export function renderNavbar({ user, role }) {
       document.body.classList.toggle("sidebar-open");
       document.body.classList.remove("sidebar-collapsed");
       syncSidebarToggleState();
+      refreshLayout();
       return;
     }
-    document.body.classList.toggle("sidebar-collapsed");
+    const willCollapse = !document.body.classList.contains("sidebar-collapsed");
+    document.body.classList.toggle("sidebar-collapsed", willCollapse);
+    writeSidebarPref(willCollapse ? "collapsed" : "expanded");
     syncSidebarToggleState();
+    refreshLayout();
   });
 
-  window.addEventListener("resize", syncSidebarToggleState);
+  window.addEventListener("resize", () => {
+    applySidebarStateForViewport();
+    syncSidebarToggleState();
+  });
 
   if (window.__hrmsSidebarObserver) {
     window.__hrmsSidebarObserver.disconnect();
@@ -351,7 +394,9 @@ export function renderNavbar({ user, role }) {
   }
 
   if (window.lucide) window.lucide.createIcons();
+  applySidebarStateForViewport();
   syncSidebarToggleState();
+  refreshLayout();
 
   trackPageVisit();
   renderRecentActivityBar();

@@ -6,6 +6,7 @@ import { openModal } from "../Collaboration interface/ui-modal.js";
 import { showToast } from "../Collaboration interface/ui-toast.js";
 import { ROLES, ROLE_PERMISSIONS, MENU_ITEMS, STORAGE_KEYS } from "../app.config.js";
 import { listUsers, upsertUser, deleteUser } from "../Services/users.service.js";
+import { getSettingsRbacConfig, upsertSettingsRbacConfig } from "../Services/settings-config.service.js";
 import { logSecurityEvent } from "../Services/security-audit.service.js";
 import { enforceAdminPagesCode } from "../Services/admin-lock.service.js";
 
@@ -36,8 +37,8 @@ const usersTable = document.getElementById("users-table");
 const userSearch = document.getElementById("settings-user-search");
 const addUserBtn = document.getElementById("settings-add-user-btn");
 
-const roleVisibility = parseStorage(STORAGE_KEYS.roleVisibility, {});
-const userPermissions = parseStorage(STORAGE_KEYS.userPermissions, {});
+let roleVisibility = parseStorage(STORAGE_KEYS.roleVisibility, {});
+let userPermissions = parseStorage(STORAGE_KEYS.userPermissions, {});
 let users = [];
 
 if (!canManageUsers) {
@@ -55,6 +56,15 @@ function parseStorage(key, fallback) {
 
 function persistUsersDraft() {
   localStorage.setItem(STORAGE_KEYS.usersDraft, JSON.stringify(users));
+}
+
+function persistRbacLocal() {
+  localStorage.setItem(STORAGE_KEYS.roleVisibility, JSON.stringify(roleVisibility));
+  localStorage.setItem(STORAGE_KEYS.userPermissions, JSON.stringify(userPermissions));
+}
+
+async function syncRbacRemote() {
+  await upsertSettingsRbacConfig({ roleVisibility, userPermissions });
 }
 
 function defaultPagesForRole(roleKey) {
@@ -261,7 +271,8 @@ function openUserModal(existing = null) {
           persistUsersDraft();
 
           userPermissions[uid] = readSelectedPermissions();
-          localStorage.setItem(STORAGE_KEYS.userPermissions, JSON.stringify(userPermissions));
+          persistRbacLocal();
+          void syncRbacRemote();
 
           try {
             await upsertUser(uid, {
@@ -312,7 +323,8 @@ function openPermissionsModal(uid) {
         className: "btn btn-primary",
         onClick: async () => {
           userPermissions[uid] = readSelectedPermissions();
-          localStorage.setItem(STORAGE_KEYS.userPermissions, JSON.stringify(userPermissions));
+          persistRbacLocal();
+          void syncRbacRemote();
           try {
             await upsertUser(uid, { permissions: userPermissions[uid] });
           } catch (_) {
@@ -357,7 +369,8 @@ async function handleUserAction(action, uid) {
     users = users.filter((entry) => entry.uid !== uid);
     persistUsersDraft();
     delete userPermissions[uid];
-    localStorage.setItem(STORAGE_KEYS.userPermissions, JSON.stringify(userPermissions));
+    persistRbacLocal();
+    void syncRbacRemote();
     try {
       await deleteUser(uid);
     } catch (_) {
@@ -399,6 +412,17 @@ async function loadUsers() {
   renderUsersTable();
 }
 
+async function loadRbacConfig() {
+  try {
+    const remote = await getSettingsRbacConfig();
+    roleVisibility = { ...roleVisibility, ...(remote.roleVisibility || {}) };
+    userPermissions = { ...userPermissions, ...(remote.userPermissions || {}) };
+    persistRbacLocal();
+  } catch (_) {
+    showToast("info", "Using local RBAC settings. Firebase sync can be enabled later.");
+  }
+}
+
 rolesTable.addEventListener("change", (event) => {
   if (!canManageUsers || isManager) return;
   if (!event.target.matches("input[type=checkbox]")) return;
@@ -408,7 +432,8 @@ rolesTable.addEventListener("change", (event) => {
   if (event.target.checked) current.add(key);
   else current.delete(key);
   roleVisibility[roleKey] = Array.from(current);
-  localStorage.setItem(STORAGE_KEYS.roleVisibility, JSON.stringify(roleVisibility));
+  persistRbacLocal();
+  void syncRbacRemote();
   renderUsersTable();
   renderSidebar("settings");
   logSecurityEvent({
@@ -446,5 +471,8 @@ if (addUserBtn) {
   });
 }
 
-renderRoleTable();
-loadUsers();
+(async () => {
+  await loadRbacConfig();
+  renderRoleTable();
+  await loadUsers();
+})();

@@ -67,6 +67,17 @@
   gap: var(--space-2);
 }
 
+.payroll-reset-btn {
+  border-color: rgba(244, 63, 94, 0.38);
+  color: #be123c;
+  background: rgba(244, 63, 94, 0.08);
+}
+
+.payroll-reset-btn:hover {
+  border-color: rgba(244, 63, 94, 0.55);
+  background: rgba(244, 63, 94, 0.14);
+}
+
 .payroll-month,
 .payroll-search {
   display: flex;

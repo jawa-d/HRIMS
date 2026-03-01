@@ -26,6 +26,7 @@ const isEmployee = role === "employee";
 const monthSelect = document.getElementById("payroll-month");
 const searchInput = document.getElementById("payroll-search");
 const saveBtn = document.getElementById("save-payroll-btn");
+const resetBtn = document.getElementById("reset-payroll-btn");
 const approveBtn = document.getElementById("approve-payroll-btn");
 const exportExcelBtn = document.getElementById("export-excel-btn");
 const exportPdfBtn = document.getElementById("export-pdf-btn");
@@ -46,6 +47,7 @@ const totalNetEl = document.getElementById("total-net");
 
 if (!canManage) {
   saveBtn.classList.add("hidden");
+  resetBtn?.classList.add("hidden");
   approveBtn.classList.add("hidden");
 }
 
@@ -53,6 +55,7 @@ let payrollEntries = [];
 let monthEntries = [];
 let employees = [];
 let currentMonth = "";
+const removedEmployeesByMonth = new Map();
 
 const formatter = new Intl.NumberFormat(undefined, {
   minimumFractionDigits: 2,
@@ -122,6 +125,13 @@ function findPayrollEntryForEmployee(emp, list) {
   });
   matches.sort((a, b) => toMillis(b.updatedAt || b.createdAt) - toMillis(a.updatedAt || a.createdAt));
   return matches[0] || null;
+}
+
+function monthRemovedSet(monthKey) {
+  if (!removedEmployeesByMonth.has(monthKey)) {
+    removedEmployeesByMonth.set(monthKey, new Set());
+  }
+  return removedEmployeesByMonth.get(monthKey);
 }
 
 function getRowValues(row) {
@@ -200,7 +210,8 @@ function attachRowEvents() {
 }
 
 function renderPayroll() {
-  const visibleEmployees = getVisibleEmployees();
+  const removedSet = monthRemovedSet(currentMonth);
+  const visibleEmployees = getVisibleEmployees().filter((emp) => !removedSet.has(emp.id));
   monthEntries = payrollEntries.filter((entry) => entry.month === currentMonth);
 
   tbody.innerHTML = visibleEmployees
@@ -228,8 +239,8 @@ function renderPayroll() {
           <td><span class="badge ${statusClass}">${status}</span></td>
           <td>
             ${
-              canManage && entry?.id
-                ? `<button class="btn btn-ghost" data-action="delete" data-id="${entry.id}">Delete</button>`
+              canManage
+                ? `<button class="btn btn-ghost" data-action="delete" data-id="${entry?.id || ""}" data-employee-id="${emp.id}">Delete</button>`
                 : "-"
             }
           </td>
@@ -250,11 +261,19 @@ function attachActionEvents() {
   tbody.querySelectorAll('button[data-action="delete"]').forEach((button) => {
     button.addEventListener("click", async () => {
       const entryId = button.dataset.id;
-      if (!entryId || !canManage) return;
+      const employeeId = button.dataset.employeeId;
+      if (!canManage || !employeeId) return;
+      if (!window.confirm("Delete this payroll row from the selected month?")) return;
+
       try {
-        await deletePayroll(entryId);
-        showToast("success", "Payroll entry deleted");
-        await loadPayroll();
+        if (entryId) {
+          await deletePayroll(entryId);
+          payrollEntries = payrollEntries.filter((entry) => entry.id !== entryId);
+        }
+
+        monthRemovedSet(currentMonth).add(employeeId);
+        showToast("success", "Payroll row deleted");
+        renderPayroll();
       } catch (error) {
         console.error("Payroll delete failed:", error);
         showToast("error", "Payroll delete failed");
@@ -305,6 +324,26 @@ async function savePayroll(status = "draft") {
   await Promise.all(tasks);
   showToast("success", status === "approved" ? "Payroll month approved" : "Payroll month saved");
   await loadPayroll();
+}
+
+async function resetPayrollMonth() {
+  if (!canManage) return;
+  const confirmed = window.confirm("Reset base, allowances, and deductions to 0 for this month?");
+  if (!confirmed) return;
+
+  const rows = Array.from(tbody.querySelectorAll("tr"));
+  rows.forEach((row) => {
+    const baseInput = row.querySelector('[data-field="base"]');
+    const allowancesInput = row.querySelector('[data-field="allowances"]');
+    const deductionsInput = row.querySelector('[data-field="deductions"]');
+    if (baseInput) baseInput.value = "0";
+    if (allowancesInput) allowancesInput.value = "0";
+    if (deductionsInput) deductionsInput.value = "0";
+    updateRowNet(row);
+  });
+  updateTotals();
+
+  await savePayroll("draft");
 }
 
 function buildExportData() {
@@ -436,6 +475,7 @@ monthSelect.addEventListener("change", async () => {
 });
 searchInput.addEventListener("input", renderPayroll);
 saveBtn.addEventListener("click", () => savePayroll("draft"));
+resetBtn?.addEventListener("click", resetPayrollMonth);
 approveBtn.addEventListener("click", () => savePayroll("approved"));
 exportExcelBtn.addEventListener("click", exportToCsv);
 exportPdfBtn.addEventListener("click", exportToPdf);
