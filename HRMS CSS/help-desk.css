@@ -29,10 +29,22 @@
 }
 
 .helpdesk-kpi {
-  border: 1px solid var(--border);
+  border: 1px solid color-mix(in srgb, var(--primary-soft) 42%, var(--border));
   border-radius: var(--radius-md);
   padding: 12px;
-  background: color-mix(in srgb, var(--surface-strong) 86%, var(--primary-soft));
+  background: linear-gradient(180deg, var(--surface-strong), color-mix(in srgb, var(--surface) 86%, var(--primary-soft)));
+}
+
+.helpdesk-kpis .helpdesk-kpi:nth-child(1) {
+  border-color: color-mix(in srgb, #0ea5e9 35%, var(--border));
+}
+
+.helpdesk-kpis .helpdesk-kpi:nth-child(2) {
+  border-color: color-mix(in srgb, #6366f1 35%, var(--border));
+}
+
+.helpdesk-kpis .helpdesk-kpi:nth-child(3) {
+  border-color: color-mix(in srgb, #10b981 35%, var(--border));
 }
 
 .helpdesk-kpi strong {
@@ -64,10 +76,17 @@
 }
 
 .helpdesk-ticket {
-  border: 1px solid var(--border);
+  border: 1px solid color-mix(in srgb, var(--ticket-accent, var(--primary)) 24%, var(--border));
+  border-inline-start: 3px solid color-mix(in srgb, var(--ticket-accent, var(--primary)) 65%, transparent);
   border-radius: var(--radius-md);
   background: var(--surface-strong);
   padding: 12px;
+  animation: helpdeskTicketIn 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--row-index, 0) * 24ms);
+}
+
+.helpdesk-ticket:hover {
+  background: color-mix(in srgb, var(--ticket-accent, var(--primary)) 8%, var(--surface));
 }
 
 .helpdesk-ticket-head {
@@ -81,6 +100,17 @@
 .helpdesk-ticket-title {
   font-weight: 700;
   margin-bottom: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ticket-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--ticket-accent, var(--primary));
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--ticket-accent, var(--primary)) 18%, transparent);
 }
 
 .helpdesk-ticket-meta {
@@ -112,6 +142,23 @@
 
 .helpdesk-ticket-manage .btn {
   min-width: 120px;
+}
+
+@keyframes helpdeskTicketIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .helpdesk-ticket {
+    animation: none;
+  }
 }
 
 @media (max-width: 1000px) {

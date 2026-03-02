@@ -1,0 +1,115 @@
+.cashbox-head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.cashbox-tools {
+  display: grid;
+  grid-template-columns: 0.9fr 1.4fr;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.cashbox-summary {
+  margin-bottom: var(--space-5);
+}
+
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.grid-5 {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.summary-card {
+  border: 1px solid color-mix(in srgb, var(--primary-soft) 38%, var(--border));
+  background: linear-gradient(160deg, var(--surface-strong), color-mix(in srgb, var(--surface) 86%, var(--primary-soft)));
+}
+
+.summary-value {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-top: var(--space-2);
+}
+
+.summary-day {
+  border-color: color-mix(in srgb, #fb7185 36%, var(--border));
+}
+
+.summary-opening {
+  border-color: color-mix(in srgb, #14b8a6 36%, var(--border));
+}
+
+.summary-month {
+  border-color: color-mix(in srgb, #f59e0b 36%, var(--border));
+}
+
+.summary-count {
+  border-color: color-mix(in srgb, #6366f1 36%, var(--border));
+}
+
+.summary-net {
+  border-color: color-mix(in srgb, #10b981 36%, var(--border));
+}
+
+.table-scroll {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.cashbox-attachment {
+  color: var(--primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.cashbox-attachment:hover {
+  text-decoration: underline;
+}
+
+.cashbox-row {
+  border-left: 3px solid color-mix(in srgb, var(--cash-accent, var(--primary)) 65%, transparent);
+  animation: cashRowIn 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--row-index, 0) * 24ms);
+}
+
+.cashbox-row:hover {
+  background: color-mix(in srgb, var(--cash-accent, var(--primary)) 8%, var(--surface));
+}
+
+@keyframes cashRowIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cashbox-row {
+    animation: none;
+  }
+}
+
+@media (max-width: 960px) {
+  .cashbox-tools {
+    grid-template-columns: 1fr;
+  }
+
+  .grid-3 {
+    grid-template-columns: 1fr;
+  }
+
+  .grid-5 {
+    grid-template-columns: 1fr;
+  }
+}

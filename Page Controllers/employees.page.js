@@ -111,13 +111,20 @@ function renderEmployees() {
 
   tbody.innerHTML = paged.items
     .map(
-      (emp) => `
-      <tr>
+      (emp, index) => `
+      <tr class="employee-row status-${emp.isArchived ? "archived" : (emp.status || "active")}" style="--row-index:${index};--emp-accent:${employeeAccent(emp)};">
         <td>${emp.empId || emp.id}</td>
-        <td><a href="employee-details.html?id=${emp.id}">${emp.fullName || "-"}</a></td>
+        <td>
+          <a href="employee-details.html?id=${emp.id}">
+            <span class="employee-name-wrap">
+              <span class="employee-color-dot"></span>
+              <span>${emp.fullName || "-"}</span>
+            </span>
+          </a>
+        </td>
         <td>${emp.email || "-"}</td>
         <td>${departments.find((dept) => dept.id === emp.departmentId)?.name || emp.departmentId || "-"}</td>
-        <td><span class="badge">${emp.isArchived ? "archived" : (emp.status || "active")}</span></td>
+        <td><span class="badge employee-status-badge">${emp.isArchived ? "archived" : (emp.status || "active")}</span></td>
         <td>
           ${
             canEdit || canDelete
@@ -146,6 +153,21 @@ function renderEmployees() {
       });
     });
   });
+}
+
+function hashSeed(input = "") {
+  let hash = 0;
+  const value = String(input || "");
+  for (let i = 0; i < value.length; i += 1) {
+    hash = (hash * 31 + value.charCodeAt(i)) >>> 0;
+  }
+  return hash;
+}
+
+function employeeAccent(emp = {}) {
+  const seed = hashSeed(emp.empId || emp.departmentId || emp.id || emp.fullName || "");
+  const hue = seed % 360;
+  return `hsl(${hue} 72% 44%)`;
 }
 
 function getDepartmentCode(departmentId) {

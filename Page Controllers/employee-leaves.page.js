@@ -4,6 +4,7 @@ import { renderNavbar } from "../Collaboration interface/ui-navbar.js";
 import { renderSidebar } from "../Collaboration interface/ui-sidebar.js";
 import { showToast } from "../Collaboration interface/ui-toast.js";
 import { showTableSkeleton } from "../Collaboration interface/ui-skeleton.js";
+import { trackUxEvent } from "../Services/telemetry.service.js";
 import { listLeaves, createLeave, deleteLeave } from "../Services/leaves.service.js";
 import { listEmployees } from "../Services/employees.service.js";
 
@@ -39,12 +40,35 @@ const decisionEl = document.getElementById("my-last-decision");
 let myLeaves = [];
 let currentEmployee = null;
 
+function normalizeStatus(status = "") {
+  const value = String(status || "").trim().toLowerCase();
+  if (value === "pending") return "submitted";
+  return value.replaceAll("-", "_").replaceAll(" ", "_");
+}
+
+function toDate(value) {
+  if (!value) return null;
+  if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
+  if (typeof value?.toDate === "function") {
+    const parsed = value.toDate();
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+  if (typeof value?.seconds === "number") {
+    const parsed = new Date(value.seconds * 1000);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
 function resolveEmployeeForUser(profile, list) {
   if (!profile) return null;
+  const uid = String(profile.uid || "").trim();
+  const email = String(profile.email || "").trim().toLowerCase();
   return (
-    list.find((emp) => emp.id === profile.uid) ||
-    list.find((emp) => emp.empId && emp.empId === profile.uid) ||
-    list.find((emp) => emp.email && emp.email === profile.email) ||
+    list.find((emp) => String(emp.id || "").trim() === uid) ||
+    list.find((emp) => String(emp.empId || "").trim() === uid) ||
+    list.find((emp) => String(emp.email || "").trim().toLowerCase() === email) ||
     null
   );
 }
@@ -60,16 +84,18 @@ function calcDays(from, to) {
 
 function matchesMine(leave) {
   if (!leave) return false;
-  if (leave.employeeId && leave.employeeId === user.uid) return true;
-  if (currentEmployee?.id && leave.employeeId === currentEmployee.id) return true;
-  if (currentEmployee?.empId && leave.employeeCode === currentEmployee.empId) return true;
-  if (user?.email && leave.employeeEmail === user.email) return true;
+  const uid = String(user?.uid || "").trim();
+  const mail = String(user?.email || "").trim().toLowerCase();
+  if (uid && String(leave.employeeId || "").trim() === uid) return true;
+  if (currentEmployee?.id && String(leave.employeeId || "").trim() === String(currentEmployee.id || "").trim()) return true;
+  if (currentEmployee?.empId && String(leave.employeeCode || "").trim() === String(currentEmployee.empId || "").trim()) return true;
+  if (mail && String(leave.employeeEmail || leave.email || "").trim().toLowerCase() === mail) return true;
   return false;
 }
 
 function sortByNewest(a, b) {
-  const aTime = a?.updatedAt?.seconds || a?.createdAt?.seconds || 0;
-  const bTime = b?.updatedAt?.seconds || b?.createdAt?.seconds || 0;
+  const aTime = toDate(a?.updatedAt || a?.createdAt)?.getTime() || 0;
+  const bTime = toDate(b?.updatedAt || b?.createdAt)?.getTime() || 0;
   return bTime - aTime;
 }
 
@@ -83,21 +109,21 @@ function resetForm() {
 }
 
 function renderSummary() {
-  const pending = myLeaves.filter((item) => item.status === "pending").length;
-  const approved = myLeaves.filter((item) => item.status === "approved").length;
-  const rejected = myLeaves.filter((item) => item.status === "rejected").length;
+  const pending = myLeaves.filter((item) => ["submitted", "manager_review", "hr_review"].includes(normalizeStatus(item.status))).length;
+  const approved = myLeaves.filter((item) => normalizeStatus(item.status) === "approved").length;
+  const rejected = myLeaves.filter((item) => normalizeStatus(item.status) === "rejected").length;
   pendingCountEl.textContent = String(pending);
   approvedCountEl.textContent = String(approved);
   rejectedCountEl.textContent = String(rejected);
 
   const latestDecision = myLeaves
-    .filter((item) => item.status === "approved" || item.status === "rejected")
+    .filter((item) => ["approved", "rejected"].includes(normalizeStatus(item.status)))
     .sort(sortByNewest)[0];
   if (!latestDecision) {
     decisionEl.textContent = "No final decision yet.";
     return;
   }
-  decisionEl.textContent = `Latest result: ${latestDecision.status.toUpperCase()} for request ${
+  decisionEl.textContent = `Latest result: ${normalizeStatus(latestDecision.status).toUpperCase()} for request ${
     latestDecision.requestId || latestDecision.id
   }.`;
 }
@@ -111,14 +137,19 @@ function renderTable() {
       (item.requestId || "").toLowerCase().includes(query) ||
       (item.type || "").toLowerCase().includes(query) ||
       (item.reason || "").toLowerCase().includes(query) ||
-      (item.status || "").toLowerCase().includes(query);
-    const matchesStatus = !status || item.status === status;
+      normalizeStatus(item.status).includes(query);
+    const normalizedStatus = normalizeStatus(item.status);
+    const matchesStatus =
+      !status ||
+      normalizedStatus === status ||
+      (status === "pending" && ["submitted", "manager_review", "hr_review"].includes(normalizedStatus));
     return matchesSearch && matchesStatus;
   });
 
   tbody.innerHTML = filtered
     .map((item) => {
-      const canDelete = item.status === "pending";
+      const normalizedStatus = normalizeStatus(item.status || "submitted");
+      const canDelete = normalizedStatus === "submitted";
       const days = Number(item.days || calcDays(item.from, item.to) || 1);
       return `
         <tr>
@@ -126,7 +157,7 @@ function renderTable() {
           <td>${item.type || "-"}</td>
           <td>${item.from || "-"} <span class="text-muted">to</span> ${item.to || "-"}</td>
           <td>${days}</td>
-          <td><span class="badge status-${item.status || "pending"}">${item.status || "pending"}</span></td>
+          <td><span class="badge status-${normalizedStatus}">${normalizedStatus}</span></td>
           <td>${
             canDelete
               ? `<button class="btn btn-ghost" data-action="delete" data-id="${item.id}">Delete</button>`
@@ -142,9 +173,14 @@ function renderTable() {
   tbody.querySelectorAll("button[data-action='delete']").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const leaveId = btn.dataset.id;
-      await deleteLeave(leaveId);
-      showToast("success", "Pending request deleted");
-      await loadMyLeaves();
+      try {
+        await deleteLeave(leaveId);
+        showToast("success", "Pending request deleted");
+        await loadMyLeaves();
+      } catch (error) {
+        console.error("Delete leave failed:", error);
+        showToast("error", "Failed to delete request");
+      }
     });
   });
 }
@@ -178,22 +214,49 @@ async function submitRequest() {
     days,
     reason: reasonEl.value.trim(),
     approverId: "",
-    status: "pending"
+    status: "submitted"
   };
 
-  await createLeave(payload);
-  showToast("success", "Leave request submitted to department");
-  resetForm();
-  await loadMyLeaves();
+  try {
+    submitBtn.disabled = true;
+    await createLeave(payload);
+    showToast("success", "Leave request submitted to department");
+    resetForm();
+    await loadMyLeaves();
+  } catch (error) {
+    console.error("Submit leave failed:", error);
+    showToast("error", "Failed to submit request");
+  } finally {
+    submitBtn.disabled = false;
+  }
 }
 
 async function loadMyLeaves() {
-  showTableSkeleton(tbody, { rows: 6, cols: 6 });
-  const [leavesData, employees] = await Promise.all([listLeaves(), listEmployees()]);
-  currentEmployee = resolveEmployeeForUser(user, employees);
-  myLeaves = leavesData.filter(matchesMine).sort(sortByNewest);
-  renderSummary();
-  renderTable();
+  try {
+    showTableSkeleton(tbody, { rows: 6, cols: 6 });
+    const employeesData = await listEmployees();
+    currentEmployee = resolveEmployeeForUser(user, employeesData);
+
+    let leavesData = [];
+    if (currentEmployee?.id) {
+      leavesData = await listLeaves({ employeeId: currentEmployee.id });
+      if (!leavesData.length) {
+        leavesData = await listLeaves();
+      }
+    } else {
+      leavesData = await listLeaves();
+    }
+
+    myLeaves = leavesData.filter(matchesMine).sort(sortByNewest);
+    renderSummary();
+    renderTable();
+  } catch (error) {
+    console.error("Load my leaves failed:", error);
+    myLeaves = [];
+    renderSummary();
+    renderTable();
+    showToast("error", "Could not load leave requests");
+  }
 }
 
 submitBtn.addEventListener("click", submitRequest);
@@ -204,4 +267,5 @@ window.addEventListener("global-search", (event) => {
   renderTable();
 });
 
+trackUxEvent({ event: "page_open", module: "my_leaves" });
 loadMyLeaves();

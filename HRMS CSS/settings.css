@@ -9,6 +9,9 @@
 .settings-pref-card {
   display: grid;
   gap: var(--space-3);
+  border: 1px solid color-mix(in srgb, var(--primary) 20%, var(--border));
+  background: linear-gradient(140deg, color-mix(in srgb, var(--primary) 8%, var(--surface-strong)), var(--surface-strong));
+  animation: settingsCardIn 420ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
 
 .settings-actions {
@@ -34,6 +37,15 @@
 .settings-users-card,
 .settings-roles-card {
   min-width: 0;
+  animation: settingsCardIn 460ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.settings-users-card {
+  animation-delay: 40ms;
+}
+
+.settings-roles-card {
+  animation-delay: 80ms;
 }
 
 .settings-users-card .card-header,
@@ -63,6 +75,50 @@
 
 .settings-role-badge {
   text-transform: capitalize;
+  border: 1px solid color-mix(in srgb, var(--settings-accent, var(--primary)) 24%, var(--border));
+  background: color-mix(in srgb, var(--settings-accent, var(--primary)) 14%, var(--surface));
+}
+
+.settings-status-badge {
+  border: 1px solid color-mix(in srgb, var(--settings-accent, var(--primary)) 24%, var(--border));
+  background: color-mix(in srgb, var(--settings-accent, var(--primary)) 12%, var(--surface));
+  text-transform: capitalize;
+}
+
+.settings-user-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-user-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--settings-accent, var(--primary));
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--settings-accent, var(--primary)) 18%, transparent);
+}
+
+.settings-user-row,
+.settings-role-row {
+  border-left: 3px solid color-mix(in srgb, var(--settings-accent, var(--primary)) 65%, transparent);
+  animation: settingsRowIn 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--row-index, 0) * 30ms);
+}
+
+.settings-user-row:hover,
+.settings-role-row:hover {
+  background: color-mix(in srgb, var(--settings-accent, var(--primary)) 8%, var(--surface));
+}
+
+.settings-user-row.status-inactive {
+  filter: saturate(0.78);
+  opacity: 0.9;
+}
+
+.settings-user-row.status-suspended {
+  filter: grayscale(0.14);
+  opacity: 0.86;
 }
 
 .settings-note {
@@ -85,6 +141,38 @@
   align-items: center;
   gap: 8px;
   font-size: 0.9rem;
+}
+
+@keyframes settingsRowIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes settingsCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .settings-user-row,
+  .settings-role-row,
+  .settings-pref-card,
+  .settings-users-card,
+  .settings-roles-card {
+    animation: none;
+  }
 }
 
 @media (max-width: 860px) {

@@ -3,9 +3,10 @@ import { initI18n } from "../Languages/i18n.js";
 import { renderNavbar } from "../Collaboration interface/ui-navbar.js";
 import { renderSidebar } from "../Collaboration interface/ui-sidebar.js";
 import { showToast } from "../Collaboration interface/ui-toast.js";
-import { watchEmployees } from "../Services/employees.service.js";
-import { watchDepartments } from "../Services/departments.service.js";
-import { watchPositions } from "../Services/positions.service.js";
+import { trackUxEvent } from "../Services/telemetry.service.js";
+import { watchEmployees, listEmployees } from "../Services/employees.service.js";
+import { watchDepartments, listDepartments } from "../Services/departments.service.js";
+import { watchPositions, listPositions } from "../Services/positions.service.js";
 
 if (!enforceAuth("orgchart")) {
   throw new Error("Unauthorized");
@@ -36,6 +37,22 @@ let dataReady = {
   departments: false,
   positions: false
 };
+let fallbackLoading = false;
+
+function hashSeed(input = "") {
+  let hash = 0;
+  const value = String(input || "");
+  for (let i = 0; i < value.length; i += 1) {
+    hash = (hash * 31 + value.charCodeAt(i)) >>> 0;
+  }
+  return hash;
+}
+
+function departmentAccent(departmentId = "") {
+  const source = String(departmentId || UNASSIGNED_DEPARTMENT_ID);
+  const hue = hashSeed(source) % 360;
+  return `hsl(${hue} 72% 44%)`;
+}
 
 function buildMaps() {
   const deptMap = new Map(departments.map((dept) => [dept.id, dept.name || dept.id]));
@@ -111,16 +128,18 @@ function createNode(id, nodes, childrenMap, maps) {
   const positionName = maps.posMap.get(emp.positionId) || emp.positionId || "Role";
   const displayName = emp.fullName || emp.email || emp.empId || emp.id;
   const searchText = `${displayName} ${positionName} ${deptName}`.toLowerCase();
+  const accent = departmentAccent(normalizeDepartmentId(emp.departmentId));
 
   const node = document.createElement("div");
   node.className = "org-node";
   node.dataset.id = id;
   node.dataset.name = searchText;
+  node.style.setProperty("--org-accent", accent);
 
   node.innerHTML = `
     <div class="org-card">
       <div class="org-info">
-        <div class="org-name">${displayName}</div>
+        <div class="org-name"><span class="org-dot"></span><span>${displayName}</span></div>
         <div class="org-meta">${positionName} • ${deptName}</div>
       </div>
       <div class="org-actions-inline">
@@ -152,6 +171,7 @@ function createDepartmentSection(group, nodes, childrenMap, maps) {
   const section = document.createElement("section");
   section.className = "org-department";
   section.dataset.name = group.label.toLowerCase();
+  section.style.setProperty("--org-accent", departmentAccent(group.id));
   section.innerHTML = `
     <div class="org-department-head">
       <h4 class="org-department-title">${group.label}</h4>
@@ -245,6 +265,32 @@ function renderWhenReady() {
 function onRealtimeError(error) {
   console.error("Org chart realtime sync failed", error);
   showToast("error", "Could not sync org chart data from Firebase");
+  void loadSnapshotFallback();
+}
+
+async function loadSnapshotFallback() {
+  if (fallbackLoading) return;
+  fallbackLoading = true;
+  try {
+    const [employeesData, departmentsData, positionsData] = await Promise.all([
+      listEmployees(),
+      listDepartments(),
+      listPositions()
+    ]);
+    employees = employeesData;
+    departments = departmentsData;
+    positions = positionsData;
+    dataReady = {
+      employees: true,
+      departments: true,
+      positions: true
+    };
+    renderWhenReady();
+  } catch (error) {
+    console.error("Org chart fallback load failed", error);
+  } finally {
+    fallbackLoading = false;
+  }
 }
 
 function initRealtimeSync() {
@@ -292,4 +338,5 @@ window.addEventListener("beforeunload", () => {
   });
 });
 
+trackUxEvent({ event: "page_open", module: "orgchart" });
 initRealtimeSync();

@@ -3,6 +3,7 @@ import { initI18n } from "../Languages/i18n.js";
 import { renderNavbar } from "../Collaboration interface/ui-navbar.js";
 import { renderSidebar } from "../Collaboration interface/ui-sidebar.js";
 import { showToast } from "../Collaboration interface/ui-toast.js";
+import { trackUxEvent } from "../Services/telemetry.service.js";
 import { listEmployees } from "../Services/employees.service.js";
 import { listExcelSheetInputs, upsertExcelSheetInput, clearExcelSheetYear } from "../Services/excel-sheet.service.js";
 
@@ -38,6 +39,7 @@ let employees = [];
 let sheetState = {};
 const pendingRowSaves = new Map();
 let sheetMutationVersion = 0;
+let saveErrorToastAt = 0;
 
 function formatNumber(value) {
   const numeric = Number(value || 0);
@@ -48,6 +50,21 @@ function toNumeric(value) {
   const numeric = Number(value);
   if (!Number.isFinite(numeric) || numeric < 0) return 0;
   return numeric;
+}
+
+function hashSeed(input = "") {
+  let hash = 0;
+  const value = String(input || "");
+  for (let i = 0; i < value.length; i += 1) {
+    hash = (hash * 31 + value.charCodeAt(i)) >>> 0;
+  }
+  return hash;
+}
+
+function rowAccent(employee = {}) {
+  const source = employee.empId || employee.id || employee.email || employee.fullName || "";
+  const hue = hashSeed(source) % 360;
+  return `hsl(${hue} 72% 44%)`;
 }
 
 function getEmployeeInputs(employeeId) {
@@ -98,8 +115,8 @@ function buildRow(employee) {
     .join("");
 
   return `
-    <tr data-employee-id="${employee.id}">
-      <td class="sticky-col">${employee.fullName || employee.email || employee.empId || employee.id}</td>
+    <tr class="excel-row" style="--excel-accent:${rowAccent(employee)}" data-employee-id="${employee.id}">
+      <td class="sticky-col employee-col"><span class="employee-dot"></span><span>${employee.fullName || employee.email || employee.empId || employee.id}</span></td>
       ${cells}
       <td class="excel-row-total" data-row-total>${formatNumber(cumulative[11] || 0)}</td>
     </tr>
@@ -158,6 +175,11 @@ function queueRowSave(employeeId) {
       });
     } catch (error) {
       console.error("Failed to sync excel sheet row:", error);
+      const now = Date.now();
+      if (now - saveErrorToastAt > 5000) {
+        showToast("error", "Could not sync row to Firebase");
+        saveErrorToastAt = now;
+      }
     }
   }, 350);
 
@@ -236,6 +258,9 @@ async function init() {
     renderTable();
   } catch (error) {
     console.error("Failed to load excel sheet employees:", error);
+    employees = [];
+    sheetState = {};
+    renderTable();
     showToast("error", "Failed to load excel sheet from Firebase");
   }
 }
@@ -243,6 +268,7 @@ async function init() {
 body.addEventListener("input", handleCellInput);
 resetBtn?.addEventListener("click", resetAllInputs);
 exportBtn?.addEventListener("click", exportCsv);
+trackUxEvent({ event: "page_open", module: "excel_sheet" });
 
 if (window.lucide?.createIcons) window.lucide.createIcons();
 void init();

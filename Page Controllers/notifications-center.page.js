@@ -43,6 +43,29 @@ if (!canMarkAll) markAllBtn.classList.add("hidden");
 let notifications = [];
 let unsubscribeNotifications = null;
 
+function normalizeText(value = "") {
+  return String(value || "").trim().toLowerCase();
+}
+
+function normalizeStatus(value = "") {
+  return normalizeText(value).replaceAll("-", "_").replaceAll(" ", "_");
+}
+
+function hashSeed(input = "") {
+  let hash = 0;
+  const value = String(input || "");
+  for (let i = 0; i < value.length; i += 1) {
+    hash = (hash * 31 + value.charCodeAt(i)) >>> 0;
+  }
+  return hash;
+}
+
+function notificationAccent(item = {}) {
+  const source = item.id || item.type || item.priority || item.title || "";
+  const hue = hashSeed(source) % 360;
+  return `hsl(${hue} 72% 44%)`;
+}
+
 function formatDate(item) {
   const seconds = item?.createdAt?.seconds || 0;
   if (!seconds) return "Unknown date";
@@ -54,12 +77,14 @@ function priorityLabel(priority = "medium") {
 }
 
 function applyFilters() {
-  const q = (searchInput.value || "").trim().toLowerCase();
-  const status = statusFilter.value || "";
-  const type = typeFilter.value || "";
-  const priority = priorityFilter.value || "";
+  const q = normalizeText(searchInput.value);
+  const status = normalizeText(statusFilter.value);
+  const type = normalizeStatus(typeFilter.value);
+  const priority = normalizeStatus(priorityFilter.value);
 
   const filtered = notifications.filter((item) => {
+    const itemType = normalizeStatus(item.type || "system");
+    const itemPriority = normalizeStatus(item.priority || "medium");
     const hitSearch =
       !q ||
       `${item.title || ""} ${item.body || ""} ${item.type || ""}`.toLowerCase().includes(q);
@@ -67,24 +92,26 @@ function applyFilters() {
       !status ||
       (status === "unread" && item.isRead !== true) ||
       (status === "read" && item.isRead === true);
-    const hitType = !type || (item.type || "system") === type;
-    const hitPriority = !priority || (item.priority || "medium") === priority;
+    const hitType = !type || itemType === type;
+    const hitPriority = !priority || itemPriority === priority;
     return hitSearch && hitStatus && hitType && hitPriority;
   });
 
   countEl.textContent = String(filtered.length);
   listEl.innerHTML = filtered
-    .map((item) => {
+    .map((item, index) => {
       const isArchived = item.isArchived === true;
+      const typeLabel = normalizeStatus(item.type || "system");
+      const priority = normalizeStatus(item.priority || "medium");
       const href = item.actionHref || "";
       const openButton = href ? `<a class="btn btn-ghost" href="${href}">${t("notifications.open_entity")}</a>` : "";
       return `
-        <article class="notif-item ${item.isRead ? "" : "is-unread"}">
+        <article class="notif-item ${item.isRead ? "" : "is-unread"}" style="--notif-accent:${notificationAccent(item)};--row-index:${index}">
           <div class="notif-head">
             <strong>${item.title || "Notification"}</strong>
             <div class="notif-meta">
-              <span class="badge">${item.type || "system"}</span>
-              <span class="badge">P:${priorityLabel(item.priority || "medium")}</span>
+              <span class="badge notif-type-${typeLabel}">${typeLabel}</span>
+              <span class="badge notif-priority-${priority}">P:${priorityLabel(priority)}</span>
               <span class="text-muted">${formatDate(item)}</span>
             </div>
           </div>
@@ -107,20 +134,32 @@ function applyFilters() {
 
   listEl.querySelectorAll("button[data-action]").forEach((button) => {
     button.addEventListener("click", async () => {
-      const action = button.dataset.action;
-      const id = button.dataset.id;
-      if (action === "read") await markNotificationRead(id);
-      if (action === "archive") await archiveNotification(id);
-      if (action === "unarchive") await unarchiveNotification(id);
-      await loadNotifications();
+      try {
+        const action = button.dataset.action;
+        const id = button.dataset.id;
+        if (action === "read") await markNotificationRead(id);
+        if (action === "archive") await archiveNotification(id);
+        if (action === "unarchive") await unarchiveNotification(id);
+        await loadNotifications();
+      } catch (error) {
+        console.error("Notification action failed:", error);
+        showToast("error", "Notification action failed");
+      }
     });
   });
 }
 
 async function loadNotifications() {
-  const includeArchived = archivedToggle.checked;
-  notifications = await listNotifications({ includeArchived });
-  applyFilters();
+  try {
+    const includeArchived = archivedToggle.checked;
+    notifications = await listNotifications({ includeArchived });
+    applyFilters();
+  } catch (error) {
+    console.error("Load notifications failed:", error);
+    notifications = [];
+    applyFilters();
+    showToast("error", "Could not load notifications");
+  }
 }
 
 function stopRealtimeNotifications() {
@@ -143,19 +182,24 @@ function startRealtimeNotifications() {
 }
 
 markAllBtn.addEventListener("click", async () => {
-  await markAllNotificationsRead();
-  await logSecurityEvent({
-    action: "notifications_mark_all_read",
-    severity: "info",
-    status: "success",
-    actorUid: user?.uid || "",
-    actorEmail: user?.email || "",
-    actorRole: role || "",
-    entity: "notifications",
-    message: "Marked all notifications as read."
-  });
-  showToast("success", "All notifications marked as read");
-  await loadNotifications();
+  try {
+    await markAllNotificationsRead();
+    await logSecurityEvent({
+      action: "notifications_mark_all_read",
+      severity: "info",
+      status: "success",
+      actorUid: user?.uid || "",
+      actorEmail: user?.email || "",
+      actorRole: role || "",
+      entity: "notifications",
+      message: "Marked all notifications as read."
+    });
+    showToast("success", "All notifications marked as read");
+    await loadNotifications();
+  } catch (error) {
+    console.error("Mark all notifications failed:", error);
+    showToast("error", "Failed to mark all notifications");
+  }
 });
 
 searchInput.addEventListener("input", applyFilters);

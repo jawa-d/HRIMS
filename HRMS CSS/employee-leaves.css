@@ -10,6 +10,12 @@
   gap: var(--space-3);
 }
 
+.form-grid label {
+  display: grid;
+  gap: var(--space-2);
+  color: var(--text-muted);
+}
+
 .submit-row {
   margin-top: var(--space-4);
 }
@@ -27,16 +33,16 @@
 }
 
 .status-tile {
-  border: 1px solid var(--border);
+  border: 1px solid color-mix(in srgb, var(--primary-soft) 42%, var(--border));
   border-radius: var(--radius-md);
-  padding: var(--space-3);
-  background: var(--surface-strong);
+  padding: var(--space-4);
+  background: linear-gradient(180deg, var(--surface-strong), color-mix(in srgb, var(--surface) 86%, var(--primary-soft)));
 }
 
 .status-value {
-  font-size: 1.4rem;
+  font-size: 1.5rem;
   font-weight: 700;
-  margin-top: 6px;
+  margin-top: var(--space-2);
 }
 
 .decision-box {
@@ -51,9 +57,18 @@
   display: flex;
   gap: var(--space-3);
   align-items: center;
+  width: min(100%, 460px);
 }
 
-.badge.status-pending {
+.filters-row .input,
+.filters-row .select {
+  min-width: 0;
+}
+
+.badge.status-pending,
+.badge.status-submitted,
+.badge.status-manager_review,
+.badge.status-hr_review {
   background: #fde68a;
   color: #92400e;
 }
@@ -66,6 +81,16 @@
 .badge.status-rejected {
   background: #fecaca;
   color: #991b1b;
+}
+
+.table-scroll {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.leave-table td,
+.leave-table th {
+  white-space: nowrap;
 }
 
 @media (max-width: 1100px) {

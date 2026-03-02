@@ -41,6 +41,24 @@
 
 .tickets-kpi {
   padding: var(--space-4);
+  border: 1px solid color-mix(in srgb, var(--primary-soft) 42%, var(--border));
+  background: linear-gradient(180deg, var(--surface-strong), color-mix(in srgb, var(--surface) 86%, var(--primary-soft)));
+}
+
+.tickets-kpis .tickets-kpi:nth-child(1) {
+  border-color: color-mix(in srgb, #0ea5e9 35%, var(--border));
+}
+
+.tickets-kpis .tickets-kpi:nth-child(2) {
+  border-color: color-mix(in srgb, #f59e0b 35%, var(--border));
+}
+
+.tickets-kpis .tickets-kpi:nth-child(3) {
+  border-color: color-mix(in srgb, #6366f1 35%, var(--border));
+}
+
+.tickets-kpis .tickets-kpi:nth-child(4) {
+  border-color: color-mix(in srgb, #10b981 35%, var(--border));
 }
 
 .tickets-analytics {
@@ -52,6 +70,8 @@
 
 .tickets-analytics-card {
   padding: var(--space-4);
+  border: 1px solid color-mix(in srgb, var(--primary-soft) 42%, var(--border));
+  background: linear-gradient(180deg, var(--surface-strong), color-mix(in srgb, var(--surface) 88%, var(--primary-soft)));
 }
 
 .tickets-analytics-card small {
@@ -87,6 +107,20 @@
 .tickets-subject {
   display: grid;
   gap: 3px;
+}
+
+.ticket-subject-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ticket-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--ticket-accent, var(--primary));
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--ticket-accent, var(--primary)) 18%, transparent);
 }
 
 .tickets-subject small {
@@ -136,6 +170,37 @@
 .ticket-status-closed {
   background: rgba(100, 116, 139, 0.18);
   color: #334155;
+}
+
+.ticket-row {
+  border-left: 3px solid color-mix(in srgb, var(--ticket-accent, var(--primary)) 65%, transparent);
+  animation: ticketRowIn 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--row-index, 0) * 22ms);
+}
+
+.ticket-row:hover {
+  background: color-mix(in srgb, var(--ticket-accent, var(--primary)) 8%, transparent);
+}
+
+.ticket-row td:last-child .btn {
+  border-color: color-mix(in srgb, var(--ticket-accent, var(--primary)) 24%, var(--border));
+}
+
+@keyframes ticketRowIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ticket-row {
+    animation: none;
+  }
 }
 
 @media (max-width: 1200px) {

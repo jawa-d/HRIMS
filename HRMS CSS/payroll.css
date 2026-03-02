@@ -142,11 +142,33 @@
 
 .summary-card {
   padding: var(--space-4);
+  border: 1px solid color-mix(in srgb, var(--primary-soft) 42%, var(--border));
+  background: linear-gradient(180deg, var(--surface-strong), color-mix(in srgb, var(--surface) 86%, var(--primary-soft)));
 }
 
 .summary-card-net {
   grid-column: span 2;
   background: linear-gradient(135deg, rgba(15, 118, 110, 0.2), rgba(163, 230, 53, 0.18));
+}
+
+.payroll-summary .summary-card:nth-child(1) {
+  border-color: color-mix(in srgb, #0ea5e9 35%, var(--border));
+}
+
+.payroll-summary .summary-card:nth-child(2) {
+  border-color: color-mix(in srgb, #10b981 35%, var(--border));
+}
+
+.payroll-summary .summary-card:nth-child(3) {
+  border-color: color-mix(in srgb, #3b82f6 35%, var(--border));
+}
+
+.payroll-summary .summary-card:nth-child(4) {
+  border-color: color-mix(in srgb, #f59e0b 35%, var(--border));
+}
+
+.payroll-summary .summary-card:nth-child(5) {
+  border-color: color-mix(in srgb, #ef4444 35%, var(--border));
 }
 
 .summary-value {
@@ -175,6 +197,20 @@
   gap: 4px;
 }
 
+.employee-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.employee-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--payroll-accent, var(--primary));
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--payroll-accent, var(--primary)) 18%, transparent);
+}
+
 .employee-meta {
   font-size: 0.8rem;
   color: var(--text-muted);
@@ -182,6 +218,7 @@
 
 .payroll-input {
   min-width: 120px;
+  border-color: color-mix(in srgb, var(--payroll-accent, var(--border)) 18%, var(--border));
 }
 
 .payroll-input:disabled {
@@ -201,6 +238,37 @@
 .entry-badge-approved {
   background: rgba(52, 211, 153, 0.2);
   color: #0b7a3c;
+}
+
+.payroll-row {
+  border-left: 3px solid color-mix(in srgb, var(--payroll-accent, var(--primary)) 65%, transparent);
+  animation: payrollRowIn 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--row-index, 0) * 24ms);
+}
+
+.payroll-row:hover {
+  background: color-mix(in srgb, var(--payroll-accent, var(--primary)) 8%, var(--surface));
+}
+
+.payroll-row td:last-child .btn {
+  border-color: color-mix(in srgb, var(--payroll-accent, var(--primary)) 24%, var(--border));
+}
+
+@keyframes payrollRowIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .payroll-row {
+    animation: none;
+  }
 }
 
 @media (max-width: 1300px) {

@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HRMS | Accounting Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../HRMS%20CSS/tokens.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/global.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/components.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/navbar.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/sidebar.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/modal.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/toast.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/accounting-admin.css" />
+</head>
+<body data-page="accounting_admin">
+  <div id="app" class="app-shell">
+    <div id="sidebar-root"></div>
+    <div class="main-content">
+      <div id="navbar-root"></div>
+      <main class="page">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title" data-i18n="accounting_admin.title">Accounting Master</h1>
+            <p class="text-muted">Chart of Accounts, obligations, and monthly/yearly close control.</p>
+          </div>
+        </div>
+
+        <section class="card admin-card">
+          <div class="card-header">
+            <h3 class="section-title"><i data-lucide="book-open-check"></i> Chart of Accounts</h3>
+            <button class="btn btn-primary" id="coa-add-btn">Add Account</button>
+          </div>
+          <div class="table-scroll">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Code</th>
+                  <th>Name</th>
+                  <th>Type</th>
+                  <th>Parent</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="coa-body"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="card admin-card">
+          <div class="card-header">
+            <h3 class="section-title"><i data-lucide="wallet-cards"></i> Custody / Advances / AR / AP</h3>
+            <button class="btn btn-primary" id="obl-add-btn">Add Item</button>
+          </div>
+          <div class="table-scroll">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Kind</th>
+                  <th>Party</th>
+                  <th>Ref</th>
+                  <th>Balance</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="obl-body"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="card admin-card">
+          <div class="card-header">
+            <h3 class="section-title"><i data-lucide="lock"></i> Period Closing</h3>
+          </div>
+          <div class="close-grid">
+            <div class="close-box">
+              <label class="text-muted" for="close-month-input">Month</label>
+              <input class="input" id="close-month-input" type="month" />
+              <div class="close-actions">
+                <button class="btn btn-outline" id="close-month-btn">Close Month</button>
+                <button class="btn btn-ghost" id="reopen-month-btn">Reopen Month</button>
+              </div>
+            </div>
+            <div class="close-box">
+              <label class="text-muted" for="close-year-input">Year</label>
+              <input class="input" id="close-year-input" type="number" min="2000" max="2999" />
+              <div class="close-actions">
+                <button class="btn btn-outline" id="close-year-btn">Close Year</button>
+                <button class="btn btn-ghost" id="reopen-year-btn">Reopen Year</button>
+              </div>
+            </div>
+          </div>
+          <div class="close-lists">
+            <div>
+              <div class="text-muted">Closed Months</div>
+              <div id="closed-months-list" class="chip-list"></div>
+            </div>
+            <div>
+              <div class="text-muted">Closed Years</div>
+              <div id="closed-years-list" class="chip-list"></div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script type="module" src="../Page%20Controllers/accounting-admin.page.js"></script>
+</body>
+</html>

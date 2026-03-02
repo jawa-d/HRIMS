@@ -1,0 +1,139 @@
+.acc-head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.acc-summary {
+  margin-bottom: var(--space-5);
+}
+
+.grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.grid-5 {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.summary-card {
+  border: 1px solid color-mix(in srgb, var(--primary-soft) 38%, var(--border));
+  background: linear-gradient(160deg, var(--surface-strong), color-mix(in srgb, var(--surface) 86%, var(--primary-soft)));
+}
+
+.summary-value {
+  font-size: 1.45rem;
+  font-weight: 700;
+  margin-top: var(--space-2);
+}
+
+.summary-in {
+  border-color: color-mix(in srgb, #10b981 38%, var(--border));
+}
+
+.summary-opening {
+  border-color: color-mix(in srgb, #14b8a6 38%, var(--border));
+}
+
+.summary-out {
+  border-color: color-mix(in srgb, #f59e0b 38%, var(--border));
+}
+
+.summary-expense {
+  border-color: color-mix(in srgb, #fb7185 38%, var(--border));
+}
+
+.summary-net {
+  border-color: color-mix(in srgb, #6366f1 38%, var(--border));
+}
+
+.acc-links-card {
+  margin-bottom: var(--space-5);
+}
+
+.acc-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.acc-links .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.table-scroll {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.acc-type {
+  text-transform: uppercase;
+}
+
+.acc-type-in {
+  background: #bbf7d0;
+  color: #166534;
+}
+
+.acc-type-out {
+  background: #fde68a;
+  color: #92400e;
+}
+
+.acc-type-expense {
+  background: #fecdd3;
+  color: #9f1239;
+}
+
+.acc-row {
+  border-left: 3px solid color-mix(in srgb, var(--acc-accent, var(--primary)) 65%, transparent);
+  animation: accRowIn 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--row-index, 0) * 30ms);
+}
+
+.acc-row:hover {
+  background: color-mix(in srgb, var(--acc-accent, var(--primary)) 8%, var(--surface));
+}
+
+@keyframes accRowIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .acc-row {
+    animation: none;
+  }
+}
+
+@media (max-width: 1080px) {
+  .grid-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .grid-5 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .grid-4 {
+    grid-template-columns: 1fr;
+  }
+
+  .grid-5 {
+    grid-template-columns: 1fr;
+  }
+}

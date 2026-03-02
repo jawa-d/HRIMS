@@ -28,6 +28,19 @@
   color: color-mix(in srgb, var(--text) 86%, var(--primary));
 }
 
+.excel-kpi {
+  border: 1px solid color-mix(in srgb, var(--primary-soft) 42%, var(--border));
+  background: linear-gradient(180deg, var(--surface-strong), color-mix(in srgb, var(--surface) 86%, var(--primary-soft)));
+}
+
+.excel-kpis .excel-kpi:nth-child(1) {
+  border-color: color-mix(in srgb, #0ea5e9 35%, var(--border));
+}
+
+.excel-kpis .excel-kpi:nth-child(2) {
+  border-color: color-mix(in srgb, #10b981 35%, var(--border));
+}
+
 .excel-table-card {
   padding: var(--space-4);
   border: 1px solid color-mix(in srgb, var(--primary-soft) 35%, var(--border));
@@ -87,6 +100,14 @@
   background: color-mix(in srgb, var(--primary-soft) 32%, transparent);
 }
 
+.excel-row {
+  border-inline-start: 3px solid color-mix(in srgb, var(--excel-accent, var(--primary)) 60%, transparent);
+}
+
+.excel-row:hover {
+  background: color-mix(in srgb, var(--excel-accent, var(--primary)) 8%, transparent);
+}
+
 .excel-table .sticky-col {
   position: sticky;
   inset-inline-start: 0;
@@ -106,6 +127,20 @@
   color: var(--text);
 }
 
+.employee-col {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.employee-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--excel-accent, var(--primary));
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--excel-accent, var(--primary)) 18%, transparent);
+}
+
 .excel-cell {
   display: grid;
   gap: 6px;
@@ -119,15 +154,15 @@
   font-size: 0.9rem;
   font-weight: 700;
   color: color-mix(in srgb, var(--text) 88%, var(--primary));
-  border: 1px solid color-mix(in srgb, var(--primary) 24%, var(--border));
-  background: color-mix(in srgb, var(--primary-soft) 40%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--excel-accent, var(--primary)) 24%, var(--border));
+  background: color-mix(in srgb, var(--excel-accent, var(--primary)) 14%, var(--surface));
   line-height: 1;
   transition: transform var(--transition-fast);
 }
 
 .excel-month-input {
   width: 100%;
-  border: 1px solid var(--border);
+  border: 1px solid color-mix(in srgb, var(--excel-accent, var(--primary)) 20%, var(--border));
   border-radius: 9px;
   background: var(--surface);
   color: var(--text);
@@ -145,8 +180,8 @@
 
 .excel-row-total {
   font-weight: 700;
-  color: color-mix(in srgb, var(--text) 84%, var(--primary));
-  background: color-mix(in srgb, var(--accent-soft) 34%, transparent);
+  color: color-mix(in srgb, var(--text) 84%, var(--excel-accent, var(--primary)));
+  background: color-mix(in srgb, var(--excel-accent, var(--primary)) 12%, transparent);
 }
 
 .excel-value-pop {

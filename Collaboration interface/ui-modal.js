@@ -1,5 +1,4 @@
 let modalRoot;
-
 function ensureModal() {
   if (!modalRoot) {
     modalRoot = document.createElement("div");
@@ -21,7 +20,6 @@ function ensureModal() {
     });
   }
 }
-
 export function openModal({ title, content, actions = [] }) {
   ensureModal();
   modalRoot.querySelector("#modal-title").textContent = title || "";
@@ -39,19 +37,24 @@ export function openModal({ title, content, actions = [] }) {
     const button = document.createElement("button");
     button.className = action.className || "btn btn-primary";
     button.textContent = action.label || "OK";
-    button.addEventListener("click", () => {
-      if (action.onClick) {
-        Promise.resolve(action.onClick()).catch((error) => {
-          console.error("Modal action failed:", error);
-        });
+    button.addEventListener("click", async () => {
+      button.disabled = true;
+      try {
+        let result = true;
+        if (action.onClick) {
+          result = await action.onClick();
+        }
+        if (!action.keepOpen && result !== false) closeModal();
+      } catch (error) {
+        console.error("Modal action failed:", error);
+      } finally {
+        button.disabled = false;
       }
-      if (!action.keepOpen) closeModal();
     });
     actionsRoot.appendChild(button);
   });
   modalRoot.classList.add("open");
 }
-
 export function closeModal() {
   if (modalRoot) {
     modalRoot.classList.remove("open");

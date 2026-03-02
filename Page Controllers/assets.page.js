@@ -5,6 +5,7 @@ import { renderSidebar } from "../Collaboration interface/ui-sidebar.js";
 import { openModal } from "../Collaboration interface/ui-modal.js";
 import { showToast } from "../Collaboration interface/ui-toast.js";
 import { showTableSkeleton } from "../Collaboration interface/ui-skeleton.js";
+import { trackUxEvent } from "../Services/telemetry.service.js";
 import { listEmployees } from "../Services/employees.service.js";
 import { listAssets, createAsset, updateAsset, deleteAsset } from "../Services/assets.service.js";
 
@@ -39,6 +40,25 @@ if (!canManage) {
 
 let assets = [];
 let employees = [];
+
+function normalizeStatus(status = "") {
+  return String(status || "").trim().toLowerCase().replaceAll("-", "_").replaceAll(" ", "_");
+}
+
+function hashSeed(input = "") {
+  let hash = 0;
+  const value = String(input || "");
+  for (let i = 0; i < value.length; i += 1) {
+    hash = (hash * 31 + value.charCodeAt(i)) >>> 0;
+  }
+  return hash;
+}
+
+function assetAccent(asset = {}) {
+  const source = asset.tag || asset.id || asset.name || asset.category || "";
+  const hue = hashSeed(source) % 360;
+  return `hsl(${hue} 72% 44%)`;
+}
 
 function getEmployeeOptions(selected = "") {
   return employees
@@ -85,15 +105,20 @@ function openAssetModal(asset) {
         label: "Save",
         className: "btn btn-primary",
         onClick: async () => {
-          const payload = collectAssetForm();
-          if (!payload.name) return;
-          if (asset) {
-            await updateAsset(asset.id, payload);
-          } else {
-            await createAsset(payload);
+          try {
+            const payload = collectAssetForm();
+            if (!payload.name) return;
+            if (asset) {
+              await updateAsset(asset.id, payload);
+            } else {
+              await createAsset(payload);
+            }
+            showToast("success", "Asset saved");
+            await loadAssets();
+          } catch (error) {
+            console.error("Save asset failed:", error);
+            showToast("error", "Failed to save asset");
           }
-          showToast("success", "Asset saved");
-          await loadAssets();
         }
       },
       { label: "Cancel", className: "btn btn-ghost" }
@@ -117,17 +142,22 @@ function openAssignModal(asset) {
         label: "Assign",
         className: "btn btn-primary",
         onClick: async () => {
-          const employeeId = document.getElementById("asset-assign").value;
-          const employee = employees.find((emp) => emp.id === employeeId);
-          if (!employeeId) return;
-          await updateAsset(asset.id, {
-            status: "assigned",
-            assignedTo: employeeId,
-            assignedToName: employee?.fullName || employee?.email || employee?.empId || employeeId,
-            assignedAt: new Date().toISOString()
-          });
-          showToast("success", "Asset assigned");
-          await loadAssets();
+          try {
+            const employeeId = document.getElementById("asset-assign").value;
+            const employee = employees.find((emp) => emp.id === employeeId);
+            if (!employeeId) return;
+            await updateAsset(asset.id, {
+              status: "assigned",
+              assignedTo: employeeId,
+              assignedToName: employee?.fullName || employee?.email || employee?.empId || employeeId,
+              assignedAt: new Date().toISOString()
+            });
+            showToast("success", "Asset assigned");
+            await loadAssets();
+          } catch (error) {
+            console.error("Assign asset failed:", error);
+            showToast("error", "Failed to assign asset");
+          }
         }
       },
       { label: "Cancel", className: "btn btn-ghost" }
@@ -170,24 +200,25 @@ function renderAssets() {
   const query = (searchInput?.value || "").trim().toLowerCase();
   const status = statusFilter?.value || "";
   const filtered = assets.filter((asset) => {
+    const normalized = normalizeStatus(asset.status || "available");
     const matchesQuery =
       !query ||
       (asset.name || "").toLowerCase().includes(query) ||
       (asset.tag || "").toLowerCase().includes(query) ||
       (asset.assignedToName || "").toLowerCase().includes(query);
-    const matchesStatus = !status || asset.status === status;
+    const matchesStatus = !status || normalized === status;
     return matchesQuery && matchesStatus;
   });
 
   tbody.innerHTML = filtered
-    .map((asset) => {
-      const statusLabel = asset.status || "available";
+    .map((asset, index) => {
+      const statusLabel = normalizeStatus(asset.status || "available");
       const assigned = asset.assignedToName || "-";
       return `
-        <tr>
+        <tr class="asset-row status-${statusLabel}" style="--asset-accent:${assetAccent(asset)};--row-index:${index};">
           <td>
             <div class="asset-cell">
-              <div>${asset.name || "-"}</div>
+              <div class="asset-name"><span class="asset-dot"></span><span>${asset.name || "-"}</span></div>
               <div class="asset-meta">${asset.notes || "No notes"}</div>
             </div>
           </td>
@@ -219,9 +250,9 @@ function renderAssets() {
   emptyState.classList.toggle("hidden", filtered.length > 0);
 
   if (totalEl) totalEl.textContent = assets.length;
-  if (assignedEl) assignedEl.textContent = assets.filter((a) => a.status === "assigned").length;
-  if (availableEl) availableEl.textContent = assets.filter((a) => a.status === "available").length;
-  if (maintenanceEl) maintenanceEl.textContent = assets.filter((a) => a.status === "maintenance").length;
+  if (assignedEl) assignedEl.textContent = assets.filter((a) => normalizeStatus(a.status) === "assigned").length;
+  if (availableEl) availableEl.textContent = assets.filter((a) => normalizeStatus(a.status) === "available").length;
+  if (maintenanceEl) maintenanceEl.textContent = assets.filter((a) => normalizeStatus(a.status) === "maintenance").length;
 
   if (canManage) {
     tbody.querySelectorAll("button[data-action]").forEach((button) => {
@@ -236,13 +267,25 @@ function renderAssets() {
 }
 
 async function loadAssets() {
-  showTableSkeleton(tbody, { rows: 6, cols: 6 });
-  assets = await listAssets();
-  renderAssets();
+  try {
+    showTableSkeleton(tbody, { rows: 6, cols: 6 });
+    assets = await listAssets();
+    renderAssets();
+  } catch (error) {
+    console.error("Load assets failed:", error);
+    assets = [];
+    renderAssets();
+    showToast("error", "Could not load assets");
+  }
 }
 
 async function loadEmployees() {
-  employees = await listEmployees();
+  try {
+    employees = await listEmployees();
+  } catch (error) {
+    console.error("Load employees for assets failed:", error);
+    employees = [];
+  }
 }
 
 addButton.addEventListener("click", () => openAssetModal());
@@ -256,6 +299,7 @@ window.addEventListener("global-search", (event) => {
   if (searchInput) searchInput.value = event.detail || "";
   renderAssets();
 });
+trackUxEvent({ event: "page_open", module: "assets" });
 
 (async () => {
   try {

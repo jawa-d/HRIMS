@@ -7,6 +7,7 @@ import { showToast } from "../Collaboration interface/ui-toast.js";
 import { showTableSkeleton } from "../Collaboration interface/ui-skeleton.js";
 import { canDo } from "../Services/permissions.service.js";
 import { getTablePrefs, saveTablePrefs } from "../Services/table-tools.service.js";
+import { trackUxEvent } from "../Services/telemetry.service.js";
 import { listEmployees } from "../Services/employees.service.js";
 import { createNotification } from "../Services/notifications.service.js";
 import { listUsers } from "../Services/users.service.js";
@@ -67,6 +68,25 @@ const SLA_TARGET_HOURS = {
   low: 48
 };
 
+function normalizeStatus(value = "") {
+  return String(value || "").trim().toLowerCase().replaceAll("-", "_").replaceAll(" ", "_");
+}
+
+function hashSeed(input = "") {
+  let hash = 0;
+  const value = String(input || "");
+  for (let i = 0; i < value.length; i += 1) {
+    hash = (hash * 31 + value.charCodeAt(i)) >>> 0;
+  }
+  return hash;
+}
+
+function ticketAccent(ticket = {}) {
+  const source = ticket.id || ticket.subject || ticket.requesterUid || ticket.requesterEmail || "";
+  const hue = hashSeed(source) % 360;
+  return `hsl(${hue} 72% 44%)`;
+}
+
 function formatTime(value) {
   const seconds = value?.seconds || 0;
   if (!seconds) return "-";
@@ -110,21 +130,24 @@ function filteredTickets() {
   const category = categoryFilter?.value || "";
   const priority = priorityFilter?.value || "";
   return tickets.filter((ticket) => {
+    const ticketStatus = normalizeStatus(ticket.status);
+    const ticketCategory = normalizeStatus(ticket.category);
+    const ticketPriority = normalizeStatus(ticket.priority);
     const hitQuery =
       !query ||
       `${ticket.subject || ""} ${ticket.requesterName || ""} ${ticket.assigneeName || ""}`.toLowerCase().includes(query);
-    const hitStatus = !status || ticket.status === status;
-    const hitCategory = !category || ticket.category === category;
-    const hitPriority = !priority || ticket.priority === priority;
+    const hitStatus = !status || ticketStatus === status;
+    const hitCategory = !category || ticketCategory === category;
+    const hitPriority = !priority || ticketPriority === priority;
     return hitQuery && hitStatus && hitCategory && hitPriority;
   });
 }
 
 function renderKpis(items) {
   kpiTotalEl.textContent = String(items.length);
-  kpiOpenEl.textContent = String(items.filter((item) => item.status === "open").length);
-  kpiProgressEl.textContent = String(items.filter((item) => item.status === "in_progress").length);
-  kpiResolvedEl.textContent = String(items.filter((item) => ["resolved", "closed"].includes(item.status)).length);
+  kpiOpenEl.textContent = String(items.filter((item) => normalizeStatus(item.status) === "open").length);
+  kpiProgressEl.textContent = String(items.filter((item) => normalizeStatus(item.status) === "in_progress").length);
+  kpiResolvedEl.textContent = String(items.filter((item) => ["resolved", "closed"].includes(normalizeStatus(item.status))).length);
 }
 
 function toMillis(value) {
@@ -135,7 +158,7 @@ function toMillis(value) {
 }
 
 function renderAnalytics(items) {
-  const closedItems = items.filter((item) => ["resolved", "closed"].includes(item.status || ""));
+  const closedItems = items.filter((item) => ["resolved", "closed"].includes(normalizeStatus(item.status)));
   let slaHits = 0;
   let avgCloseHours = 0;
 
@@ -146,7 +169,7 @@ function renderAnalytics(items) {
         const closedAt = toMillis(item.updatedAt) || createdAt;
         if (!createdAt || !closedAt || closedAt < createdAt) return null;
         const hours = (closedAt - createdAt) / (1000 * 60 * 60);
-        const target = SLA_TARGET_HOURS[item.priority] || SLA_TARGET_HOURS.medium;
+        const target = SLA_TARGET_HOURS[normalizeStatus(item.priority)] || SLA_TARGET_HOURS.medium;
         if (hours <= target) slaHits += 1;
         return hours;
       })
@@ -163,7 +186,7 @@ function renderAnalytics(items) {
 
   const categoryCount = new Map();
   items.forEach((item) => {
-    const key = item.category || "general";
+    const key = normalizeStatus(item.category) || "general";
     categoryCount.set(key, (categoryCount.get(key) || 0) + 1);
   });
   const topCategory = Array.from(categoryCount.entries()).sort((a, b) => b[1] - a[1])[0];
@@ -172,12 +195,12 @@ function renderAnalytics(items) {
 
   const workload = new Map();
   items
-    .filter((item) => ["open", "in_progress"].includes(item.status || ""))
+    .filter((item) => ["open", "in_progress"].includes(normalizeStatus(item.status)))
     .forEach((item) => {
       const assignee = String(item.assigneeName || "").trim() || "Unassigned";
       const row = workload.get(assignee) || { assignee, open: 0, inProgress: 0 };
-      if (item.status === "open") row.open += 1;
-      if (item.status === "in_progress") row.inProgress += 1;
+      if (normalizeStatus(item.status) === "open") row.open += 1;
+      if (normalizeStatus(item.status) === "in_progress") row.inProgress += 1;
       workload.set(assignee, row);
     });
 
@@ -220,26 +243,31 @@ async function runBulkAction() {
     return;
   }
 
-  if (action === "close") {
-    const list = tickets.filter((item) => ids.includes(item.id));
-    await Promise.all(list.map((item) => updateTicket(item.id, { ...item, status: "closed" })));
-    showToast("success", `Closed ${list.length} ticket(s)`);
-  }
-
-  if (action === "delete") {
-    if (!canDelete) {
-      showToast("error", "Delete permission required");
-      return;
+  try {
+    if (action === "close") {
+      const list = tickets.filter((item) => ids.includes(item.id));
+      await Promise.all(list.map((item) => updateTicket(item.id, { ...item, status: "closed" })));
+      showToast("success", `Closed ${list.length} ticket(s)`);
     }
-    const confirmed = window.confirm(`Delete ${ids.length} ticket(s) permanently?`);
-    if (!confirmed) return;
-    await Promise.all(ids.map((id) => deleteTicket(id)));
-    showToast("success", `Deleted ${ids.length} ticket(s)`);
-  }
 
-  selectedTicketIds.clear();
-  bulkActionEl.value = "";
-  await loadTicketsData();
+    if (action === "delete") {
+      if (!canDelete) {
+        showToast("error", "Delete permission required");
+        return;
+      }
+      const confirmed = window.confirm(`Delete ${ids.length} ticket(s) permanently?`);
+      if (!confirmed) return;
+      await Promise.all(ids.map((id) => deleteTicket(id)));
+      showToast("success", `Deleted ${ids.length} ticket(s)`);
+    }
+
+    selectedTicketIds.clear();
+    bulkActionEl.value = "";
+    await loadTicketsData();
+  } catch (error) {
+    console.error("Bulk ticket action failed:", error);
+    showToast("error", "Bulk action failed");
+  }
 }
 
 function scheduleSlaScan() {
@@ -267,9 +295,9 @@ async function runSlaAlerts() {
   });
 
   const candidates = tickets.filter((item) => {
-    if (!["open", "in_progress"].includes(item.status || "")) return false;
+    if (!["open", "in_progress"].includes(normalizeStatus(item.status))) return false;
     if (item.slaAlertSent) return false;
-    const targetHours = SLA_TARGET_HOURS[item.priority] || SLA_TARGET_HOURS.medium;
+    const targetHours = SLA_TARGET_HOURS[normalizeStatus(item.priority)] || SLA_TARGET_HOURS.medium;
     return getHoursSinceCreated(item) >= targetHours * 0.8;
   });
 
@@ -278,7 +306,7 @@ async function runSlaAlerts() {
       const toUids = new Set(Array.from(targetsByRole.values()));
       if (ticket.assigneeUid) toUids.add(ticket.assigneeUid);
       const timeUsed = getHoursSinceCreated(ticket).toFixed(1);
-      const target = SLA_TARGET_HOURS[ticket.priority] || SLA_TARGET_HOURS.medium;
+      const target = SLA_TARGET_HOURS[normalizeStatus(ticket.priority)] || SLA_TARGET_HOURS.medium;
       await Promise.all(
         Array.from(toUids).map((toUid) =>
           createNotification({
@@ -351,9 +379,9 @@ function collectTicketForm(existing = {}) {
     ...existing,
     subject: document.getElementById("ticket-subject").value.trim(),
     description: document.getElementById("ticket-description").value.trim(),
-    category: document.getElementById("ticket-category").value,
-    priority: document.getElementById("ticket-priority").value,
-    status: canManage ? document.getElementById("ticket-status").value : (existing.status || "open"),
+    category: normalizeStatus(document.getElementById("ticket-category").value),
+    priority: normalizeStatus(document.getElementById("ticket-priority").value),
+    status: canManage ? normalizeStatus(document.getElementById("ticket-status").value) : normalizeStatus(existing.status || "open"),
     assigneeUid,
     assigneeName: assignee ? assignee.fullName || assignee.email || assignee.empId || assignee.id : "",
     resolutionNote: canManage ? document.getElementById("ticket-resolution").value.trim() : (existing.resolutionNote || "")
@@ -370,31 +398,36 @@ function openTicketModal(ticket = null) {
         label: "Save",
         className: "btn btn-primary",
         onClick: async () => {
-          const payload = collectTicketForm(ticket || {});
-          if (!payload.subject) {
-            showToast("error", "Subject is required");
-            return;
+          try {
+            const payload = collectTicketForm(ticket || {});
+            if (!payload.subject) {
+              showToast("error", "Subject is required");
+              return;
+            }
+            if (!payload.description) {
+              showToast("error", "Description is required");
+              return;
+            }
+            if (isEdit) {
+              await updateTicket(ticket.id, payload);
+              showToast("success", "Ticket updated");
+            } else {
+              const createdPayload = {
+                ...payload,
+                status: "open",
+                requesterUid: user?.uid || "",
+                requesterName: user?.name || "",
+                requesterEmail: user?.email || ""
+              };
+              const ticketId = await createTicket(createdPayload);
+              await notifyTicketCreated(ticketId, createdPayload);
+              showToast("success", "Ticket created");
+            }
+            await loadTicketsData();
+          } catch (error) {
+            console.error("Save ticket failed:", error);
+            showToast("error", "Failed to save ticket");
           }
-          if (!payload.description) {
-            showToast("error", "Description is required");
-            return;
-          }
-          if (isEdit) {
-            await updateTicket(ticket.id, payload);
-            showToast("success", "Ticket updated");
-          } else {
-            const createdPayload = {
-              ...payload,
-              status: "open",
-              requesterUid: user?.uid || "",
-              requesterName: user?.name || "",
-              requesterEmail: user?.email || ""
-            };
-            const ticketId = await createTicket(createdPayload);
-            await notifyTicketCreated(ticketId, createdPayload);
-            showToast("success", "Ticket created");
-          }
-          await loadTicketsData();
         }
       },
       { label: "Cancel", className: "btn btn-ghost" }
@@ -430,22 +463,25 @@ async function handleAction(action, id) {
 function renderTickets() {
   const items = filteredTickets();
   bodyEl.innerHTML = items
-    .map((ticket) => {
+    .map((ticket, index) => {
       const canEdit = canEditTicket(ticket);
+      const status = normalizeStatus(ticket.status || "open");
+      const priority = normalizeStatus(ticket.priority || "medium");
+      const category = normalizeStatus(ticket.category || "general");
       return `
-      <tr>
+      <tr class="ticket-row" style="--ticket-accent:${ticketAccent(ticket)};--row-index:${index};">
         <td>
           <input class="tickets-select" type="checkbox" data-select-ticket="${ticket.id}" ${selectedTicketIds.has(ticket.id) ? "checked" : ""} />
         </td>
         <td>
           <div class="tickets-subject">
-            <span>${ticket.subject || "-"}</span>
+            <span class="ticket-subject-title"><span class="ticket-dot"></span><span>${ticket.subject || "-"}</span></span>
             <small>${ticket.description || "-"}</small>
           </div>
         </td>
-        <td><span class="badge">${labelCase(ticket.category || "general")}</span></td>
-        <td><span class="badge ticket-priority-${ticket.priority || "medium"}">${labelCase(ticket.priority || "medium")}</span></td>
-        <td><span class="badge ticket-status-${ticket.status || "open"}">${labelCase(ticket.status || "open")}</span></td>
+        <td><span class="badge">${labelCase(category)}</span></td>
+        <td><span class="badge ticket-priority-${priority}">${labelCase(priority)}</span></td>
+        <td><span class="badge ticket-status-${status}">${labelCase(status)}</span></td>
         <td>${ticket.requesterName || ticket.requesterEmail || "-"}</td>
         <td>${ticket.assigneeName || "-"}</td>
         <td>${formatTime(ticket.updatedAt || ticket.createdAt)}</td>
@@ -487,10 +523,17 @@ function renderTickets() {
 }
 
 async function loadTicketsData() {
-  showTableSkeleton(bodyEl, { rows: 6, cols: 9 });
-  const scopeUid = canManage ? "" : (user?.uid || "");
-  tickets = await listTickets({ scopeUid });
-  renderTickets();
+  try {
+    showTableSkeleton(bodyEl, { rows: 6, cols: 9 });
+    const scopeUid = canManage ? "" : (user?.uid || "");
+    tickets = await listTickets({ scopeUid });
+    renderTickets();
+  } catch (error) {
+    console.error("Load tickets failed:", error);
+    tickets = [];
+    renderTickets();
+    showToast("error", "Could not load tickets");
+  }
 }
 
 function startRealtimeTickets() {
@@ -514,7 +557,12 @@ async function loadEmployeesData() {
 }
 
 async function loadUsersData() {
-  users = await listUsers();
+  try {
+    users = await listUsers();
+  } catch (error) {
+    console.error("Load users failed:", error);
+    users = [];
+  }
 }
 
 async function notifyTicketCreated(ticketId, payload) {
@@ -586,6 +634,7 @@ window.addEventListener("global-search", (event) => {
   if (searchInput) searchInput.value = event.detail || "";
   renderTickets();
 });
+trackUxEvent({ event: "page_open", module: "tickets" });
 
 window.addEventListener("beforeunload", () => {
   if (typeof unsubscribeTickets === "function") unsubscribeTickets();

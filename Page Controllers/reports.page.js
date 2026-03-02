@@ -3,6 +3,7 @@ import { initI18n } from "../Languages/i18n.js";
 import { renderNavbar } from "../Collaboration interface/ui-navbar.js";
 import { renderSidebar } from "../Collaboration interface/ui-sidebar.js";
 import { showToast } from "../Collaboration interface/ui-toast.js";
+import { trackUxEvent } from "../Services/telemetry.service.js";
 import { listEmployees } from "../Services/employees.service.js";
 import { listLeaves } from "../Services/leaves.service.js";
 import { listDepartments } from "../Services/departments.service.js";
@@ -50,6 +51,7 @@ const totalsEls = {
 
 let reportData = null;
 let latestBackup = null;
+const chartInstances = [];
 
 const actor = {
   uid: user?.uid || "",
@@ -75,7 +77,7 @@ function sortLabelsByValue(map) {
 }
 
 function buildChart(ctx, config) {
-  return new window.Chart(ctx, {
+  const instance = new window.Chart(ctx, {
     ...config,
     options: {
       responsive: true,
@@ -89,6 +91,8 @@ function buildChart(ctx, config) {
       ...config.options
     }
   });
+  chartInstances.push(instance);
+  return instance;
 }
 
 function buildAreaGradient(ctx, color) {
@@ -126,6 +130,17 @@ function setupChartDefaults() {
   window.Chart.defaults.elements.point.radius = 3;
   window.Chart.defaults.elements.point.hoverRadius = 6;
   window.Chart.defaults.elements.point.hitRadius = 12;
+}
+
+function clearCharts() {
+  while (chartInstances.length) {
+    const instance = chartInstances.pop();
+    try {
+      instance?.destroy();
+    } catch (_) {
+      // Ignore chart destroy errors.
+    }
+  }
 }
 
 function buildHeadcountSeries(employees) {
@@ -417,15 +432,20 @@ function backupToWord(payload) {
 }
 
 async function refreshBackupStatus() {
-  const snapshots = await listBackupSnapshots(5);
-  latestBackup = snapshots[0] || null;
-  if (!backupStatusLabel) return;
-  if (!latestBackup) {
-    backupStatusLabel.textContent = "No backup yet";
-    return;
+  try {
+    const snapshots = await listBackupSnapshots(5);
+    latestBackup = snapshots[0] || null;
+    if (!backupStatusLabel) return;
+    if (!latestBackup) {
+      backupStatusLabel.textContent = "No backup yet";
+      return;
+    }
+    const timeLabel = toTimeLabel(latestBackup.createdAt) || latestBackup.createdAtIso || "-";
+    backupStatusLabel.textContent = `Latest backup: ${timeLabel}`;
+  } catch (error) {
+    console.error("Refresh backup status failed:", error);
+    if (backupStatusLabel) backupStatusLabel.textContent = "Backup status unavailable";
   }
-  const timeLabel = toTimeLabel(latestBackup.createdAt) || latestBackup.createdAtIso || "-";
-  backupStatusLabel.textContent = `Latest backup: ${timeLabel}`;
 }
 
 async function backupNow() {
@@ -435,21 +455,22 @@ async function backupNow() {
 }
 
 async function loadReports() {
-  const [employees, leaves, departments, positions, attendance, payroll] = await Promise.all([
-    listEmployees(),
-    listLeaves(),
-    listDepartments(),
-    listPositions(),
-    listAttendance(),
-    listPayroll()
-  ]);
+  try {
+    const [employees, leaves, departments, positions, attendance, payroll] = await Promise.all([
+      listEmployees(),
+      listLeaves(),
+      listDepartments(),
+      listPositions(),
+      listAttendance(),
+      listPayroll()
+    ]);
 
-  totalsEls.employees.textContent = employees.length;
-  totalsEls.departments.textContent = departments.length;
-  totalsEls.positions.textContent = positions.length;
-  totalsEls.leaves.textContent = leaves.length;
-  totalsEls.attendance.textContent = attendance.length;
-  totalsEls.payroll.textContent = payroll.length;
+    totalsEls.employees.textContent = employees.length;
+    totalsEls.departments.textContent = departments.length;
+    totalsEls.positions.textContent = positions.length;
+    totalsEls.leaves.textContent = leaves.length;
+    totalsEls.attendance.textContent = attendance.length;
+    totalsEls.payroll.textContent = payroll.length;
 
   const departmentNames = new Map(
     departments.map((dept) => [dept.id, dept.name || dept.id])
@@ -492,172 +513,175 @@ async function loadReports() {
   const payrollLabels = Object.keys(payrollByMonth).sort();
   const employeeStatusLabels = sortLabelsByValue(employeeStatus);
 
-  reportData = {
-    employees,
-    leaves,
-    departments,
-    positions,
-    attendance,
-    payroll,
-    departmentCounts: deptCounts,
-    positionCounts,
-    leaveStatus,
-    leaveTypes,
-    attendanceStatus,
-    payrollByMonth,
-    employeeStatus,
-    departmentLabels,
-    positionLabels,
-    leaveStatusLabels,
-    leaveTypeLabels,
-    attendanceLabels,
-    payrollLabels,
-    employeeStatusLabels
-  };
+    reportData = {
+      employees,
+      leaves,
+      departments,
+      positions,
+      attendance,
+      payroll,
+      departmentCounts: deptCounts,
+      positionCounts,
+      leaveStatus,
+      leaveTypes,
+      attendanceStatus,
+      payrollByMonth,
+      employeeStatus,
+      departmentLabels,
+      positionLabels,
+      leaveStatusLabels,
+      leaveTypeLabels,
+      attendanceLabels,
+      payrollLabels,
+      employeeStatusLabels
+    };
 
-  if (window.Chart) {
-    setupChartDefaults();
-    const trend = getCanvasCtx("headcount-trend-chart");
-    if (trend) {
-      const { labels, series } = buildHeadcountSeries(employees);
-      buildChart(trend.canvas, {
-        type: "line",
-        data: {
-          labels,
-          datasets: [
-            buildAreaSeries(trend.ctx, "Headcount", series, "#2563eb")
-          ]
-        }
-      });
+    if (window.Chart) {
+      clearCharts();
+      setupChartDefaults();
+      const trend = getCanvasCtx("headcount-trend-chart");
+      if (trend) {
+        const { labels, series } = buildHeadcountSeries(employees);
+        buildChart(trend.canvas, {
+          type: "line",
+          data: {
+            labels,
+            datasets: [
+              buildAreaSeries(trend.ctx, "Headcount", series, "#2563eb")
+            ]
+          }
+        });
+      }
+
+      const dept = getCanvasCtx("dept-chart");
+      if (dept) {
+        buildChart(dept.canvas, {
+          type: "line",
+          data: {
+            labels: departmentLabels,
+            datasets: [
+              buildAreaSeries(
+                dept.ctx,
+                "Employees",
+                departmentLabels.map((label) => deptCounts[label]),
+                "#3b82f6"
+              )
+            ]
+          }
+        });
+      }
+
+      const position = getCanvasCtx("position-chart");
+      if (position) {
+        buildChart(position.canvas, {
+          type: "line",
+          data: {
+            labels: positionLabels,
+            datasets: [
+              buildAreaSeries(
+                position.ctx,
+                "Employees",
+                positionLabels.map((label) => positionCounts[label]),
+                "#14b8a6"
+              )
+            ]
+          }
+        });
+      }
+
+      const leaveStatusCanvas = getCanvasCtx("leave-status-chart");
+      if (leaveStatusCanvas) {
+        buildChart(leaveStatusCanvas.canvas, {
+          type: "line",
+          data: {
+            labels: leaveStatusLabels,
+            datasets: [
+              buildAreaSeries(
+                leaveStatusCanvas.ctx,
+                "Requests",
+                leaveStatusLabels.map((label) => leaveStatus[label]),
+                "#f59e0b"
+              )
+            ]
+          }
+        });
+      }
+
+      const leaveTypeCanvas = getCanvasCtx("leave-type-chart");
+      if (leaveTypeCanvas) {
+        buildChart(leaveTypeCanvas.canvas, {
+          type: "line",
+          data: {
+            labels: leaveTypeLabels,
+            datasets: [
+              buildAreaSeries(
+                leaveTypeCanvas.ctx,
+                "Requests",
+                leaveTypeLabels.map((label) => leaveTypes[label]),
+                "#8b5cf6"
+              )
+            ]
+          }
+        });
+      }
+
+      const attendanceCanvas = getCanvasCtx("attendance-chart");
+      if (attendanceCanvas) {
+        buildChart(attendanceCanvas.canvas, {
+          type: "line",
+          data: {
+            labels: attendanceLabels,
+            datasets: [
+              buildAreaSeries(
+                attendanceCanvas.ctx,
+                "Attendance",
+                attendanceLabels.map((label) => attendanceStatus[label]),
+                "#22c55e"
+              )
+            ]
+          }
+        });
+      }
+
+      const payrollCanvas = getCanvasCtx("payroll-chart");
+      if (payrollCanvas) {
+        buildChart(payrollCanvas.canvas, {
+          type: "line",
+          data: {
+            labels: payrollLabels,
+            datasets: [
+              buildAreaSeries(
+                payrollCanvas.ctx,
+                "Net Payroll",
+                payrollLabels.map((label) => payrollByMonth[label]),
+                "#0ea5e9"
+              )
+            ]
+          }
+        });
+      }
+
+      const statusCanvas = getCanvasCtx("employee-status-chart");
+      if (statusCanvas) {
+        buildChart(statusCanvas.canvas, {
+          type: "line",
+          data: {
+            labels: employeeStatusLabels,
+            datasets: [
+              buildAreaSeries(
+                statusCanvas.ctx,
+                "Employees",
+                employeeStatusLabels.map((label) => employeeStatus[label]),
+                "#16a34a"
+              )
+            ]
+          }
+        });
+      }
     }
-
-    const dept = getCanvasCtx("dept-chart");
-    if (dept) {
-      buildChart(dept.canvas, {
-        type: "line",
-        data: {
-          labels: departmentLabels,
-          datasets: [
-            buildAreaSeries(
-              dept.ctx,
-              "Employees",
-              departmentLabels.map((label) => deptCounts[label]),
-              "#3b82f6"
-            )
-          ]
-        }
-      });
-    }
-
-    const position = getCanvasCtx("position-chart");
-    if (position) {
-      buildChart(position.canvas, {
-        type: "line",
-        data: {
-          labels: positionLabels,
-          datasets: [
-            buildAreaSeries(
-              position.ctx,
-              "Employees",
-              positionLabels.map((label) => positionCounts[label]),
-              "#14b8a6"
-            )
-          ]
-        }
-      });
-    }
-
-    const leaveStatusCanvas = getCanvasCtx("leave-status-chart");
-    if (leaveStatusCanvas) {
-      buildChart(leaveStatusCanvas.canvas, {
-        type: "line",
-        data: {
-          labels: leaveStatusLabels,
-          datasets: [
-            buildAreaSeries(
-              leaveStatusCanvas.ctx,
-              "Requests",
-              leaveStatusLabels.map((label) => leaveStatus[label]),
-              "#f59e0b"
-            )
-          ]
-        }
-      });
-    }
-
-    const leaveTypeCanvas = getCanvasCtx("leave-type-chart");
-    if (leaveTypeCanvas) {
-      buildChart(leaveTypeCanvas.canvas, {
-        type: "line",
-        data: {
-          labels: leaveTypeLabels,
-          datasets: [
-            buildAreaSeries(
-              leaveTypeCanvas.ctx,
-              "Requests",
-              leaveTypeLabels.map((label) => leaveTypes[label]),
-              "#8b5cf6"
-            )
-          ]
-        }
-      });
-    }
-
-    const attendanceCanvas = getCanvasCtx("attendance-chart");
-    if (attendanceCanvas) {
-      buildChart(attendanceCanvas.canvas, {
-        type: "line",
-        data: {
-          labels: attendanceLabels,
-          datasets: [
-            buildAreaSeries(
-              attendanceCanvas.ctx,
-              "Attendance",
-              attendanceLabels.map((label) => attendanceStatus[label]),
-              "#22c55e"
-            )
-          ]
-        }
-      });
-    }
-
-    const payrollCanvas = getCanvasCtx("payroll-chart");
-    if (payrollCanvas) {
-      buildChart(payrollCanvas.canvas, {
-        type: "line",
-        data: {
-          labels: payrollLabels,
-          datasets: [
-            buildAreaSeries(
-              payrollCanvas.ctx,
-              "Net Payroll",
-              payrollLabels.map((label) => payrollByMonth[label]),
-              "#0ea5e9"
-            )
-          ]
-        }
-      });
-    }
-
-    const statusCanvas = getCanvasCtx("employee-status-chart");
-    if (statusCanvas) {
-      buildChart(statusCanvas.canvas, {
-        type: "line",
-        data: {
-          labels: employeeStatusLabels,
-          datasets: [
-            buildAreaSeries(
-              statusCanvas.ctx,
-              "Employees",
-              employeeStatusLabels.map((label) => employeeStatus[label]),
-              "#16a34a"
-            )
-          ]
-        }
-      });
-    }
-
-    return;
+  } catch (error) {
+    console.error("Load reports failed:", error);
+    showToast("error", "Could not load reports data");
   }
 }
 
@@ -685,8 +709,13 @@ exportPdfBtn.addEventListener("click", () => {
 });
 
 backupNowBtn?.addEventListener("click", async () => {
-  await backupNow();
-  showToast("success", "Backup created successfully.");
+  try {
+    await backupNow();
+    showToast("success", "Backup created successfully.");
+  } catch (error) {
+    console.error("Backup now failed:", error);
+    showToast("error", "Backup failed");
+  }
 });
 
 backupExcelBtn?.addEventListener("click", async () => {
@@ -714,17 +743,22 @@ backupWordBtn?.addEventListener("click", async () => {
 });
 
 restoreLatestBtn?.addEventListener("click", async () => {
-  const snapshots = await listBackupSnapshots(1);
-  const latest = snapshots[0];
-  if (!latest?.id) {
-    showToast("error", "No backup to restore.");
-    return;
+  try {
+    const snapshots = await listBackupSnapshots(1);
+    const latest = snapshots[0];
+    if (!latest?.id) {
+      showToast("error", "No backup to restore.");
+      return;
+    }
+    const confirmed = window.confirm("Restore latest backup now? This will replace current data.");
+    if (!confirmed) return;
+    await restoreBackupById(latest.id);
+    showToast("success", "Restore completed. Refreshing page...");
+    window.location.reload();
+  } catch (error) {
+    console.error("Restore latest failed:", error);
+    showToast("error", "Restore failed");
   }
-  const confirmed = window.confirm("Restore latest backup now? This will replace current data.");
-  if (!confirmed) return;
-  await restoreBackupById(latest.id);
-  showToast("success", "Restore completed. Refreshing page...");
-  window.location.reload();
 });
 
 restoreFileBtn?.addEventListener("click", () => {
@@ -750,3 +784,5 @@ restoreFileInput?.addEventListener("change", async () => {
     showToast("error", "Invalid backup file.");
   }
 });
+
+trackUxEvent({ event: "page_open", module: "reports" });

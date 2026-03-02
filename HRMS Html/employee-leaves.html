@@ -15,7 +15,7 @@
   <link rel="stylesheet" href="../HRMS%20CSS/toast.css" />
   <link rel="stylesheet" href="../HRMS%20CSS/employee-leaves.css" />
 </head>
-<body data-page="my-leaves">
+<body data-page="my_leaves">
   <div id="app" class="app-shell">
     <div id="sidebar-root"></div>
     <div class="main-content">
@@ -76,15 +76,15 @@
               </h3>
             </div>
             <div class="status-grid">
-              <div class="status-tile">
+              <div class="status-tile summary-card">
                 <div class="text-muted">Pending</div>
                 <div class="status-value" id="my-pending-count">0</div>
               </div>
-              <div class="status-tile">
+              <div class="status-tile summary-card">
                 <div class="text-muted">Approved</div>
                 <div class="status-value" id="my-approved-count">0</div>
               </div>
-              <div class="status-tile">
+              <div class="status-tile summary-card">
                 <div class="text-muted">Rejected</div>
                 <div class="status-value" id="my-rejected-count">0</div>
               </div>
@@ -110,7 +110,7 @@
             </div>
           </div>
           <div class="table-scroll">
-            <table class="table">
+            <table class="table leave-table">
               <thead>
                 <tr>
                   <th>Request ID</th>

@@ -5,6 +5,7 @@ import { renderSidebar } from "../Collaboration interface/ui-sidebar.js";
 import { openModal } from "../Collaboration interface/ui-modal.js";
 import { showToast } from "../Collaboration interface/ui-toast.js";
 import { showTableSkeleton } from "../Collaboration interface/ui-skeleton.js";
+import { trackUxEvent } from "../Services/telemetry.service.js";
 import {
   listDepartments,
   createDepartment,
@@ -41,6 +42,21 @@ if (!canManage) {
 
 let departments = [];
 
+function hashSeed(input = "") {
+  let hash = 0;
+  const value = String(input || "");
+  for (let i = 0; i < value.length; i += 1) {
+    hash = (hash * 31 + value.charCodeAt(i)) >>> 0;
+  }
+  return hash;
+}
+
+function departmentAccent(dept = {}) {
+  const source = dept.code || dept.name || dept.id || "";
+  const hue = hashSeed(source) % 360;
+  return `hsl(${hue} 72% 44%)`;
+}
+
 function getDeptCode(dept) {
   if (dept.code) return dept.code;
   if (dept.name) return dept.name.replace(/[^A-Za-z0-9]/g, "").slice(0, 3).toUpperCase();
@@ -61,9 +77,9 @@ function renderDepartments() {
 
   tbody.innerHTML = sorted
     .map(
-      (dept) => `
-      <tr>
-        <td>${dept.name}</td>
+      (dept, index) => `
+      <tr class="department-row" style="--dept-accent:${departmentAccent(dept)};--row-index:${index};">
+        <td><span class="department-name"><span class="department-dot"></span><span>${dept.name}</span></span></td>
         <td><span class="chip">${getDeptCode(dept) || "-"}</span></td>
         <td>
           ${
@@ -100,15 +116,20 @@ function openDepartmentModal(dept) {
         label: "Save",
         className: "btn btn-primary",
         onClick: async () => {
-          const name = document.getElementById("dept-name").value.trim();
-          if (!name) return;
-          if (dept) {
-            await updateDepartment(dept.id, { name });
-          } else {
-            await createDepartment({ name });
+          try {
+            const name = document.getElementById("dept-name").value.trim();
+            if (!name) return;
+            if (dept) {
+              await updateDepartment(dept.id, { name });
+            } else {
+              await createDepartment({ name });
+            }
+            showToast("success", "Department saved");
+            await loadDepartments();
+          } catch (error) {
+            console.error("Save department failed:", error);
+            showToast("error", "Failed to save department");
           }
-          showToast("success", "Department saved");
-          await loadDepartments();
         }
       },
       { label: "Cancel", className: "btn btn-ghost" }
@@ -130,9 +151,16 @@ async function handleAction(action, id) {
 }
 
 async function loadDepartments() {
-  showTableSkeleton(tbody, { rows: 6, cols: 3 });
-  departments = await listDepartments();
-  renderDepartments();
+  try {
+    showTableSkeleton(tbody, { rows: 6, cols: 3 });
+    departments = await listDepartments();
+    renderDepartments();
+  } catch (error) {
+    console.error("Departments load failed:", error);
+    departments = [];
+    renderDepartments();
+    throw error;
+  }
 }
 
 function mapDepartmentsLoadError(error) {
@@ -155,6 +183,7 @@ window.addEventListener("global-search", (event) => {
   renderDepartments();
 });
 if (roleEl) roleEl.textContent = canManage ? "Manage departments" : "View only";
+trackUxEvent({ event: "page_open", module: "departments" });
 (async () => {
   try {
     await loadDepartments();

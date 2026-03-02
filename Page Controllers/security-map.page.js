@@ -3,6 +3,7 @@ import { initI18n, t } from "../Languages/i18n.js";
 import { renderNavbar } from "../Collaboration interface/ui-navbar.js";
 import { renderSidebar } from "../Collaboration interface/ui-sidebar.js";
 import { showToast } from "../Collaboration interface/ui-toast.js";
+import { trackUxEvent } from "../Services/telemetry.service.js";
 import { listSecurityEvents } from "../Services/security-audit.service.js";
 import { buildThreatMap, runAIDefense, listAIReports, countBlockedActors } from "../Services/security-defense.service.js";
 import { enforceAdminPagesCode } from "../Services/admin-lock.service.js";
@@ -88,6 +89,21 @@ function getMarkerColor(incident) {
   if (tier === "high") return "#f97316";
   if (tier === "medium") return "#eab308";
   return "#3b82f6";
+}
+
+function hashSeed(input = "") {
+  let hash = 0;
+  const value = String(input || "");
+  for (let i = 0; i < value.length; i += 1) {
+    hash = (hash * 31 + value.charCodeAt(i)) >>> 0;
+  }
+  return hash;
+}
+
+function incidentAccent(incident = {}) {
+  const source = incident.id || incident.actorEmail || incident.actor || incident.attackType || "";
+  const hue = hashSeed(source) % 360;
+  return `hsl(${hue} 72% 44%)`;
 }
 
 function getLaneClassName(incident) {
@@ -215,8 +231,8 @@ function renderIncidents(items) {
   incidentListEl.innerHTML = items
     .slice(0, 35)
     .map(
-      (incident) => `
-        <article class="incident-item ${incident.isBlocked ? "is-blocked" : ""}">
+      (incident, index) => `
+        <article class="incident-item ${incident.isBlocked ? "is-blocked" : ""}" style="--incident-accent:${incidentAccent(incident)};--row-index:${index}">
           <div class="incident-head">
             <strong>${incident.attackType}</strong>
             <div class="incident-meta">
@@ -342,10 +358,18 @@ function rerenderThreatView() {
 }
 
 async function loadThreatData() {
-  const events = await listSecurityEvents();
-  incidents = buildThreatMap(events).sort((a, b) => b.risk - a.risk || b.createdAt - a.createdAt);
-  rerenderThreatView();
-  renderLatestReport();
+  try {
+    const events = await listSecurityEvents();
+    incidents = buildThreatMap(events).sort((a, b) => b.risk - a.risk || b.createdAt - a.createdAt);
+    rerenderThreatView();
+    renderLatestReport();
+  } catch (error) {
+    console.error("Threat data load failed:", error);
+    incidents = [];
+    rerenderThreatView();
+    renderLatestReport();
+    showToast("error", "Could not load threat data");
+  }
 }
 
 function stopSimulation() {
@@ -418,14 +442,19 @@ function runQuickAction(action) {
 }
 
 runAiBtn.addEventListener("click", async () => {
-  const events = await listSecurityEvents();
-  const report = await runAIDefense(events, {
-    uid: user?.uid || "",
-    email: user?.email || "",
-    role: role || ""
-  });
-  showToast("success", `AI defense finished. ${report.newlyBlocked} new actor(s) blocked.`);
-  await loadThreatData();
+  try {
+    const events = await listSecurityEvents();
+    const report = await runAIDefense(events, {
+      uid: user?.uid || "",
+      email: user?.email || "",
+      role: role || ""
+    });
+    showToast("success", `AI defense finished. ${report.newlyBlocked} new actor(s) blocked.`);
+    await loadThreatData();
+  } catch (error) {
+    console.error("AI defense run failed:", error);
+    showToast("error", "AI defense run failed");
+  }
 });
 
 simulateBtn.addEventListener("click", simulateAttackWave);
@@ -497,6 +526,7 @@ exportBtn.addEventListener("click", () => {
 });
 
 applyIntensityLevel();
+trackUxEvent({ event: "page_open", module: "security_map" });
 loadThreatData();
 renderProcedures(null);
 

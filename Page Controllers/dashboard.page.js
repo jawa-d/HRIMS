@@ -120,11 +120,92 @@ function translateLeaveStatus(status = "") {
 }
 
 function isToday(value) {
-  if (!value) return false;
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return false;
+  const d = toDate(value);
+  if (!d) return false;
   const now = new Date();
   return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+}
+
+function toDate(value) {
+  if (!value) return null;
+  if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
+  if (typeof value?.toDate === "function") {
+    const firebaseDate = value.toDate();
+    return Number.isNaN(firebaseDate.getTime()) ? null : firebaseDate;
+  }
+  if (typeof value?.seconds === "number") {
+    const d = new Date(value.seconds * 1000);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  if (typeof value === "number") {
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  if (typeof value === "string") {
+    const str = value.trim();
+    if (!str) return null;
+
+    const yyyyMmDd = /^(\d{4})-(\d{2})-(\d{2})$/;
+    const ddMmYyyy = /^(\d{2})[/-](\d{2})[/-](\d{4})$/;
+    const iso = new Date(str);
+    if (!Number.isNaN(iso.getTime())) return iso;
+    if (yyyyMmDd.test(str)) {
+      const [, y, m, d] = str.match(yyyyMmDd);
+      const parsed = new Date(Number(y), Number(m) - 1, Number(d));
+      return Number.isNaN(parsed.getTime()) ? null : parsed;
+    }
+    if (ddMmYyyy.test(str)) {
+      const [, d, m, y] = str.match(ddMmYyyy);
+      const parsed = new Date(Number(y), Number(m) - 1, Number(d));
+      return Number.isNaN(parsed.getTime()) ? null : parsed;
+    }
+  }
+  return null;
+}
+
+function normalizeStatus(status = "") {
+  return String(status).trim().toLowerCase().replaceAll("-", "_").replaceAll(" ", "_");
+}
+
+function isPendingLeaveStatus(status = "") {
+  return ["submitted", "pending", "manager_review", "hr_review", "in_review"].includes(normalizeStatus(status));
+}
+
+function isPayrollReadyStatus(status = "") {
+  return ["ready", "approved", "published", "ready_to_publish"].includes(normalizeStatus(status));
+}
+
+function isCriticalNotification(item = {}) {
+  const priority = normalizeStatus(item.priority || "");
+  const type = normalizeStatus(item.type || "");
+  return ["high", "critical", "urgent"].includes(priority) || type === "security";
+}
+
+function countTodayAttendance(attendance = []) {
+  const seen = new Set();
+  attendance.forEach((item) => {
+    if (!isToday(item.date || item.day || item.checkInAt || item.createdAt)) return;
+    const key = item.employeeId || item.empId || item.id;
+    if (key) seen.add(String(key));
+  });
+  return seen.size;
+}
+
+function bindDashboardQuickLinks() {
+  const cards = document.querySelectorAll("[data-nav-target]");
+  cards.forEach((card) => {
+    const href = card.getAttribute("data-nav-target");
+    if (!href || card.dataset.bound === "1") return;
+    card.dataset.bound = "1";
+    card.addEventListener("click", () => {
+      window.location.href = href;
+    });
+    card.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      window.location.href = href;
+    });
+  });
 }
 
 function applyDashboardSearch(query) {
@@ -156,6 +237,7 @@ async function loadDashboard() {
   }
 
   if (welcomeName) welcomeName.textContent = user?.name || "Team";
+  bindDashboardQuickLinks();
   if (welcomeDate) {
     const today = new Date();
     welcomeDate.textContent = today.toLocaleDateString(getLanguage() === "ar" ? "ar" : undefined, {
@@ -199,13 +281,10 @@ async function loadDashboard() {
   if (welcomeTotal) welcomeTotal.textContent = String(employees.length);
   if (welcomeDepts) welcomeDepts.textContent = String(departments.length);
 
-  const todayAttendance = attendance.filter((item) => isToday(item.date || item.day || item.checkInAt)).length;
-  const pendingApprovals = leaves.filter((l) => ["submitted", "manager_review", "hr_review"].includes(normalizeLeaveStatus(l.status))).length;
-  const payrollReady = payroll.filter((p) => {
-    const status = (p.status || "").toLowerCase();
-    return status === "ready" || status === "approved" || status === "published";
-  }).length;
-  const criticalAlerts = notifications.filter((n) => (n.priority || "").toLowerCase() === "high" || n.type === "security").length;
+  const todayAttendance = countTodayAttendance(attendance);
+  const pendingApprovals = leaves.filter((l) => isPendingLeaveStatus(normalizeLeaveStatus(l.status))).length;
+  const payrollReady = payroll.filter((p) => isPayrollReadyStatus(p.status)).length;
+  const criticalAlerts = notifications.filter((n) => isCriticalNotification(n)).length;
 
   if (kpiTodayAttendance) kpiTodayAttendance.textContent = String(todayAttendance);
   if (kpiPendingApprovals) kpiPendingApprovals.textContent = String(pendingApprovals);
@@ -279,9 +358,9 @@ async function loadDashboard() {
     }, {});
     const deptLabels = Object.keys(deptCounts);
 
-    const present = attendance.filter((item) => item.status === "present").length;
-    const late = attendance.filter((item) => item.status === "late").length;
-    const absent = attendance.filter((item) => item.status === "absent").length;
+    const present = attendance.filter((item) => normalizeStatus(item.status) === "present").length;
+    const late = attendance.filter((item) => normalizeStatus(item.status) === "late").length;
+    const absent = attendance.filter((item) => normalizeStatus(item.status) === "absent").length;
 
     const payrollByMonth = payroll.reduce((acc, entry) => {
       const month = (entry.month || "Unknown").trim();

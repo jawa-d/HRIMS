@@ -40,15 +40,72 @@ let departments = [];
 let positions = [];
 
 function formatDate(value) {
-  if (!value) return "-";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "-";
+  const date = toDate(value);
+  if (!date) return "-";
   return date.toLocaleDateString();
 }
 
+function toDate(value) {
+  if (!value) return null;
+  if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
+  if (typeof value?.toDate === "function") {
+    const d = value.toDate();
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  if (typeof value?.seconds === "number") {
+    const d = new Date(value.seconds * 1000);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date;
+}
+
+function normalizeStatus(value = "") {
+  return String(value || "").trim().toLowerCase().replaceAll("-", "_").replaceAll(" ", "_");
+}
+
+function hashSeed(input = "") {
+  let hash = 0;
+  const value = String(input || "");
+  for (let i = 0; i < value.length; i += 1) {
+    hash = (hash * 31 + value.charCodeAt(i)) >>> 0;
+  }
+  return hash;
+}
+
+function employeeAccent(employee = {}) {
+  const seed = hashSeed(employee.empId || employee.uid || employee.id || employee.email || "");
+  return `hsl(${seed % 360} 72% 44%)`;
+}
+
+function applyEmployeeTheme(employee) {
+  const accent = employee ? employeeAccent(employee) : "";
+  document.documentElement.style.setProperty("--employee360-accent", accent || "var(--primary)");
+}
+
+function sortByLatest(items = [], dateKeys = []) {
+  return items
+    .slice()
+    .sort((a, b) => {
+      const aTime = pickDateMillis(a, dateKeys);
+      const bTime = pickDateMillis(b, dateKeys);
+      return bTime - aTime;
+    });
+}
+
+function pickDateMillis(item = {}, dateKeys = []) {
+  for (const key of dateKeys) {
+    const d = toDate(item[key]);
+    if (d) return d.getTime();
+  }
+  return 0;
+}
+
 function statusBadge(value) {
-  const text = String(value || "unknown").toLowerCase();
-  return `<span class="badge">${text.replace(/_/g, " ")}</span>`;
+  const text = normalizeStatus(value || "unknown");
+  const statusClass = `status-${text}`;
+  return `<span class="badge ${statusClass}">${text.replace(/_/g, " ")}</span>`;
 }
 
 function emptyRow(colspan) {
@@ -92,8 +149,10 @@ function renderEmployeeOptions() {
 function renderProfile(employee) {
   if (!employee) {
     profileEl.innerHTML = `<div class="employee360-empty">No profile found.</div>`;
+    applyEmployeeTheme(null);
     return;
   }
+  applyEmployeeTheme(employee);
   const department = departments.find((item) => item.id === employee.departmentId)?.name || employee.departmentId || "-";
   const position = positions.find((item) => item.id === employee.positionId)?.name || employee.positionId || "-";
 
@@ -109,20 +168,20 @@ function renderProfile(employee) {
   ];
 
   profileEl.innerHTML = fields
-    .map(([label, value]) => `<article class="employee360-field"><span>${label}</span><strong>${value}</strong></article>`)
+    .map(([label, value], index) => `<article class="employee360-field" style="--field-index:${index}"><span>${label}</span><strong>${value}</strong></article>`)
     .join("");
 }
 
 function calcApprovedLeaveDays(leaves) {
   return leaves
-    .filter((item) => ["approved"].includes(String(item.status || "").toLowerCase()))
+    .filter((item) => normalizeStatus(item.status) === "approved")
     .reduce((sum, item) => sum + Number(item.days || 0), 0);
 }
 
 function calcAttendanceRate(attendance) {
-  const filtered = attendance.filter((item) => ["present", "late", "absent"].includes(String(item.status || "").toLowerCase()));
+  const filtered = attendance.filter((item) => ["present", "late", "absent"].includes(normalizeStatus(item.status)));
   if (!filtered.length) return "0%";
-  const presentLike = filtered.filter((item) => ["present", "late"].includes(String(item.status || "").toLowerCase())).length;
+  const presentLike = filtered.filter((item) => ["present", "late"].includes(normalizeStatus(item.status))).length;
   const rate = Math.round((presentLike / filtered.length) * 100);
   return `${rate}%`;
 }
@@ -135,12 +194,12 @@ function renderAttendanceTable(items) {
   attendanceBody.innerHTML = items
     .slice(0, 10)
     .map(
-      (item) => `
-      <tr>
-        <td>${formatDate(item.date)}</td>
+      (item, index) => `
+      <tr class="employee360-row" style="--row-index:${index}">
+        <td>${formatDate(item.date || item.day || item.createdAt)}</td>
         <td>${statusBadge(item.status || "unknown")}</td>
-        <td>${item.checkIn || "-"}</td>
-        <td>${item.checkOut || "-"}</td>
+        <td>${item.checkIn || item.checkInAt || "-"}</td>
+        <td>${item.checkOut || item.checkOutAt || "-"}</td>
       </tr>
     `
     )
@@ -155,8 +214,8 @@ function renderLeavesTable(items) {
   leavesBody.innerHTML = items
     .slice(0, 10)
     .map(
-      (item) => `
-      <tr>
+      (item, index) => `
+      <tr class="employee360-row" style="--row-index:${index}">
         <td>${formatDate(item.from)}</td>
         <td>${formatDate(item.to)}</td>
         <td>${item.type || "-"}</td>
@@ -175,8 +234,8 @@ function renderPayrollTable(items) {
   payrollBody.innerHTML = items
     .slice(0, 10)
     .map(
-      (item) => `
-      <tr>
+      (item, index) => `
+      <tr class="employee360-row" style="--row-index:${index}">
         <td>${item.month || "-"}</td>
         <td>${statusBadge(item.status || "draft")}</td>
         <td>${numberFmt.format(Number(item.gross || 0))}</td>
@@ -187,16 +246,69 @@ function renderPayrollTable(items) {
     .join("");
 }
 
-async function loadEmployeeDetails(employeeId) {
-  if (!employeeId) return;
-  const [attendance, leaves, payroll] = await Promise.all([
-    listAttendance({ employeeId }),
-    listLeaves({ employeeId }),
-    listPayroll({ employeeId })
+function isMatchEmployee(record = {}, employee = {}) {
+  const employeeKeys = new Set(
+    [
+      employee.id,
+      employee.uid,
+      employee.empId,
+      String(employee.email || "").trim().toLowerCase()
+    ]
+      .map((item) => String(item || "").trim())
+      .filter(Boolean)
+  );
+
+  const recordKeys = [
+    record.employeeId,
+    record.empId,
+    record.uid,
+    String(record.employeeEmail || record.email || "").trim().toLowerCase()
+  ]
+    .map((item) => String(item || "").trim())
+    .filter(Boolean);
+
+  return recordKeys.some((key) => employeeKeys.has(key));
+}
+
+async function resolveEmployeeData(employee) {
+  const [attendanceById, leavesById, payrollById] = await Promise.all([
+    listAttendance({ employeeId: employee.id }),
+    listLeaves({ employeeId: employee.id }),
+    listPayroll({ employeeId: employee.id })
   ]);
 
+  if (attendanceById.length || leavesById.length || payrollById.length) {
+    return {
+      attendance: attendanceById,
+      leaves: leavesById,
+      payroll: payrollById
+    };
+  }
+
+  const [allAttendance, allLeaves, allPayroll] = await Promise.all([
+    listAttendance(),
+    listLeaves(),
+    listPayroll()
+  ]);
+
+  return {
+    attendance: allAttendance.filter((item) => isMatchEmployee(item, employee)),
+    leaves: allLeaves.filter((item) => isMatchEmployee(item, employee)),
+    payroll: allPayroll.filter((item) => isMatchEmployee(item, employee))
+  };
+}
+
+async function loadEmployeeDetails(employeeId) {
+  if (!employeeId) return;
+  const employee = employees.find((item) => item.id === employeeId);
+  if (!employee) return;
+  const data = await resolveEmployeeData(employee);
+  const attendance = sortByLatest(data.attendance, ["date", "day", "createdAt"]);
+  const leaves = sortByLatest(data.leaves, ["from", "createdAt"]);
+  const payroll = sortByLatest(data.payroll, ["createdAt"]);
+
   const pendingLeaves = leaves.filter((item) => {
-    const status = String(item.status || "").toLowerCase();
+    const status = normalizeStatus(item.status);
     return ["submitted", "pending", "manager_review", "hr_review"].includes(status);
   }).length;
   const approvedDays = calcApprovedLeaveDays(leaves);

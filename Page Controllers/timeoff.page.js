@@ -5,6 +5,7 @@ import { renderSidebar } from "../Collaboration interface/ui-sidebar.js";
 import { openModal } from "../Collaboration interface/ui-modal.js";
 import { showToast } from "../Collaboration interface/ui-toast.js";
 import { showTableSkeleton } from "../Collaboration interface/ui-skeleton.js";
+import { trackUxEvent } from "../Services/telemetry.service.js";
 import { listEmployees } from "../Services/employees.service.js";
 import { listLeaves } from "../Services/leaves.service.js";
 import { listTimeoffBalances, upsertTimeoffBalance, deleteTimeoffBalance } from "../Services/timeoff.service.js";
@@ -52,6 +53,27 @@ function matchesEmployee(leave, emp) {
   return false;
 }
 
+function normalizeLeaveStatus(status = "") {
+  const value = String(status || "").trim().toLowerCase();
+  if (value === "pending") return "submitted";
+  return value.replaceAll("-", "_").replaceAll(" ", "_");
+}
+
+function hashSeed(input = "") {
+  let hash = 0;
+  const value = String(input || "");
+  for (let i = 0; i < value.length; i += 1) {
+    hash = (hash * 31 + value.charCodeAt(i)) >>> 0;
+  }
+  return hash;
+}
+
+function balanceAccent(row = {}) {
+  const source = row.code || row.id || row.name || "";
+  const hue = hashSeed(source) % 360;
+  return `hsl(${hue} 72% 44%)`;
+}
+
 function calcLeaveDays(leave) {
   if (leave.days) return Number(leave.days) || 0;
   if (!leave.from || !leave.to) return 0;
@@ -79,7 +101,7 @@ function buildRows() {
     const carryover = Number(balance.carryover ?? 0);
     const adjustment = Number(balance.adjustment ?? 0);
     const used = leaves
-      .filter((leave) => leave.status === "approved")
+      .filter((leave) => normalizeLeaveStatus(leave.status) === "approved")
       .filter((leave) => matchesEmployee(leave, emp))
       .filter((leave) => {
         if (!leave.from) return true;
@@ -107,11 +129,11 @@ function renderTable() {
   const rows = buildRows();
   tbody.innerHTML = rows
     .map(
-      (row) => `
-      <tr>
+      (row, index) => `
+      <tr class="timeoff-row balance-${row.status.toLowerCase()}" style="--timeoff-accent:${balanceAccent(row)};--row-index:${index};">
         <td>
           <div class="employee-cell">
-            <div>${row.name}</div>
+            <div class="employee-name"><span class="employee-dot"></span><span>${row.name}</span></div>
             <div class="employee-meta">ID: ${row.code}</div>
           </div>
         </td>
@@ -170,14 +192,19 @@ function openBalanceModal(employeeId) {
         label: "Save",
         className: "btn btn-primary",
         onClick: async () => {
-          const payload = {
-            annual: Number(document.getElementById("balance-annual").value || DEFAULT_ANNUAL),
-            carryover: Number(document.getElementById("balance-carry").value || 0),
-            adjustment: Number(document.getElementById("balance-adjust").value || 0)
-          };
-          await upsertTimeoffBalance(employeeId, payload);
-          showToast("success", "Balance updated");
-          await loadBalances();
+          try {
+            const payload = {
+              annual: Number(document.getElementById("balance-annual").value || DEFAULT_ANNUAL),
+              carryover: Number(document.getElementById("balance-carry").value || 0),
+              adjustment: Number(document.getElementById("balance-adjust").value || 0)
+            };
+            await upsertTimeoffBalance(employeeId, payload);
+            showToast("success", "Balance updated");
+            await loadBalances();
+          } catch (error) {
+            console.error("Update balance failed:", error);
+            showToast("error", "Failed to update balance");
+          }
         }
       },
       { label: "Cancel", className: "btn btn-ghost" }
@@ -208,16 +235,21 @@ function openCreateBalanceModal() {
         label: "Save",
         className: "btn btn-primary",
         onClick: async () => {
-          const employeeId = document.getElementById("new-balance-employee").value;
-          if (!employeeId) return;
-          const payload = {
-            annual: Number(document.getElementById("new-balance-annual").value || DEFAULT_ANNUAL),
-            carryover: Number(document.getElementById("new-balance-carry").value || 0),
-            adjustment: Number(document.getElementById("new-balance-adjust").value || 0)
-          };
-          await upsertTimeoffBalance(employeeId, payload);
-          showToast("success", "Balance added");
-          await loadBalances();
+          try {
+            const employeeId = document.getElementById("new-balance-employee").value;
+            if (!employeeId) return;
+            const payload = {
+              annual: Number(document.getElementById("new-balance-annual").value || DEFAULT_ANNUAL),
+              carryover: Number(document.getElementById("new-balance-carry").value || 0),
+              adjustment: Number(document.getElementById("new-balance-adjust").value || 0)
+            };
+            await upsertTimeoffBalance(employeeId, payload);
+            showToast("success", "Balance added");
+            await loadBalances();
+          } catch (error) {
+            console.error("Create balance failed:", error);
+            showToast("error", "Failed to add balance");
+          }
         }
       },
       { label: "Cancel", className: "btn btn-ghost" }
@@ -264,15 +296,29 @@ function exportToCsv() {
 }
 
 async function loadBalances() {
-  showTableSkeleton(tbody, { rows: 6, cols: 7 });
-  balances = await listTimeoffBalances();
-  renderTable();
+  try {
+    showTableSkeleton(tbody, { rows: 6, cols: 7 });
+    balances = await listTimeoffBalances();
+    renderTable();
+  } catch (error) {
+    console.error("Load balances failed:", error);
+    balances = [];
+    renderTable();
+    showToast("error", "Could not load balances");
+  }
 }
 
 async function loadData() {
-  const [employeesData, leavesData] = await Promise.all([listEmployees(), listLeaves()]);
-  employees = employeesData;
-  leaves = leavesData;
+  try {
+    const [employeesData, leavesData] = await Promise.all([listEmployees(), listLeaves()]);
+    employees = employeesData;
+    leaves = leavesData;
+  } catch (error) {
+    console.error("Load timeoff data failed:", error);
+    employees = [];
+    leaves = [];
+    throw error;
+  }
 }
 
 if (searchInput) {
@@ -286,6 +332,7 @@ window.addEventListener("global-search", (event) => {
   if (searchInput) searchInput.value = event.detail || "";
   renderTable();
 });
+trackUxEvent({ event: "page_open", module: "timeoff" });
 
 (async () => {
   try {

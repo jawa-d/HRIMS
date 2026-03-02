@@ -22,6 +22,36 @@ const form = document.getElementById("profile-form");
 const photoInput = document.getElementById("profile-photo-input");
 let profile = { ...user };
 
+function normalizeUid(value = "") {
+  return String(value || "").trim();
+}
+
+function ensureProfileUid() {
+  const uid = normalizeUid(profile.uid || user.uid);
+  if (uid) return uid;
+  const fallback = normalizeUid(profile.email || user.email || "guest-profile");
+  return fallback.replace(/[^a-zA-Z0-9_-]/g, "_");
+}
+
+function escapeHtml(value = "") {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+async function saveProfileToFirebase(nextProfile) {
+  const uid = ensureProfileUid();
+  const payload = { ...nextProfile, uid };
+  await upsertUser(uid, payload);
+  profile = payload;
+  localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(payload));
+  if (payload.role) localStorage.setItem(STORAGE_KEYS.role, payload.role);
+  return payload;
+}
+
 function getInitials(name = "") {
   const parts = name.trim().split(" ").filter(Boolean);
   if (!parts.length) return "HR";
@@ -35,12 +65,13 @@ function fieldValue(id, fallback = "") {
 }
 
 function renderAccessSnapshot() {
+  if (!accessList) return;
   const allowed = getAllowedPages(profile.role || role, profile);
   const labels = MENU_ITEMS.filter((item) => allowed.includes(item.key));
   accessList.innerHTML = `
     <div class="profile-access-item">
       <span class="text-muted">Role</span>
-      <span class="badge">${profile.role || role}</span>
+      <span class="badge">${escapeHtml(profile.role || role)}</span>
     </div>
     <div class="profile-access-item">
       <span class="text-muted">Accessible Pages</span>
@@ -50,8 +81,8 @@ function renderAccessSnapshot() {
       .map(
         (item) => `
           <div class="profile-access-item">
-            <span>${item.key}</span>
-            <span class="chip">${item.href}</span>
+            <span>${escapeHtml(item.key)}</span>
+            <span class="chip">${escapeHtml(item.href)}</span>
           </div>
         `
       )
@@ -60,6 +91,7 @@ function renderAccessSnapshot() {
 }
 
 function renderProfile() {
+  if (!profileCard) return;
   const initials = getInitials(profile.name || profile.email || "");
   const photoUrl = profile.photoUrl || "";
   profileCard.innerHTML = `
@@ -77,11 +109,11 @@ function renderProfile() {
       </div>
     </div>
     <div class="profile-stat-grid">
-      <div class="profile-stat-row"><strong>Name</strong><span>${profile.name || "-"}</span></div>
-      <div class="profile-stat-row"><strong>Email</strong><span>${profile.email || "-"}</span></div>
-      <div class="profile-stat-row"><strong>Role</strong><span>${profile.role || role}</span></div>
-      <div class="profile-stat-row"><strong>Department</strong><span>${profile.departmentId || "-"}</span></div>
-      <div class="profile-stat-row"><strong>Manager</strong><span>${profile.managerId || "-"}</span></div>
+      <div class="profile-stat-row"><strong>Name</strong><span>${escapeHtml(profile.name || "-")}</span></div>
+      <div class="profile-stat-row"><strong>Email</strong><span>${escapeHtml(profile.email || "-")}</span></div>
+      <div class="profile-stat-row"><strong>Role</strong><span>${escapeHtml(profile.role || role)}</span></div>
+      <div class="profile-stat-row"><strong>Department</strong><span>${escapeHtml(profile.departmentId || "-")}</span></div>
+      <div class="profile-stat-row"><strong>Manager</strong><span>${escapeHtml(profile.managerId || "-")}</span></div>
     </div>
   `;
 
@@ -102,12 +134,15 @@ function renderProfile() {
   }
   if (removeBtn) {
     removeBtn.addEventListener("click", async () => {
-      profile = { ...profile, photoUrl: "" };
-      await upsertUser(profile.uid, profile);
-      localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(profile));
-      showToast("success", "Photo removed");
-      renderProfile();
-      renderAccessSnapshot();
+      try {
+        await saveProfileToFirebase({ ...profile, photoUrl: "" });
+        showToast("success", "Photo removed");
+        renderProfile();
+        renderAccessSnapshot();
+      } catch (error) {
+        console.error("Profile photo remove failed:", error);
+        showToast("error", "Failed to remove photo");
+      }
     });
   }
 
@@ -124,28 +159,35 @@ photoInput?.addEventListener("change", async (event) => {
     showToast("error", "Please upload an image file");
     return;
   }
-  const maxSize = 2 * 1024 * 1024;
+  // Keep below Firestore document limits when stored as base64 text.
+  const maxSize = 700 * 1024;
   if (file.size > maxSize) {
-    showToast("error", "Image must be under 2MB");
+    showToast("error", "Image must be under 700KB");
     return;
   }
   const reader = new FileReader();
   reader.onload = async () => {
-    profile = { ...profile, photoUrl: reader.result };
-    await upsertUser(profile.uid, profile);
-    localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(profile));
-    showToast("success", "Photo updated");
-    renderProfile();
+    try {
+      await saveProfileToFirebase({ ...profile, photoUrl: String(reader.result || "") });
+      showToast("success", "Photo updated");
+      renderProfile();
+    } catch (error) {
+      console.error("Profile photo update failed:", error);
+      showToast("error", "Failed to update photo");
+    }
+  };
+  reader.onerror = () => {
+    showToast("error", "Failed to read image file");
   };
   reader.readAsDataURL(file);
 });
 
-form.addEventListener("submit", async (event) => {
+form?.addEventListener("submit", async (event) => {
   event.preventDefault();
   const updated = {
     ...profile,
     name: fieldValue("profile-name"),
-    email: profile.email,
+    email: profile.email || user.email || "",
     phone: fieldValue("profile-phone"),
     title: fieldValue("profile-title"),
     departmentId: fieldValue("profile-dept"),
@@ -154,23 +196,29 @@ form.addEventListener("submit", async (event) => {
     bio: fieldValue("profile-bio")
   };
 
-  await upsertUser(profile.uid, updated);
-  localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(updated));
-  profile = { ...updated };
-  showToast("success", "Profile updated");
-  renderProfile();
-  renderSidebar("profile");
+  try {
+    await saveProfileToFirebase(updated);
+    showToast("success", "Profile updated");
+    renderProfile();
+    renderSidebar("profile");
+  } catch (error) {
+    console.error("Profile update failed:", error);
+    showToast("error", "Failed to update profile");
+  }
 });
 
 async function hydrateProfile() {
   try {
-    const remote = await getUser(user.uid);
+    const remote = await getUser(ensureProfileUid());
     if (remote) {
       profile = { ...profile, ...remote };
       localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(profile));
       if (profile.role) localStorage.setItem(STORAGE_KEYS.role, profile.role);
+    } else {
+      await saveProfileToFirebase(profile);
     }
-  } catch (_) {
+  } catch (error) {
+    console.error("Profile hydrate failed:", error);
     showToast("info", "Profile loaded from local session");
   }
   renderProfile();

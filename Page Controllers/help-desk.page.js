@@ -3,9 +3,10 @@ import { initI18n } from "../Languages/i18n.js";
 import { renderNavbar } from "../Collaboration interface/ui-navbar.js";
 import { renderSidebar } from "../Collaboration interface/ui-sidebar.js";
 import { showToast } from "../Collaboration interface/ui-toast.js";
+import { trackUxEvent } from "../Services/telemetry.service.js";
 import { listUsers } from "../Services/users.service.js";
 import { createNotification } from "../Services/notifications.service.js";
-import { createTicket, updateTicket, watchTickets } from "../Services/tickets.service.js";
+import { createTicket, updateTicket, watchTickets, listTickets } from "../Services/tickets.service.js";
 
 if (!enforceAuth("help_desk")) {
   throw new Error("Unauthorized");
@@ -39,6 +40,21 @@ let tickets = [];
 let supportUsers = [];
 let unsubscribeTickets = null;
 
+function hashSeed(input = "") {
+  let hash = 0;
+  const value = String(input || "");
+  for (let i = 0; i < value.length; i += 1) {
+    hash = (hash * 31 + value.charCodeAt(i)) >>> 0;
+  }
+  return hash;
+}
+
+function ticketAccent(ticket = {}) {
+  const source = ticket.id || ticket.subject || ticket.requesterUid || ticket.requesterEmail || "";
+  const hue = hashSeed(source) % 360;
+  return `hsl(${hue} 72% 44%)`;
+}
+
 function toMillis(value) {
   if (!value) return 0;
   if (typeof value.toMillis === "function") return value.toMillis();
@@ -71,11 +87,25 @@ function startTicketsWatcher() {
       tickets = items;
       renderTickets();
     },
-    () => {
+    async () => {
       showToast("error", "Failed to watch tickets");
+      await loadTicketsOnce();
     },
     { scopeUid }
   );
+}
+
+async function loadTicketsOnce() {
+  try {
+    const scopeUid = shouldScopeToCurrentUser() ? (user?.uid || "") : "";
+    tickets = await listTickets({ scopeUid });
+    renderTickets();
+  } catch (error) {
+    console.error("Load helpdesk tickets failed:", error);
+    tickets = [];
+    renderTickets();
+    showToast("error", "Could not load tickets");
+  }
 }
 
 function createSupportNotificationPayload(ticketId, ticketPayload) {
@@ -93,12 +123,16 @@ async function notifySupportTeam(ticketId, ticketPayload) {
   if (!targets.length) return;
 
   const payload = createSupportNotificationPayload(ticketId, ticketPayload);
-  await Promise.all(
-    targets
-      .map((item) => item.uid || item.id || "")
-      .filter(Boolean)
-      .map((toUid) => createNotification({ ...payload, toUid }))
-  );
+  try {
+    await Promise.all(
+      targets
+        .map((item) => item.uid || item.id || "")
+        .filter(Boolean)
+        .map((toUid) => createNotification({ ...payload, toUid }))
+    );
+  } catch (error) {
+    console.error("Helpdesk notify failed:", error);
+  }
 }
 
 function normalizeText(value) {
@@ -166,11 +200,11 @@ function renderTickets() {
 
   listEl.innerHTML = items
     .map(
-      (ticket) => `
-      <article class="helpdesk-ticket">
+      (ticket, index) => `
+      <article class="helpdesk-ticket" style="--ticket-accent:${ticketAccent(ticket)};--row-index:${index};">
         <div class="helpdesk-ticket-head">
           <div>
-            <div class="helpdesk-ticket-title">${ticket.subject || "-"}</div>
+            <div class="helpdesk-ticket-title"><span class="ticket-dot"></span><span>${ticket.subject || "-"}</span></div>
             <div class="helpdesk-ticket-meta">
               <span class="badge">${ticket.category || "general"}</span>
               <span class="badge">${ticket.priority || "medium"}</span>
@@ -204,13 +238,18 @@ function renderTickets() {
       const assigneeUid = String(assigneeEl?.value || "").trim();
       const assignee = supportUsers.find((item) => (item.uid || item.id || "") === assigneeUid);
 
-      await updateTicket(id, {
-        ...ticket,
-        status: statusEl?.value || ticket.status || "open",
-        assigneeUid,
-        assigneeName: assignee ? assignee.name || assignee.email || assigneeUid : ""
-      });
-      showToast("success", "Ticket updated");
+      try {
+        await updateTicket(id, {
+          ...ticket,
+          status: statusEl?.value || ticket.status || "open",
+          assigneeUid,
+          assigneeName: assignee ? assignee.name || assignee.email || assigneeUid : ""
+        });
+        showToast("success", "Ticket updated");
+      } catch (error) {
+        console.error("Update helpdesk ticket failed:", error);
+        showToast("error", "Failed to update ticket");
+      }
     });
   });
 }
@@ -275,6 +314,7 @@ myOnlyEl.addEventListener("change", () => {
   startTicketsWatcher();
 });
 window.addEventListener("beforeunload", stopTicketsWatcher);
+trackUxEvent({ event: "page_open", module: "help_desk" });
 
 if (window.lucide?.createIcons) window.lucide.createIcons();
 void init();

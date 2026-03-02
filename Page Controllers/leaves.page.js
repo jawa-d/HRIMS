@@ -69,7 +69,24 @@ function savePrefs() {
 }
 
 function normalizeStatus(status = "") {
-  return status === "pending" ? "submitted" : status;
+  const value = String(status || "").trim().toLowerCase();
+  if (value === "pending") return "submitted";
+  return value.replaceAll("-", "_").replaceAll(" ", "_");
+}
+
+function hashSeed(input = "") {
+  let hash = 0;
+  const value = String(input || "");
+  for (let i = 0; i < value.length; i += 1) {
+    hash = (hash * 31 + value.charCodeAt(i)) >>> 0;
+  }
+  return hash;
+}
+
+function leaveAccent(leave = {}) {
+  const source = leave.employeeCode || leave.employeeId || leave.employeeEmail || leave.requestId || leave.id || "";
+  const hue = hashSeed(source) % 360;
+  return `hsl(${hue} 72% 44%)`;
 }
 
 function calcLeaveDays(leave) {
@@ -231,11 +248,11 @@ function renderLeaves() {
 
   tbody.innerHTML = paged.items
     .map(
-      (leave) => `
-      <tr>
+      (leave, index) => `
+      <tr class="leave-row leave-status-${normalizeStatus(leave.status)}" style="--leave-accent:${leaveAccent(leave)};--row-index:${index};">
         <td>
           <div class="employee-cell">
-            <div>${leave.employeeName || leave.employeeId}</div>
+            <div class="employee-name"><span class="employee-dot"></span><span>${leave.employeeName || leave.employeeId}</span></div>
             <div class="employee-meta">ID: ${leave.employeeCode || leave.employeeId}</div>
           </div>
         </td>
@@ -264,7 +281,14 @@ function renderLeaves() {
   renderPagination(paged);
 
   tbody.querySelectorAll("button[data-action]").forEach((button) => {
-    button.addEventListener("click", () => handleLeaveAction(button.dataset.action, button.dataset.id));
+    button.addEventListener("click", async () => {
+      try {
+        await handleLeaveAction(button.dataset.action, button.dataset.id);
+      } catch (error) {
+        console.error("Leave action failed:", error);
+        showToast("error", "Leave action failed");
+      }
+    });
   });
 }
 
@@ -478,19 +502,27 @@ function exportCurrentRows() {
 }
 
 async function loadLeaves() {
-  showTableSkeleton(tbody, { rows: 6, cols: 7 });
-  const [leavesData, employeesData, balancesData] = await Promise.all([
-    listLeaves(),
-    listEmployees(),
-    listTimeoffBalances()
-  ]);
-  allLeaves = leavesData.map((item) => ({ ...item, status: normalizeStatus(item.status) }));
-  employees = employeesData;
-  balances = balancesData;
-  currentEmployee = resolveEmployeeForUser(user, employees);
-  leaves = role === "employee" ? allLeaves.filter((item) => matchesEmployee(item, currentEmployee, user)) : allLeaves;
-  updateBalanceSummary();
-  renderLeaves();
+  try {
+    showTableSkeleton(tbody, { rows: 6, cols: 7 });
+    const [leavesData, employeesData, balancesData] = await Promise.all([
+      listLeaves(),
+      listEmployees(),
+      listTimeoffBalances()
+    ]);
+    allLeaves = leavesData.map((item) => ({ ...item, status: normalizeStatus(item.status) }));
+    employees = employeesData;
+    balances = balancesData;
+    currentEmployee = resolveEmployeeForUser(user, employees);
+    leaves = role === "employee" ? allLeaves.filter((item) => matchesEmployee(item, currentEmployee, user)) : allLeaves;
+    updateBalanceSummary();
+    renderLeaves();
+  } catch (error) {
+    console.error("Load leaves failed:", error);
+    allLeaves = [];
+    leaves = [];
+    renderLeaves();
+    showToast("error", "Could not load leave requests");
+  }
 }
 
 addButton.addEventListener("click", openLeaveModal);

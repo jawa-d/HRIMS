@@ -4,6 +4,7 @@ import { renderNavbar } from "../Collaboration interface/ui-navbar.js";
 import { renderSidebar } from "../Collaboration interface/ui-sidebar.js";
 import { showToast } from "../Collaboration interface/ui-toast.js";
 import { showTableSkeleton } from "../Collaboration interface/ui-skeleton.js";
+import { trackUxEvent } from "../Services/telemetry.service.js";
 import { listPayroll, createPayroll, updatePayroll } from "../Services/payroll.service.js";
 import { listEmployees } from "../Services/employees.service.js";
 
@@ -83,6 +84,25 @@ function safeNumber(value) {
   const num = Number(value);
   if (!Number.isFinite(num)) return 0;
   return Math.max(0, num);
+}
+
+function normalizeStatus(status = "") {
+  return String(status || "").trim().toLowerCase().replaceAll("-", "_").replaceAll(" ", "_");
+}
+
+function hashSeed(input = "") {
+  let hash = 0;
+  const value = String(input || "");
+  for (let i = 0; i < value.length; i += 1) {
+    hash = (hash * 31 + value.charCodeAt(i)) >>> 0;
+  }
+  return hash;
+}
+
+function payrollAccent(emp = {}) {
+  const source = emp.empId || emp.id || emp.email || emp.fullName || "";
+  const hue = hashSeed(source) % 360;
+  return `hsl(${hue} 72% 44%)`;
 }
 
 function buildMonthOptions() {
@@ -180,7 +200,7 @@ function updateTotals() {
 
 function getMonthStatus(entries, totalEmployeeCount) {
   if (!entries.length) return "draft";
-  const approvedCount = entries.filter((entry) => entry.status === "approved").length;
+  const approvedCount = entries.filter((entry) => normalizeStatus(entry.status) === "approved").length;
   if (approvedCount === 0) return "processing";
   if (approvedCount >= totalEmployeeCount && totalEmployeeCount > 0) return "approved";
   return "processing";
@@ -197,7 +217,7 @@ function renderMonthStatus(totalEmployeeCount) {
   } else if (status === "processing") {
     monthStatusBadgeEl.classList.add("status-pill-processing");
     monthStatusBadgeEl.textContent = "In Progress";
-    const approvedCount = monthEntries.filter((entry) => entry.status === "approved").length;
+    const approvedCount = monthEntries.filter((entry) => normalizeStatus(entry.status) === "approved").length;
     monthStatusTextEl.textContent = `${approvedCount}/${Math.max(totalEmployeeCount, 1)} approved entries for ${monthLabelFromKey(currentMonth)}.`;
   } else {
     monthStatusBadgeEl.classList.add("status-pill-approved");
@@ -223,20 +243,20 @@ function renderPayroll() {
   const scopedVisibleCount = getScopedEmployees().filter((emp) => !removedSet.has(String(emp.id)) && !removedSet.has(String(emp.empId || ""))).length;
 
   tbody.innerHTML = visibleEmployees
-    .map((emp) => {
+    .map((emp, index) => {
       const entry = findPayrollEntryForEmployee(emp, monthEntries);
       const base = entry?.base ?? safeNumber(emp.salaryBase);
       const allowances = entry?.allowancesTotal ?? safeNumber(emp.allowances);
       const deductions = entry?.deductionsTotal ?? 0;
       const net = base + allowances - deductions;
-      const status = entry?.status || "draft";
+      const status = normalizeStatus(entry?.status || "draft");
       const statusClass = status === "approved" ? "entry-badge entry-badge-approved" : "entry-badge";
 
       return `
-        <tr data-employee-id="${emp.id}" data-employee-code="${emp.empId || ""}" data-entry-id="${entry?.id || ""}">
+        <tr class="payroll-row" style="--payroll-accent:${payrollAccent(emp)};--row-index:${index};" data-employee-id="${emp.id}" data-employee-code="${emp.empId || ""}" data-entry-id="${entry?.id || ""}">
           <td>
             <div class="employee-cell">
-              <div>${emp.fullName || emp.empId || emp.id}</div>
+              <div class="employee-name"><span class="employee-dot"></span><span>${emp.fullName || emp.empId || emp.id}</span></div>
               <div class="employee-meta">ID: ${emp.empId || emp.id} ${emp.email ? `| ${emp.email}` : ""}</div>
             </div>
           </td>
@@ -376,9 +396,14 @@ async function savePayroll(status = "draft", overridesByEmployee = null) {
     if (row) row.dataset.entryId = newId;
   });
 
-  await Promise.all(tasks);
-  showToast("success", status === "approved" ? "Payroll month approved" : "Payroll month saved");
-  await loadPayroll();
+  try {
+    await Promise.all(tasks);
+    showToast("success", status === "approved" ? "Payroll month approved" : "Payroll month saved");
+    await loadPayroll();
+  } catch (error) {
+    console.error("Save payroll failed:", error);
+    showToast("error", "Payroll save failed");
+  }
 }
 
 async function resetPayrollMonth() {
@@ -387,43 +412,48 @@ async function resetPayrollMonth() {
   if (!confirmed) return;
 
   const removedEntries = monthEntries.filter((entry) => entry.status === "removed");
-  if (removedEntries.length) {
-    await Promise.all(
-      removedEntries
-        .filter((entry) => entry.id)
-        .map((entry) =>
-          updatePayroll(entry.id, {
-            ...entry,
-            base: 0,
-            allowancesTotal: 0,
-            deductionsTotal: 0,
-            net: 0,
-            status: "draft"
-          })
-        )
-    );
-    await loadPayroll();
+  try {
+    if (removedEntries.length) {
+      await Promise.all(
+        removedEntries
+          .filter((entry) => entry.id)
+          .map((entry) =>
+            updatePayroll(entry.id, {
+              ...entry,
+              base: 0,
+              allowancesTotal: 0,
+              deductionsTotal: 0,
+              net: 0,
+              status: "draft"
+            })
+          )
+      );
+      await loadPayroll();
+    }
+
+    const scopedEmployees = getScopedEmployees();
+    const overridesByEmployee = {};
+    scopedEmployees.forEach((emp) => {
+      overridesByEmployee[String(emp.id)] = { base: 0, allowances: 0, deductions: 0 };
+    });
+
+    const rows = Array.from(tbody.querySelectorAll("tr"));
+    rows.forEach((row) => {
+      const baseInput = row.querySelector('[data-field="base"]');
+      const allowancesInput = row.querySelector('[data-field="allowances"]');
+      const deductionsInput = row.querySelector('[data-field="deductions"]');
+      if (baseInput) baseInput.value = "0";
+      if (allowancesInput) allowancesInput.value = "0";
+      if (deductionsInput) deductionsInput.value = "0";
+      updateRowNet(row);
+    });
+    updateTotals();
+
+    await savePayroll("draft", overridesByEmployee);
+  } catch (error) {
+    console.error("Reset payroll failed:", error);
+    showToast("error", "Payroll reset failed");
   }
-
-  const scopedEmployees = getScopedEmployees();
-  const overridesByEmployee = {};
-  scopedEmployees.forEach((emp) => {
-    overridesByEmployee[String(emp.id)] = { base: 0, allowances: 0, deductions: 0 };
-  });
-
-  const rows = Array.from(tbody.querySelectorAll("tr"));
-  rows.forEach((row) => {
-    const baseInput = row.querySelector('[data-field="base"]');
-    const allowancesInput = row.querySelector('[data-field="allowances"]');
-    const deductionsInput = row.querySelector('[data-field="deductions"]');
-    if (baseInput) baseInput.value = "0";
-    if (allowancesInput) allowancesInput.value = "0";
-    if (deductionsInput) deductionsInput.value = "0";
-    updateRowNet(row);
-  });
-  updateTotals();
-
-  await savePayroll("draft", overridesByEmployee);
 }
 
 function buildExportData() {
@@ -542,10 +572,33 @@ async function loadEmployees() {
 }
 
 async function loadPayroll() {
-  showTableSkeleton(tbody, { rows: 6, cols: 7 });
-  const filter = isEmployee ? { employeeId: user.uid, month: currentMonth } : { month: currentMonth };
-  payrollEntries = await listPayroll(filter);
-  renderPayroll();
+  try {
+    showTableSkeleton(tbody, { rows: 6, cols: 7 });
+    if (isEmployee) {
+      const byUid = await listPayroll({ employeeId: user.uid, month: currentMonth });
+      if (byUid.length) {
+        payrollEntries = byUid;
+      } else {
+        const allMonth = await listPayroll({ month: currentMonth });
+        const mail = String(user?.email || "").trim().toLowerCase();
+        payrollEntries = allMonth.filter((item) => {
+          const id = String(item.employeeId || "").trim();
+          const code = String(item.employeeCode || "").trim();
+          const emp = employees.find((e) => String(e.id) === id || (code && String(e.empId || "") === code));
+          const empMail = String(emp?.email || "").trim().toLowerCase();
+          return id === String(user?.uid || "").trim() || empMail === mail;
+        });
+      }
+    } else {
+      payrollEntries = await listPayroll({ month: currentMonth });
+    }
+    renderPayroll();
+  } catch (error) {
+    console.error("Load payroll failed:", error);
+    payrollEntries = [];
+    renderPayroll();
+    showToast("error", "Could not load payroll data");
+  }
 }
 
 buildMonthOptions();
@@ -563,6 +616,7 @@ window.addEventListener("global-search", (event) => {
   searchInput.value = event.detail || "";
   renderPayroll();
 });
+trackUxEvent({ event: "page_open", module: "payroll" });
 
 (async () => {
   try {

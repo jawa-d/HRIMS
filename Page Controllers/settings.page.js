@@ -9,6 +9,7 @@ import { listUsers, upsertUser, deleteUser } from "../Services/users.service.js"
 import { getSettingsRbacConfig, upsertSettingsRbacConfig } from "../Services/settings-config.service.js";
 import { logSecurityEvent } from "../Services/security-audit.service.js";
 import { enforceAdminPagesCode } from "../Services/admin-lock.service.js";
+import { trackUxEvent } from "../Services/telemetry.service.js";
 
 if (!enforceAuth("settings")) {
   throw new Error("Unauthorized");
@@ -111,6 +112,43 @@ function uidFromEmail(email) {
   return email.toLowerCase().replace(/[^a-z0-9]/g, "-");
 }
 
+function hashSeed(input = "") {
+  let hash = 0;
+  const value = String(input || "");
+  for (let i = 0; i < value.length; i += 1) {
+    hash = (hash * 31 + value.charCodeAt(i)) >>> 0;
+  }
+  return hash;
+}
+
+function settingsAccent(input = "") {
+  return `hsl(${hashSeed(input) % 360} 72% 44%)`;
+}
+
+function escapeHtml(value = "") {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function statusTone(value = "") {
+  const normalized = String(value || "").toLowerCase();
+  if (normalized === "inactive") return "inactive";
+  if (normalized === "suspended" || normalized === "archived") return "suspended";
+  return "active";
+}
+
+async function safeLogSecurityEvent(payload) {
+  try {
+    await logSecurityEvent(payload);
+  } catch (error) {
+    console.warn("Security audit log failed:", error);
+  }
+}
+
 function normalizeUser(raw = {}) {
   const uid = raw.uid || raw.id || uidFromEmail(raw.email);
   return {
@@ -143,12 +181,12 @@ function renderRoleTable() {
     </thead>
     <tbody>
       ${ROLES.map(
-        (roleKey) => `
-        <tr>
-          <td><span class="badge settings-role-badge">${roleKey}</span></td>
+        (roleKey, index) => `
+        <tr class="settings-role-row" style="--settings-accent:${settingsAccent(`role-${roleKey}`)};--row-index:${index};">
+          <td><span class="badge settings-role-badge">${escapeHtml(roleKey)}</span></td>
           ${MENU_ITEMS.map((item) => {
             const checked = defaultPagesForRole(roleKey).includes(item.key);
-            return `<td><input type="checkbox" data-role="${roleKey}" data-key="${item.key}" ${checked ? "checked" : ""} ${!canManageUsers || isManager ? "disabled" : ""} /></td>`;
+            return `<td><input type="checkbox" data-role="${escapeHtml(roleKey)}" data-key="${escapeHtml(item.key)}" ${checked ? "checked" : ""} ${!canManageUsers || isManager ? "disabled" : ""} /></td>`;
           }).join("")}
         </tr>
       `
@@ -182,23 +220,30 @@ function renderUsersTable() {
       ${
         filtered.length
           ? filtered
-              .map((item) => {
+              .map((item, index) => {
                 const pages = userAllowedPages(item).length;
+                const accent = settingsAccent(item.uid || item.email || item.name || item.role);
+                const tone = statusTone(item.status);
                 return `
-                  <tr>
-                    <td>${item.name || "-"}</td>
-                    <td>${item.email || "-"}</td>
-                    <td>${item.uid}</td>
-                    <td><span class="badge settings-role-badge">${item.role}</span></td>
-                    <td>${item.status}</td>
+                  <tr class="settings-user-row status-${tone}" style="--settings-accent:${accent};--row-index:${index};">
+                    <td>
+                      <span class="settings-user-name">
+                        <span class="settings-user-dot"></span>
+                        <span>${escapeHtml(item.name || "-")}</span>
+                      </span>
+                    </td>
+                    <td>${escapeHtml(item.email || "-")}</td>
+                    <td>${escapeHtml(item.uid)}</td>
+                    <td><span class="badge settings-role-badge">${escapeHtml(item.role)}</span></td>
+                    <td><span class="badge settings-status-badge">${escapeHtml(item.status || "active")}</span></td>
                     <td>${pages}</td>
                     <td>
                       ${
                         canManageTargetUser(item)
                           ? `
-                          <button class="btn btn-ghost" data-action="edit" data-id="${item.uid}">Edit</button>
-                          <button class="btn btn-ghost" data-action="perm" data-id="${item.uid}">Permissions</button>
-                          <button class="btn btn-ghost" data-action="delete" data-id="${item.uid}" ${item.uid === user.uid ? "disabled" : ""}>Delete</button>
+                          <button class="btn btn-ghost" data-action="edit" data-id="${escapeHtml(item.uid)}">Edit</button>
+                          <button class="btn btn-ghost" data-action="perm" data-id="${escapeHtml(item.uid)}">Permissions</button>
+                          <button class="btn btn-ghost" data-action="delete" data-id="${escapeHtml(item.uid)}" ${item.uid === user.uid ? "disabled" : ""}>Delete</button>
                         `
                           : "<span class=\"text-muted\">View only</span>"
                       }
@@ -315,7 +360,7 @@ function openUserModal(existing = null) {
 
           renderUsersTable();
           renderSidebar("settings");
-          await logSecurityEvent({
+          await safeLogSecurityEvent({
             action: isEdit ? "user_updated" : "user_created",
             severity: "info",
             status: "success",
@@ -356,7 +401,7 @@ function openPermissionsModal(uid) {
           }
           renderUsersTable();
           renderSidebar("settings");
-          await logSecurityEvent({
+          await safeLogSecurityEvent({
             action: "permissions_updated",
             severity: "warning",
             status: "success",
@@ -401,7 +446,7 @@ async function handleUserAction(action, uid) {
       showToast("info", "Deleted locally. Firebase sync can be completed later.");
     }
     renderUsersTable();
-    await logSecurityEvent({
+    await safeLogSecurityEvent({
       action: "user_deleted",
       severity: "critical",
       status: "success",
@@ -447,42 +492,50 @@ async function loadRbacConfig() {
   }
 }
 
-rolesTable.addEventListener("change", (event) => {
-  if (!canManageUsers || isManager) return;
-  if (!event.target.matches("input[type=checkbox]")) return;
-  const roleKey = event.target.dataset.role;
-  const key = event.target.dataset.key;
-  const current = new Set(defaultPagesForRole(roleKey));
-  if (event.target.checked) current.add(key);
-  else current.delete(key);
-  roleVisibility[roleKey] = Array.from(current);
-  persistRbacLocal();
-  syncRbacRemoteSafe();
-  renderUsersTable();
-  renderSidebar("settings");
-  logSecurityEvent({
-    action: "role_template_updated",
-    severity: "warning",
-    status: "success",
-    actorUid: user?.uid || "",
-    actorEmail: user?.email || "",
-    actorRole: role || "",
-    entity: "roles",
-    entityId: roleKey,
-    message: `Role template changed for ${roleKey}.`
+if (rolesTable) {
+  rolesTable.addEventListener("change", (event) => {
+    if (!canManageUsers || isManager) return;
+    if (!event.target.matches("input[type=checkbox]")) return;
+    const roleKey = event.target.dataset.role;
+    const key = event.target.dataset.key;
+    if (!roleKey || !key) return;
+
+    const current = new Set(defaultPagesForRole(roleKey));
+    if (event.target.checked) current.add(key);
+    else current.delete(key);
+    roleVisibility[roleKey] = Array.from(current);
+    persistRbacLocal();
+    syncRbacRemoteSafe();
+    renderUsersTable();
+    renderSidebar("settings");
+    void safeLogSecurityEvent({
+      action: "role_template_updated",
+      severity: "warning",
+      status: "success",
+      actorUid: user?.uid || "",
+      actorEmail: user?.email || "",
+      actorRole: role || "",
+      entity: "roles",
+      entityId: roleKey,
+      message: `Role template changed for ${roleKey}.`
+    });
+    showToast("info", "Role template updated");
   });
-  showToast("info", "Role template updated");
-});
+}
 
-themeBtn.addEventListener("click", () => {
-  toggleTheme();
-  showToast("success", "Theme updated");
-});
+if (themeBtn) {
+  themeBtn.addEventListener("click", () => {
+    toggleTheme();
+    showToast("success", "Theme updated");
+  });
+}
 
-langBtn.addEventListener("click", () => {
-  toggleLanguage();
-  showToast("success", "Language updated");
-});
+if (langBtn) {
+  langBtn.addEventListener("click", () => {
+    toggleLanguage();
+    showToast("success", "Language updated");
+  });
+}
 
 if (userSearch) {
   userSearch.addEventListener("input", renderUsersTable);
@@ -496,7 +549,16 @@ if (addUserBtn) {
 }
 
 (async () => {
-  await loadRbacConfig();
-  renderRoleTable();
-  await loadUsers();
+  try {
+    await loadRbacConfig();
+    renderRoleTable();
+    await loadUsers();
+  } catch (error) {
+    console.error("Settings page bootstrap failed:", error);
+    showToast("error", "Settings page failed to load completely.");
+    if (rolesTable) renderRoleTable();
+    if (usersTable) renderUsersTable();
+  }
 })();
+
+trackUxEvent({ event: "page_open", module: "settings" });

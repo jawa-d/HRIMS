@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HRMS | Cashbox</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../HRMS%20CSS/tokens.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/global.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/components.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/navbar.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/sidebar.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/modal.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/toast.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/cashbox.css" />
+</head>
+<body data-page="cashbox">
+  <div id="app" class="app-shell">
+    <div id="sidebar-root"></div>
+    <div class="main-content">
+      <div id="navbar-root"></div>
+      <main class="page">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title" data-i18n="cashbox.title">Daily Cashbox</h1>
+            <p class="text-muted">Daily expense journal for petty cash operations.</p>
+          </div>
+          <div class="cashbox-head-actions">
+            <button class="btn btn-ghost" id="cashbox-export-excel-btn">
+              <i data-lucide="file-spreadsheet"></i>
+              Export Excel
+            </button>
+            <button class="btn btn-ghost" id="cashbox-export-pdf-btn">
+              <i data-lucide="file-text"></i>
+              Export PDF
+            </button>
+            <button class="btn btn-ghost" id="cashbox-opening-btn">
+              <i data-lucide="piggy-bank"></i>
+              Set Opening Balance
+            </button>
+            <button class="btn btn-primary" id="cashbox-add-btn">
+              <i data-lucide="plus"></i>
+              Add Expense
+            </button>
+          </div>
+        </div>
+
+        <section class="cashbox-tools">
+          <input class="input" id="cashbox-date-filter" type="date" />
+          <input class="input" id="cashbox-search" type="search" placeholder="Search category, notes..." />
+        </section>
+
+        <section class="cashbox-summary grid-5">
+          <div class="card summary-card summary-opening">
+            <div class="text-muted">Opening Balance</div>
+            <div class="summary-value" id="cashbox-opening-balance">0</div>
+          </div>
+          <div class="card summary-card summary-day">
+            <div class="text-muted">Selected Day</div>
+            <div class="summary-value" id="cashbox-today-total">0</div>
+          </div>
+          <div class="card summary-card summary-month">
+            <div class="text-muted">Current Month</div>
+            <div class="summary-value" id="cashbox-month-total">0</div>
+          </div>
+          <div class="card summary-card summary-count">
+            <div class="text-muted">All Entries</div>
+            <div class="summary-value" id="cashbox-count">0</div>
+          </div>
+          <div class="card summary-card summary-net">
+            <div class="text-muted">Cashbox Net</div>
+            <div class="summary-value" id="cashbox-net-balance">0</div>
+          </div>
+        </section>
+
+        <div class="card">
+          <div class="table-scroll">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Journal No</th>
+                  <th>Date</th>
+                  <th>Amount</th>
+                  <th>Category</th>
+                  <th>Expense Receipt No</th>
+                  <th>External Receipt No</th>
+                  <th>Notes</th>
+                  <th>Attachment</th>
+                  <th>Created By</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="cashbox-body"></tbody>
+            </table>
+          </div>
+          <div id="cashbox-empty" class="empty-state hidden">No expense entries found.</div>
+        </div>
+      </main>
+    </div>
+  </div>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+  <script type="module" src="../Page%20Controllers/cashbox.page.js"></script>
+</body>
+</html>

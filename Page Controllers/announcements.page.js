@@ -5,6 +5,7 @@ import { renderSidebar } from "../Collaboration interface/ui-sidebar.js";
 import { openModal } from "../Collaboration interface/ui-modal.js";
 import { showToast } from "../Collaboration interface/ui-toast.js";
 import { canDo } from "../Services/permissions.service.js";
+import { trackUxEvent } from "../Services/telemetry.service.js";
 import { createNotification } from "../Services/notifications.service.js";
 import { listUsers } from "../Services/users.service.js";
 import {
@@ -48,6 +49,25 @@ let announcements = [];
 let users = [];
 let unsubscribeAnnouncements = null;
 const COMPANY_NAME_AR = "\u0634\u0631\u0643\u0629 \u0648\u0627\u062F\u064A \u0627\u0644\u0631\u0627\u0641\u062F\u064A\u0646 \u0644\u0644\u062A\u0623\u0645\u064A\u0646 \u0627\u0644\u062A\u0643\u0627\u0641\u0644\u064A";
+
+function normalizeStatus(value = "") {
+  return String(value || "").trim().toLowerCase().replaceAll("-", "_").replaceAll(" ", "_");
+}
+
+function hashSeed(input = "") {
+  let hash = 0;
+  const value = String(input || "");
+  for (let i = 0; i < value.length; i += 1) {
+    hash = (hash * 31 + value.charCodeAt(i)) >>> 0;
+  }
+  return hash;
+}
+
+function announcementAccent(item = {}) {
+  const source = item.id || item.title || item.authorUid || item.authorName || "";
+  const hue = hashSeed(source) % 360;
+  return `hsl(${hue} 72% 44%)`;
+}
 
 async function runSafely(task, fallback = null) {
   try {
@@ -119,7 +139,7 @@ function formatDate(value) {
 
 function isVisibleForRole(item) {
   if (canManage) return true;
-  if (item.status !== "published") return false;
+  if (normalizeStatus(item.status) !== "published") return false;
   return item.audience === "all" || item.audience === role;
 }
 
@@ -131,7 +151,7 @@ function filteredAnnouncements() {
     .filter((item) => isVisibleForRole(item))
     .filter((item) => {
       const hitQuery = !query || `${item.title || ""} ${item.body || ""} ${item.authorName || ""}`.toLowerCase().includes(query);
-      const hitStatus = !status || item.status === status;
+      const hitStatus = !status || normalizeStatus(item.status) === status;
       const hitAudience = !audience || item.audience === audience;
       return hitQuery && hitStatus && hitAudience;
     })
@@ -145,8 +165,8 @@ function filteredAnnouncements() {
 
 function renderKpis(items) {
   kpiTotalEl.textContent = String(items.length);
-  kpiPublishedEl.textContent = String(items.filter((item) => item.status === "published").length);
-  kpiDraftEl.textContent = String(items.filter((item) => item.status === "draft").length);
+  kpiPublishedEl.textContent = String(items.filter((item) => normalizeStatus(item.status) === "published").length);
+  kpiDraftEl.textContent = String(items.filter((item) => normalizeStatus(item.status) === "draft").length);
   kpiPinnedEl.textContent = String(items.filter((item) => item.pinned).length);
 }
 
@@ -195,7 +215,7 @@ function collectAnnouncementForm(existing = {}) {
     whatsappRecipientName: document.getElementById("ann-whatsapp-recipient")?.value.trim() || "",
     sendWhatsAppNow: Boolean(document.getElementById("ann-send-whatsapp")?.checked),
     audience: document.getElementById("ann-audience-input").value,
-    status: document.getElementById("ann-status-input").value,
+    status: normalizeStatus(document.getElementById("ann-status-input").value),
     pinned: Boolean(document.getElementById("ann-pinned").checked),
     expiresAt,
     authorUid: existing.authorUid || user?.uid || "",
@@ -213,35 +233,40 @@ function openAnnouncementModal(item = null) {
         label: "Save",
         className: "btn btn-primary",
         onClick: async () => {
-          const payload = collectAnnouncementForm(item || {});
-          if (!payload.title) {
-            showToast("error", "Title is required");
-            return;
+          try {
+            const payload = collectAnnouncementForm(item || {});
+            if (!payload.title) {
+              showToast("error", "Title is required");
+              return;
+            }
+            if (!payload.body) {
+              showToast("error", "Message is required");
+              return;
+            }
+            if (isEdit) {
+              await updateAnnouncement(item.id, payload);
+              if (payload.status === "published") {
+                await notifyAnnouncementPublished(payload);
+              }
+              if (payload.sendWhatsAppNow) {
+                await openWhatsAppForAnnouncement(payload);
+              }
+              showToast("success", "Announcement updated");
+            } else {
+              await createAnnouncement(payload);
+              if (payload.status === "published") {
+                await notifyAnnouncementPublished(payload);
+              }
+              if (payload.sendWhatsAppNow) {
+                await openWhatsAppForAnnouncement(payload);
+              }
+              showToast("success", "Announcement posted");
+            }
+            await loadAnnouncementsData();
+          } catch (error) {
+            console.error("Save announcement failed:", error);
+            showToast("error", "Failed to save announcement");
           }
-          if (!payload.body) {
-            showToast("error", "Message is required");
-            return;
-          }
-          if (isEdit) {
-            await updateAnnouncement(item.id, payload);
-            if (payload.status === "published") {
-              await notifyAnnouncementPublished(payload);
-            }
-            if (payload.sendWhatsAppNow) {
-              await openWhatsAppForAnnouncement(payload);
-            }
-            showToast("success", "Announcement updated");
-          } else {
-            await createAnnouncement(payload);
-            if (payload.status === "published") {
-              await notifyAnnouncementPublished(payload);
-            }
-            if (payload.sendWhatsAppNow) {
-              await openWhatsAppForAnnouncement(payload);
-            }
-            showToast("success", "Announcement posted");
-          }
-          await loadAnnouncementsData();
         }
       },
       { label: "Cancel", className: "btn btn-ghost" }
@@ -290,14 +315,15 @@ async function handleAction(action, id) {
 function renderAnnouncements() {
   const items = filteredAnnouncements();
   listEl.innerHTML = items
-    .map((item) => {
+    .map((item, index) => {
       const createdAt = item?.createdAt?.seconds ? new Date(item.createdAt.seconds * 1000).toLocaleString() : "-";
+      const status = normalizeStatus(item.status || "draft");
       return `
-      <article class="card ann-card">
+      <article class="card ann-card" style="--ann-accent:${announcementAccent(item)};--row-index:${index};">
         <div class="ann-card-head">
-          <h3 class="ann-card-title">${item.title || "-"}</h3>
+          <h3 class="ann-card-title"><span class="ann-dot"></span><span>${item.title || "-"}</span></h3>
           <div class="ann-meta">
-            <span class="badge ann-status-${item.status || "draft"}">${(item.status || "draft").toUpperCase()}</span>
+            <span class="badge ann-status-${status}">${status.toUpperCase()}</span>
             ${item.pinned ? `<span class="badge ann-pin">PINNED</span>` : ""}
             <span class="badge">${(item.audience || "all").toUpperCase()}</span>
           </div>
@@ -312,7 +338,7 @@ function renderAnnouncements() {
               <button class="btn btn-ghost" data-action="edit" data-id="${item.id}">Edit</button>
               ${item.whatsappNumber ? `<button class="btn btn-ghost" data-action="send-whatsapp" data-id="${item.id}">Send WhatsApp</button>` : ""}
               ${
-                item.status === "published"
+                status === "published"
                   ? `<button class="btn btn-ghost" data-action="unpublish" data-id="${item.id}">Unpublish</button>`
                   : `<button class="btn btn-ghost" data-action="publish" data-id="${item.id}">Publish</button>`
               }
@@ -364,7 +390,7 @@ function isTargetRole(targetRole, audience) {
 }
 
 async function notifyAnnouncementPublished(item) {
-  if (item.status !== "published") return;
+  if (normalizeStatus(item.status) !== "published") return;
   const targets = users.filter((u) => isTargetRole(String(u.role || ""), item.audience || "all"));
   await Promise.all(
     targets
@@ -396,6 +422,7 @@ window.addEventListener("global-search", (event) => {
 window.addEventListener("beforeunload", () => {
   if (typeof unsubscribeAnnouncements === "function") unsubscribeAnnouncements();
 });
+trackUxEvent({ event: "page_open", module: "announcements" });
 
 (async () => {
   await runSafely(() => loadUsersData(), []);
