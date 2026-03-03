@@ -26,6 +26,12 @@
   gap: var(--space-4);
 }
 
+.grid-9 {
+  display: grid;
+  grid-template-columns: repeat(9, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
 .summary-card {
   border: 1px solid color-mix(in srgb, var(--primary-soft) 38%, var(--border));
   background: linear-gradient(160deg, var(--surface-strong), color-mix(in srgb, var(--surface) 86%, var(--primary-soft)));
@@ -78,6 +84,16 @@
 .summary-advance-deduction {
   border-color: color-mix(in srgb, #7c3aed 38%, var(--border));
   background: linear-gradient(160deg, color-mix(in srgb, #7c3aed 12%, var(--surface)), var(--surface-strong));
+}
+
+.summary-month-movement {
+  border-color: color-mix(in srgb, #0f766e 38%, var(--border));
+  background: linear-gradient(160deg, color-mix(in srgb, #0f766e 12%, var(--surface)), var(--surface-strong));
+}
+
+.summary-closure-rate {
+  border-color: color-mix(in srgb, #334155 38%, var(--border));
+  background: linear-gradient(160deg, color-mix(in srgb, #334155 12%, var(--surface)), var(--surface-strong));
 }
 
 .acc-links-card {
@@ -179,6 +195,10 @@
   .grid-7 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .grid-9 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 720px) {
@@ -191,6 +211,10 @@
   }
 
   .grid-7 {
+    grid-template-columns: 1fr;
+  }
+
+  .grid-9 {
     grid-template-columns: 1fr;
   }
 }

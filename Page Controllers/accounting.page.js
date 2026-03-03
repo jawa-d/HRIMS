@@ -38,6 +38,8 @@ const totalOutEl = document.getElementById("acc-total-out");
 const totalExpenseEl = document.getElementById("acc-total-expense");
 const advanceCountEl = document.getElementById("acc-advance-count");
 const advanceDeductionEl = document.getElementById("acc-advance-deduction");
+const monthMovementEl = document.getElementById("acc-month-movement");
+const advanceClosureRateEl = document.getElementById("acc-advance-closure-rate");
 const netEl = document.getElementById("acc-total-net");
 const recentBody = document.getElementById("accounting-recent-body");
 const emptyState = document.getElementById("accounting-empty");
@@ -100,8 +102,15 @@ function renderSummary() {
   const totalOut = monthRows.filter((r) => r.type === "out").reduce((sum, r) => sum + safeNumber(r.amount), 0);
   const totalExpense = monthRows.filter((r) => r.type === "expense").reduce((sum, r) => sum + safeNumber(r.amount), 0);
   const openAdvances = obligations.filter((item) => String(item.kind || "").toLowerCase() === "advance" && String(item.status || "").toLowerCase() === "open");
+  const allAdvances = obligations.filter((item) => String(item.kind || "").toLowerCase() === "advance");
+  const closedAdvances = allAdvances.filter((item) => {
+    const stage = String(item.workflowStage || "").toLowerCase();
+    return stage === "closed" || String(item.status || "").toLowerCase() === "settled";
+  });
   const openAdvanceCount = openAdvances.length;
   const openAdvanceDue = openAdvances.reduce((sum, item) => sum + safeNumber(item.balance), 0);
+  const monthMovement = totalIn - totalOut - totalExpense;
+  const closureRate = allAdvances.length ? Math.round((closedAdvances.length / allAdvances.length) * 100) : 0;
   const totalNet = openingBalance + totalIn - totalOut - totalExpense;
 
   if (openingBalanceEl) openingBalanceEl.textContent = currency(openingBalance);
@@ -110,6 +119,8 @@ function renderSummary() {
   totalExpenseEl.textContent = currency(totalExpense);
   if (advanceCountEl) advanceCountEl.textContent = String(openAdvanceCount);
   if (advanceDeductionEl) advanceDeductionEl.textContent = currency(openAdvanceDue);
+  if (monthMovementEl) monthMovementEl.textContent = currency(monthMovement);
+  if (advanceClosureRateEl) advanceClosureRateEl.textContent = `${closureRate}%`;
   netEl.textContent = currency(totalNet);
 }
 

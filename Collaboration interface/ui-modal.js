@@ -1,3 +1,5 @@
+import { translateDom } from "../Languages/i18n.js";
+
 let modalRoot;
 function ensureModal() {
   if (!modalRoot) {
@@ -53,6 +55,7 @@ export function openModal({ title, content, actions = [] }) {
     });
     actionsRoot.appendChild(button);
   });
+  translateDom(modalRoot);
   modalRoot.classList.add("open");
 }
 export function closeModal() {

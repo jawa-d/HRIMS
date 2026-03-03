@@ -1,26 +1,33 @@
 import { enforceAuth, getRole, getUserProfile } from "../Aman/guard.js";
-import { initI18n } from "../Languages/i18n.js";
+import { initI18n, t, translateDom } from "../Languages/i18n.js";
 import { renderNavbar } from "../Collaboration interface/ui-navbar.js";
 import { renderSidebar } from "../Collaboration interface/ui-sidebar.js";
 import { openModal } from "../Collaboration interface/ui-modal.js";
 import { showToast } from "../Collaboration interface/ui-toast.js";
 import {
+  approveAdvanceObligation,
+  closeAdvanceObligation,
   closeAccountingMonth,
   closeAccountingYear,
   createAccountingObligation,
   createChartAccount,
+  disburseAdvanceObligation,
   deleteAccountingObligation,
   deleteChartAccount,
   getAccountingClosures,
+  listAccountingObligationMovements,
   listAccountingObligations,
   listChartAccounts,
-  closeAdvanceObligation,
   postAccountingObligationMovement,
+  rejectAdvanceObligation,
   reopenAccountingMonth,
   reopenAccountingYear,
   updateAccountingObligation,
   updateChartAccount
 } from "../Services/accounting.service.js";
+import { canDo } from "../Services/permissions.service.js";
+import { listEmployees } from "../Services/employees.service.js";
+import { createNotification } from "../Services/notifications.service.js";
 import { trackUxEvent } from "../Services/telemetry.service.js";
 
 if (!enforceAuth("accounting_admin")) {
@@ -37,6 +44,10 @@ if (window.lucide?.createIcons) {
 }
 
 const canManage = ["super_admin", "hr_admin"].includes(role);
+const canAdvanceRequest = canDo({ role, entity: "accounting", action: "advance_request" });
+const canAdvanceApprove = canDo({ role, entity: "accounting", action: "advance_approve" });
+const canAdvanceDisburse = canDo({ role, entity: "accounting", action: "advance_disburse" });
+const canAdvanceClose = canDo({ role, entity: "accounting", action: "advance_close" });
 const coaBody = document.getElementById("coa-body");
 const oblBody = document.getElementById("obl-body");
 const coaAddBtn = document.getElementById("coa-add-btn");
@@ -62,6 +73,8 @@ const closedYearsList = document.getElementById("closed-years-list");
 
 let chart = [];
 let obligations = [];
+let obligationMovements = [];
+let employees = [];
 let closures = { months: {}, years: {} };
 
 function money(value) {
@@ -78,11 +91,42 @@ function todayKey() {
 
 function obligationKindLabel(kind = "") {
   const normalized = norm(kind);
-  if (normalized === "custody") return "Custody (عهد)";
-  if (normalized === "advance") return "Advance (سلف)";
-  if (normalized === "receivable") return "AR Receivable (ذمم مدينة)";
-  if (normalized === "payable") return "AP Payable (ذمم دائنة)";
+  if (normalized === "custody") return t("accounting.kind.custody");
+  if (normalized === "advance") return t("accounting.kind.advance");
+  if (normalized === "receivable") return t("accounting.kind.receivable");
+  if (normalized === "payable") return t("accounting.kind.payable");
   return kind || "-";
+}
+
+function obligationStageLabel(stage = "") {
+  const normalized = norm(stage);
+  if (normalized === "requested") return t("accounting.workflow.requested");
+  if (normalized === "approved") return t("accounting.workflow.approved");
+  if (normalized === "disbursed") return t("accounting.workflow.disbursed");
+  if (normalized === "closed") return t("accounting.workflow.closed");
+  if (normalized === "rejected") return t("accounting.workflow.rejected");
+  return stage || "-";
+}
+
+function obligationStatusLabel(status = "") {
+  const normalized = norm(status);
+  if (normalized === "open") return t("accounting_admin.status_open");
+  if (normalized === "settled") return t("accounting_admin.status_settled");
+  return status || "-";
+}
+
+function isOverdue(item = {}) {
+  const due = String(item.dueDate || "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(due)) return false;
+  return due < todayKey() && norm(item.status) === "open";
+}
+
+function stageChipClass(stage = "") {
+  const normalized = norm(stage);
+  if (normalized === "approved" || normalized === "closed") return "badge acc-type-in";
+  if (normalized === "disbursed") return "badge acc-type-out";
+  if (normalized === "rejected") return "badge acc-type-expense";
+  return "badge";
 }
 
 function filteredChartRows() {
@@ -99,7 +143,7 @@ function filteredObligationRows() {
   const query = norm(oblSearchInput?.value);
   const status = norm(oblStatusFilter?.value);
   return obligations.filter((item) => {
-    const matchesStatus = !status || norm(item.status) === status;
+    const matchesStatus = !status || norm(item.status) === status || norm(item.workflowStage) === status;
     if (!matchesStatus) return false;
     if (!query) return true;
     return [item.kind, item.partyName, item.partyRef, item.status, item.notes]
@@ -120,8 +164,8 @@ function renderObligationStats() {
 function renderClosures() {
   const months = Object.keys(closures.months || {}).sort();
   const years = Object.keys(closures.years || {}).sort();
-  closedMonthsList.innerHTML = months.length ? months.map((m) => `<span class="chip">${m}</span>`).join("") : "<span class='text-muted'>None</span>";
-  closedYearsList.innerHTML = years.length ? years.map((y) => `<span class="chip">${y}</span>`).join("") : "<span class='text-muted'>None</span>";
+  closedMonthsList.innerHTML = months.length ? months.map((m) => `<span class="chip">${m}</span>`).join("") : `<span class='text-muted'>${t("common.no")}</span>`;
+  closedYearsList.innerHTML = years.length ? years.map((y) => `<span class="chip">${y}</span>`).join("") : `<span class='text-muted'>${t("common.no")}</span>`;
 }
 
 function renderChart() {
@@ -138,10 +182,10 @@ function renderChart() {
             ${
               canManage
                 ? `
-              <button class="btn btn-ghost" data-coa-action="edit" data-id="${item.id}">Edit</button>
-              <button class="btn btn-ghost" data-coa-action="delete" data-id="${item.id}">Delete</button>
+              <button class="btn btn-ghost" data-coa-action="edit" data-id="${item.id}">${t("common.edit")}</button>
+              <button class="btn btn-ghost" data-coa-action="delete" data-id="${item.id}">${t("common.delete")}</button>
             `
-                : "<span class='text-muted'>View only</span>"
+                : `<span class='text-muted'>${t("common.view_only")}</span>`
             }
           </td>
         </tr>
@@ -162,22 +206,43 @@ function renderObligations() {
   oblBody.innerHTML = filteredObligationRows()
     .map((item) => {
       const isAdvance = norm(item.kind) === "advance";
+      const stage = norm(item.workflowStage || "requested");
+      const stageChip = `<span class="${stageChipClass(stage)}">${obligationStageLabel(stage)}</span>`;
+      const advanceActions = [];
+      if (stage === "requested" && canAdvanceApprove) {
+        advanceActions.push(`<button class="btn btn-ghost" data-obl-action="approve" data-id="${item.id}">${t("accounting.action.approve")}</button>`);
+        advanceActions.push(`<button class="btn btn-ghost" data-obl-action="reject" data-id="${item.id}">${t("accounting.action.reject")}</button>`);
+      }
+      if (stage === "approved" && canAdvanceDisburse) {
+        advanceActions.push(`<button class="btn btn-ghost" data-obl-action="disburse" data-id="${item.id}">${t("accounting.action.disburse")}</button>`);
+      }
+      if (stage === "disbursed" && canAdvanceClose) {
+        advanceActions.push(`<button class="btn btn-ghost" data-obl-action="close" data-id="${item.id}">${t("accounting.action.close")}</button>`);
+      }
+      if (canManage) {
+        advanceActions.push(`<button class="btn btn-ghost" data-obl-action="edit" data-id="${item.id}">${t("common.edit")}</button>`);
+        advanceActions.push(`<button class="btn btn-ghost" data-obl-action="delete" data-id="${item.id}">${t("common.delete")}</button>`);
+      }
       return `
-        <tr>
+        <tr class="${isOverdue(item) ? "type-expense" : ""}">
           <td>${obligationKindLabel(item.kind)}</td>
           <td>${item.partyName || "-"}</td>
           <td>${item.partyRef || "-"}</td>
           <td>${money(item.balance)}</td>
-          <td>${item.status || "-"}</td>
+          <td>${obligationStatusLabel(item.status)}<br><small class="text-muted">${stageChip}</small></td>
+          <td>${item.employeeCode || "-"}<br><small class="text-muted">${item.departmentName || "-"}</small></td>
+          <td>${item.dueDate || "-"}</td>
           <td>
             ${
-              canManage
+              isAdvance
+                ? (advanceActions.join("") || `<span class='text-muted'>${t("common.view_only")}</span>`)
+                : canManage
                 ? `
-              <button class="btn btn-ghost" data-obl-action="edit" data-id="${item.id}">Edit</button>
-              <button class="btn btn-ghost" data-obl-action="${isAdvance ? "close" : "post"}" data-id="${item.id}">${isAdvance ? "Close" : "Post"}</button>
-              <button class="btn btn-ghost" data-obl-action="delete" data-id="${item.id}">Delete</button>
+              <button class="btn btn-ghost" data-obl-action="edit" data-id="${item.id}">${t("common.edit")}</button>
+              <button class="btn btn-ghost" data-obl-action="${isAdvance ? "close" : "post"}" data-id="${item.id}">${isAdvance ? t("accounting.action.close") : t("accounting.action.post")}</button>
+              <button class="btn btn-ghost" data-obl-action="delete" data-id="${item.id}">${t("common.delete")}</button>
             `
-                : "<span class='text-muted'>View only</span>"
+                : `<span class='text-muted'>${t("common.view_only")}</span>`
             }
           </td>
         </tr>
@@ -185,33 +250,32 @@ function renderObligations() {
     })
     .join("");
 
-  if (canManage) {
-    oblBody.querySelectorAll("button[data-obl-action]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        void handleObligationAction(btn.dataset.oblAction, btn.dataset.id);
-      });
+  oblBody.querySelectorAll("button[data-obl-action]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      void handleObligationAction(btn.dataset.oblAction, btn.dataset.id);
     });
-  }
+  });
+  translateDom(oblBody);
 }
 
 function openAdvanceCloseModal(item) {
-  if (!item || !canManage) return;
+  if (!item || !canAdvanceClose) return;
   const currentBalance = Number(item.balance || 0);
   if (currentBalance <= 0) {
-    showToast("info", "This advance is already settled.");
+    showToast("info", t("accounting.msg.advance_already_settled"));
     return;
   }
 
   openModal({
-    title: `Close Advance - ${item.partyName || item.id}`,
+    title: `${t("accounting.action.close")} - ${item.partyName || item.id}`,
     content: `
-      <p class="text-muted">Closing this advance will deduct <strong>${money(currentBalance)}</strong> from cash and reduce Net Balance.</p>
-      <label>Date<input id="adv-close-date" class="input" type="date" value="${todayKey()}" /></label>
-      <label>Notes<textarea id="adv-close-notes" class="textarea" placeholder="Optional note"></textarea></label>
+      <p class="text-muted">${t("accounting.msg.advance_close_hint_prefix")} <strong>${money(currentBalance)}</strong> ${t("accounting.msg.advance_close_hint_suffix")}</p>
+      <label>${t("common.date")}<input id="adv-close-date" class="input" type="date" value="${todayKey()}" /></label>
+      <label>${t("common.notes")}<textarea id="adv-close-notes" class="textarea"></textarea></label>
     `,
     actions: [
       {
-        label: "Close Advance",
+        label: t("accounting.action.close"),
         className: "btn btn-primary",
         onClick: async () => {
           try {
@@ -222,27 +286,40 @@ function openAdvanceCloseModal(item) {
               actorUid: user.uid || "",
               actorName: user.name || user.email || user.uid || ""
             });
-            showToast("success", `Advance closed. Journal: ${result.journalNo}`);
+            if (item.employeeUid) {
+              await createNotification({
+                toUid: item.employeeUid,
+                title: t("accounting.notify.advance_closed_title"),
+                message: `${t("accounting.notify.advance_closed_message")} ${item.partyRef || ""}`.trim(),
+                priority: "high",
+                actionHref: "advances-report.html"
+              });
+            }
+            showToast("success", `${t("accounting.msg.advance_closed_success")} ${result.journalNo}`);
             await loadAll();
             return true;
           } catch (error) {
             console.error("Close advance failed:", error);
             const msg = String(error?.code || error?.message || "");
             if (msg.includes("PERIOD_CLOSED")) {
-              showToast("error", "Selected period is closed. Reopen month/year first.");
+              showToast("error", t("accounting.msg.period_closed"));
+              return false;
+            }
+            if (msg.includes("INVALID_STAGE")) {
+              showToast("error", t("accounting.msg.invalid_close_stage"));
               return false;
             }
             if (msg.includes("ALREADY_SETTLED")) {
-              showToast("info", "This advance is already settled.");
+              showToast("info", t("accounting.msg.advance_already_settled"));
               await loadAll();
               return true;
             }
-            showToast("error", "Failed to close advance");
+            showToast("error", t("accounting.msg.advance_close_failed"));
             return false;
           }
         }
       },
-      { label: "Cancel", className: "btn btn-ghost" }
+      { label: t("common.cancel"), className: "btn btn-ghost" }
     ]
   });
 }
@@ -251,41 +328,41 @@ function openObligationPostModal(item) {
   if (!item || !canManage) return;
   const kind = norm(item.kind);
   let operationOptions = "";
-  if (kind === "custody" || kind === "advance") {
+  if (kind === "custody") {
     operationOptions = `
-      <option value="issue_out">Issue Invoice/Advance (Decrease Cash)</option>
-      <option value="settle_in">Settlement / Close (No Extra Deduction)</option>
+      <option value="issue_out">${t("accounting.operation.issue_out")}</option>
+      <option value="settle_in">${t("accounting.operation.settle_in")}</option>
     `;
   } else if (kind === "receivable") {
-    operationOptions = `<option value="collect_in">Collection / Close (Increase Cash)</option>`;
+    operationOptions = `<option value="collect_in">${t("accounting.operation.collect_in")}</option>`;
   } else if (kind === "payable") {
-    operationOptions = `<option value="pay_out">Payment Invoice (Decrease Cash)</option>`;
+    operationOptions = `<option value="pay_out">${t("accounting.operation.pay_out")}</option>`;
   }
 
   openModal({
-    title: `Post Movement - ${item.partyName || item.id}`,
+    title: `${t("accounting.action.post")} - ${item.partyName || item.id}`,
     content: `
-      <p class="text-muted">Posting here creates accounting entry automatically and updates invoice/item status and balance.</p>
-      <label>Operation
+      <p class="text-muted">${t("accounting.msg.post_hint")}</p>
+      <label>${t("accounting.operation.label")}
         <select id="obl-post-operation" class="select">
           ${operationOptions}
         </select>
       </label>
-      <label>Date<input id="obl-post-date" class="input" type="date" value="${todayKey()}" /></label>
-      <label>Amount<input id="obl-post-amount" class="input" type="number" min="0" step="0.01" value="0" /></label>
-      <label>Expense Receipt No<input id="obl-post-receipt-no" class="input" /></label>
-      <label>External Receipt No<input id="obl-post-external-receipt-no" class="input" /></label>
-      <label>Notes<textarea id="obl-post-notes" class="textarea"></textarea></label>
+      <label>${t("common.date")}<input id="obl-post-date" class="input" type="date" value="${todayKey()}" /></label>
+      <label>${t("common.amount")}<input id="obl-post-amount" class="input" type="number" min="0" step="0.01" value="0" /></label>
+      <label>${t("accounting.receipt_no")}<input id="obl-post-receipt-no" class="input" /></label>
+      <label>${t("accounting.external_receipt_no")}<input id="obl-post-external-receipt-no" class="input" /></label>
+      <label>${t("common.notes")}<textarea id="obl-post-notes" class="textarea"></textarea></label>
     `,
     actions: [
       {
-        label: "Post",
+        label: t("accounting.action.post"),
         className: "btn btn-primary",
         onClick: async () => {
           try {
             const amount = Number(document.getElementById("obl-post-amount").value || 0);
             if (!Number.isFinite(amount) || amount <= 0) {
-              showToast("error", "Amount must be greater than 0");
+              showToast("error", t("accounting.msg.amount_gt_zero"));
               return false;
             }
             const result = await postAccountingObligationMovement({
@@ -299,26 +376,26 @@ function openObligationPostModal(item) {
               actorUid: user.uid || "",
               actorName: user.name || user.email || user.uid || ""
             });
-            showToast("success", `Posted. Journal: ${result.journalNo}`);
+            showToast("success", `${t("accounting.msg.posted_success")} ${result.journalNo}`);
             await loadAll();
             return true;
           } catch (error) {
             console.error("Post obligation movement failed:", error);
             const msg = String(error?.code || error?.message || "");
             if (msg.includes("PERIOD_CLOSED")) {
-              showToast("error", "Selected period is closed. Reopen month/year first.");
+              showToast("error", t("accounting.msg.period_closed"));
               return false;
             }
             if (msg.includes("INSUFFICIENT_BALANCE")) {
-              showToast("error", "Amount exceeds current balance.");
+              showToast("error", t("accounting.msg.amount_exceeds_balance"));
               return false;
             }
-            showToast("error", "Failed to post movement");
+            showToast("error", t("accounting.msg.post_failed"));
             return false;
           }
         }
       },
-      { label: "Cancel", className: "btn btn-ghost" }
+      { label: t("common.cancel"), className: "btn btn-ghost" }
     ]
   });
 }
@@ -328,31 +405,31 @@ function openCoaModal(existing = null) {
   const rec = existing || {};
   const isEdit = Boolean(existing);
   openModal({
-    title: isEdit ? "Edit Account" : "Add Account",
+    title: isEdit ? t("accounting.msg.edit_account") : t("accounting_admin.add_account"),
     content: `
-      <label>Code<input id="coa-code" class="input" value="${rec.code || ""}" /></label>
-      <label>Name<input id="coa-name" class="input" value="${rec.name || ""}" /></label>
-      <label>Type
+      <label>${t("common.code")}<input id="coa-code" class="input" value="${rec.code || ""}" /></label>
+      <label>${t("common.name")}<input id="coa-name" class="input" value="${rec.name || ""}" /></label>
+      <label>${t("common.type")}
         <select id="coa-type" class="select">
-          <option value="asset" ${rec.type === "asset" ? "selected" : ""}>Asset</option>
-          <option value="liability" ${rec.type === "liability" ? "selected" : ""}>Liability</option>
-          <option value="equity" ${rec.type === "equity" ? "selected" : ""}>Equity</option>
-          <option value="revenue" ${rec.type === "revenue" ? "selected" : ""}>Revenue</option>
-          <option value="expense" ${rec.type === "expense" || !rec.type ? "selected" : ""}>Expense</option>
+          <option value="asset" ${rec.type === "asset" ? "selected" : ""}>${t("accounting.type.asset")}</option>
+          <option value="liability" ${rec.type === "liability" ? "selected" : ""}>${t("accounting.type.liability")}</option>
+          <option value="equity" ${rec.type === "equity" ? "selected" : ""}>${t("accounting.type.equity")}</option>
+          <option value="revenue" ${rec.type === "revenue" ? "selected" : ""}>${t("accounting.type.revenue")}</option>
+          <option value="expense" ${rec.type === "expense" || !rec.type ? "selected" : ""}>${t("accounting.type.expense")}</option>
         </select>
       </label>
-      <label>Parent Code<input id="coa-parent" class="input" value="${rec.parentCode || ""}" /></label>
-      <label>Status
+      <label>${t("common.parent")} ${t("common.code")}<input id="coa-parent" class="input" value="${rec.parentCode || ""}" /></label>
+      <label>${t("common.status")}
         <select id="coa-status" class="select">
-          <option value="active" ${rec.status === "active" || !rec.status ? "selected" : ""}>Active</option>
-          <option value="inactive" ${rec.status === "inactive" ? "selected" : ""}>Inactive</option>
+          <option value="active" ${rec.status === "active" || !rec.status ? "selected" : ""}>${t("common.active")}</option>
+          <option value="inactive" ${rec.status === "inactive" ? "selected" : ""}>${t("common.inactive")}</option>
         </select>
       </label>
-      <label>Notes<textarea id="coa-notes" class="textarea">${rec.notes || ""}</textarea></label>
+      <label>${t("common.notes")}<textarea id="coa-notes" class="textarea">${rec.notes || ""}</textarea></label>
     `,
     actions: [
       {
-        label: "Save",
+        label: t("common.save"),
         className: "btn btn-primary",
         onClick: async () => {
           const payload = {
@@ -364,84 +441,131 @@ function openCoaModal(existing = null) {
             notes: document.getElementById("coa-notes").value.trim()
           };
           if (!payload.code || !payload.name) {
-            showToast("error", "Code and name are required");
+            showToast("error", t("accounting.msg.code_name_required"));
             return false;
           }
           try {
             if (isEdit) await updateChartAccount(rec.id, payload);
             else await createChartAccount(payload);
-            showToast("success", "Account saved");
+            showToast("success", t("accounting.msg.account_saved"));
             await loadAll();
             return true;
           } catch (error) {
             console.error("Save chart account failed:", error);
-            showToast("error", "Failed to save account");
+            showToast("error", t("accounting.msg.account_save_failed"));
             return false;
           }
         }
       },
-      { label: "Cancel", className: "btn btn-ghost" }
+      { label: t("common.cancel"), className: "btn btn-ghost" }
     ]
   });
 }
 
 function openObligationModal(existing = null) {
-  if (!canManage) return;
+  if (!(canManage || canAdvanceRequest)) return;
   const rec = existing || {};
   const isEdit = Boolean(existing);
+  const options = employees
+    .map((emp) => {
+      const label = `${emp.fullName || emp.name || emp.email || emp.id} (${emp.empId || emp.id || ""})`;
+      return `<option value="${emp.id}" ${String(rec.employeeUid || "") === String(emp.id) ? "selected" : ""}>${label}</option>`;
+    })
+    .join("");
   openModal({
-    title: isEdit ? "Edit Item" : "Add Item",
+    title: isEdit ? t("accounting.msg.edit_item") : t("accounting.action.request"),
     content: `
-      <label>Kind
+      <label>${t("common.kind")}
         <select id="obl-kind" class="select">
-          <option value="custody" ${rec.kind === "custody" ? "selected" : ""}>Custody</option>
-          <option value="advance" ${rec.kind === "advance" ? "selected" : ""}>Advance</option>
-          <option value="receivable" ${rec.kind === "receivable" || !rec.kind ? "selected" : ""}>Receivable</option>
-          <option value="payable" ${rec.kind === "payable" ? "selected" : ""}>Payable</option>
+          <option value="custody" ${rec.kind === "custody" ? "selected" : ""}>${t("accounting.kind.custody")}</option>
+          <option value="advance" ${rec.kind === "advance" || !rec.kind ? "selected" : ""}>${t("accounting.kind.advance")}</option>
+          <option value="receivable" ${rec.kind === "receivable" || !rec.kind ? "selected" : ""}>${t("accounting.kind.receivable")}</option>
+          <option value="payable" ${rec.kind === "payable" ? "selected" : ""}>${t("accounting.kind.payable")}</option>
         </select>
       </label>
-      <label>Party Name<input id="obl-name" class="input" value="${rec.partyName || ""}" /></label>
-      <label>Reference/Invoice No<input id="obl-ref" class="input" value="${rec.partyRef || ""}" /></label>
-      <label>Balance<input id="obl-balance" class="input" type="number" min="0" step="0.01" value="${Number(rec.balance || 0)}" /></label>
-      <label>Status
+      <label>${t("accounting.employee")}
+        <select id="obl-employee" class="select">
+          <option value="">-</option>
+          ${options}
+        </select>
+      </label>
+      <label>${t("common.party")}<input id="obl-name" class="input" value="${rec.partyName || ""}" /></label>
+      <label>${t("common.ref")}<input id="obl-ref" class="input" value="${rec.partyRef || ""}" /></label>
+      <label>${t("accounting.due_date")}<input id="obl-due-date" class="input" type="date" value="${rec.dueDate || ""}" /></label>
+      <label>${t("common.balance")}<input id="obl-balance" class="input" type="number" min="0" step="0.01" value="${Number(rec.balance || 0)}" /></label>
+      <label>${t("common.status")}
         <select id="obl-status" class="select">
-          <option value="open" ${rec.status === "open" || !rec.status ? "selected" : ""}>Open</option>
-          <option value="settled" ${rec.status === "settled" ? "selected" : ""}>Settled</option>
+          <option value="open" ${rec.status === "open" || !rec.status ? "selected" : ""}>${t("accounting_admin.status_open")}</option>
+          <option value="settled" ${rec.status === "settled" ? "selected" : ""}>${t("accounting_admin.status_settled")}</option>
         </select>
       </label>
-      <label>Notes<textarea id="obl-notes" class="textarea">${rec.notes || ""}</textarea></label>
+      <label>${t("advances_report.filter.status")}
+        <select id="obl-stage" class="select">
+          <option value="requested" ${rec.workflowStage === "requested" || !rec.workflowStage ? "selected" : ""}>${t("accounting.workflow.requested")}</option>
+          <option value="approved" ${rec.workflowStage === "approved" ? "selected" : ""}>${t("accounting.workflow.approved")}</option>
+          <option value="disbursed" ${rec.workflowStage === "disbursed" ? "selected" : ""}>${t("accounting.workflow.disbursed")}</option>
+          <option value="closed" ${rec.workflowStage === "closed" ? "selected" : ""}>${t("accounting.workflow.closed")}</option>
+          <option value="rejected" ${rec.workflowStage === "rejected" ? "selected" : ""}>${t("accounting.workflow.rejected")}</option>
+        </select>
+      </label>
+      <label>${t("common.notes")}<textarea id="obl-notes" class="textarea">${rec.notes || ""}</textarea></label>
     `,
     actions: [
       {
-        label: "Save",
+        label: t("common.save"),
         className: "btn btn-primary",
         onClick: async () => {
+          const employeeUid = document.getElementById("obl-employee").value;
+          const employee = employees.find((row) => String(row.id) === String(employeeUid));
           const payload = {
             kind: document.getElementById("obl-kind").value,
             partyName: document.getElementById("obl-name").value.trim(),
             partyRef: document.getElementById("obl-ref").value.trim(),
+            dueDate: document.getElementById("obl-due-date").value || "",
             balance: Number(document.getElementById("obl-balance").value || 0),
             status: document.getElementById("obl-status").value,
-            notes: document.getElementById("obl-notes").value.trim()
+            workflowStage: document.getElementById("obl-stage").value,
+            notes: document.getElementById("obl-notes").value.trim(),
+            employeeUid: employeeUid || "",
+            employeeCode: employee?.empId || employeeUid || "",
+            departmentId: employee?.departmentId || "",
+            departmentName: employee?.departmentName || employee?.department || employee?.departmentId || "",
+            requestedByUid: user.uid || "",
+            requestedByName: user.name || user.email || user.uid || ""
           };
           if (!payload.partyName) {
-            showToast("error", "Party name is required");
+            showToast("error", t("accounting.msg.party_required"));
             return false;
           }
           try {
             if (isEdit) await updateAccountingObligation(rec.id, payload);
-            else await createAccountingObligation(payload);
-            showToast("success", "Item saved");
+            else {
+              if (payload.kind === "advance" && !canAdvanceRequest) {
+                showToast("error", t("accounting.msg.no_permission_request"));
+                return false;
+              }
+              await createAccountingObligation(payload);
+              if (payload.kind === "advance" && payload.employeeUid) {
+                await createNotification({
+                  toUid: payload.employeeUid,
+                  title: t("accounting.notify.advance_request_title"),
+                  message: `${t("accounting.notify.advance_request_message")} ${payload.partyRef || ""}`.trim(),
+                  priority: "high",
+                  actionHref: "advances-report.html"
+                });
+              }
+            }
+            showToast("success", t("accounting.msg.item_saved"));
             await loadAll();
             return true;
           } catch (error) {
             console.error("Save obligation failed:", error);
-            showToast("error", "Failed to save item");
+            showToast("error", t("accounting.msg.item_save_failed"));
             return false;
           }
         }
       },
-      { label: "Cancel", className: "btn btn-ghost" }
+      { label: t("common.cancel"), className: "btn btn-ghost" }
     ]
   });
 }
@@ -454,18 +578,69 @@ async function handleCoaAction(action, id) {
     return;
   }
   if (action === "delete") {
-    if (!window.confirm("Delete this account?")) return;
+    if (!window.confirm(t("accounting.msg.confirm_delete_account"))) return;
     await deleteChartAccount(id);
-    showToast("success", "Account deleted");
+    showToast("success", t("accounting.msg.account_deleted"));
     await loadAll();
   }
 }
 
 async function handleObligationAction(action, id) {
   const item = obligations.find((x) => x.id === id);
-  if (!item || !canManage) return;
+  if (!item) return;
   if (action === "edit") {
+    if (!canManage) return;
     openObligationModal(item);
+    return;
+  }
+  if (action === "approve" && norm(item.kind) === "advance" && canAdvanceApprove) {
+    await approveAdvanceObligation({
+      obligationId: item.id,
+      actorUid: user.uid || "",
+      actorName: user.name || user.email || user.uid || ""
+    });
+    if (item.employeeUid) {
+      await createNotification({
+        toUid: item.employeeUid,
+        title: t("accounting.notify.advance_approved_title"),
+        message: `${t("accounting.notify.advance_approved_message")} ${item.partyRef || ""}`.trim(),
+        priority: "high",
+        actionHref: "advances-report.html"
+      });
+    }
+    showToast("success", t("accounting.msg.advance_approved"));
+    await loadAll();
+    return;
+  }
+  if (action === "reject" && norm(item.kind) === "advance" && canAdvanceApprove) {
+    await rejectAdvanceObligation({
+      obligationId: item.id,
+      actorUid: user.uid || "",
+      actorName: user.name || user.email || user.uid || ""
+    });
+    showToast("success", t("accounting.msg.advance_rejected"));
+    await loadAll();
+    return;
+  }
+  if (action === "disburse" && norm(item.kind) === "advance" && canAdvanceDisburse) {
+    const result = await disburseAdvanceObligation({
+      obligationId: item.id,
+      date: todayKey(),
+      notes: t("accounting.msg.advance_disbursed_note"),
+      actorUid: user.uid || "",
+      actorName: user.name || user.email || user.uid || ""
+    });
+    if (item.employeeUid) {
+      await createNotification({
+        toUid: item.employeeUid,
+        title: t("accounting.notify.advance_disbursed_title"),
+        message: `${t("accounting.notify.advance_disbursed_message")} ${item.partyRef || ""}`.trim(),
+        priority: "high",
+        actionHref: "advances-report.html"
+      });
+    }
+    showToast("success", `${t("accounting.msg.disbursed_success")} ${result.journalNo}`);
+    await loadAll();
     return;
   }
   if (action === "close") {
@@ -473,13 +648,15 @@ async function handleObligationAction(action, id) {
     return;
   }
   if (action === "post") {
+    if (!canManage) return;
     openObligationPostModal(item);
     return;
   }
   if (action === "delete") {
-    if (!window.confirm("Delete this item?")) return;
+    if (!canManage) return;
+    if (!window.confirm(t("accounting.msg.confirm_delete_item"))) return;
     await deleteAccountingObligation(id);
-    showToast("success", "Item deleted");
+    showToast("success", t("accounting.msg.item_deleted"));
     await loadAll();
   }
 }
@@ -490,7 +667,7 @@ async function runCloseAction(kind, op) {
     if (kind === "month") {
       const month = String(closeMonthInput.value || "").trim();
       if (!month) {
-        showToast("error", "Month is required");
+        showToast("error", t("accounting.msg.month_required"));
         return;
       }
       if (op === "close") await closeAccountingMonth(month);
@@ -498,17 +675,17 @@ async function runCloseAction(kind, op) {
     } else {
       const year = String(closeYearInput.value || "").trim();
       if (!/^\d{4}$/.test(year)) {
-        showToast("error", "Year must be 4 digits");
+        showToast("error", t("accounting.msg.year_four_digits"));
         return;
       }
       if (op === "close") await closeAccountingYear(year);
       else await reopenAccountingYear(year);
     }
-    showToast("success", "Closing state updated");
+    showToast("success", t("accounting.msg.closing_updated"));
     await loadAll();
   } catch (error) {
     console.error("Closing action failed:", error);
-    showToast("error", "Failed to update closing state");
+    showToast("error", t("accounting.msg.closing_update_failed"));
   }
 }
 
@@ -532,6 +709,11 @@ function getObligationExportRows() {
     Kind: obligationKindLabel(item.kind),
     Party: item.partyName || "",
     Ref: item.partyRef || "",
+    EmployeeCode: item.employeeCode || "",
+    Department: item.departmentName || "",
+    Workflow: obligationStageLabel(item.workflowStage || ""),
+    DueDate: item.dueDate || "",
+    Overdue: isOverdue(item) ? t("common.yes") : t("common.no"),
     Balance: Number(item.balance) || 0,
     Status: item.status || "",
     Notes: item.notes || ""
@@ -540,11 +722,11 @@ function getObligationExportRows() {
 
 function exportExcel(rows, sheetName, fileName) {
   if (!rows.length) {
-    showToast("info", "No rows to export");
+    showToast("info", t("accounting.msg.no_rows_export"));
     return;
   }
   if (!window.XLSX) {
-    showToast("error", "Excel export library not loaded");
+    showToast("error", t("accounting.msg.excel_lib_missing"));
     return;
   }
   const sheet = window.XLSX.utils.json_to_sheet(rows);
@@ -555,25 +737,28 @@ function exportExcel(rows, sheetName, fileName) {
 
 function exportPdf(rows, fileName, title, headers) {
   if (!rows.length) {
-    showToast("info", "No rows to export");
+    showToast("info", t("accounting.msg.no_rows_export"));
     return;
   }
   const jsPdfLib = window.jspdf?.jsPDF;
   if (!jsPdfLib) {
-    showToast("error", "PDF export library not loaded");
+    showToast("error", t("accounting.msg.pdf_lib_missing"));
     return;
   }
 
   const doc = new jsPdfLib({ orientation: "landscape" });
   doc.setFontSize(13);
   doc.text(title, 14, 14);
+  doc.text(`${t("accounting.export.period")}: ${new Date().toISOString().slice(0, 7)}`, 14, 20);
   const body = rows.map((row) => headers.map((header) => String(row[header] ?? "")));
   if (typeof doc.autoTable === "function") {
     doc.autoTable({
-      startY: 20,
+      startY: 24,
       head: [headers],
       body
     });
+    const finalY = doc.lastAutoTable?.finalY || 200;
+    doc.text(`${t("accounting.export.signature")}: __________________`, 14, finalY + 12);
   } else {
     let y = 24;
     body.forEach((r) => {
@@ -590,7 +775,7 @@ function exportChartExcel() {
 
 function exportChartPdf() {
   const rows = getChartExportRows();
-  exportPdf(rows, `chart-of-accounts-${fileDateToken()}.pdf`, "Chart of Accounts", ["Code", "Name", "Type", "Parent", "Status", "Notes"]);
+  exportPdf(rows, `chart-of-accounts-${fileDateToken()}.pdf`, t("accounting_admin.coa"), ["Code", "Name", "Type", "Parent", "Status", "Notes"]);
 }
 
 function exportObligationExcel() {
@@ -599,18 +784,22 @@ function exportObligationExcel() {
 
 function exportObligationPdf() {
   const rows = getObligationExportRows();
-  exportPdf(rows, `invoices-obligations-${fileDateToken()}.pdf`, "Custody / Advances / AR / AP", ["Kind", "Party", "Ref", "Balance", "Status", "Notes"]);
+  exportPdf(rows, `invoices-obligations-${fileDateToken()}.pdf`, t("accounting_admin.obligations"), ["Kind", "Party", "Ref", "EmployeeCode", "Department", "Workflow", "DueDate", "Overdue", "Balance", "Status", "Notes"]);
 }
 
 async function loadAll() {
-  const [chartRows, obligationRows, closeState] = await Promise.all([
+  const [chartRows, obligationRows, closeState, employeesRows, movementRows] = await Promise.all([
     listChartAccounts(),
     listAccountingObligations(),
-    getAccountingClosures()
+    getAccountingClosures(),
+    listEmployees(),
+    listAccountingObligationMovements({ kind: "advance" })
   ]);
   chart = chartRows;
   obligations = obligationRows;
   closures = closeState;
+  employees = employeesRows;
+  obligationMovements = movementRows;
   renderObligationStats();
   renderChart();
   renderObligations();
@@ -619,11 +808,13 @@ async function loadAll() {
 
 if (!canManage) {
   coaAddBtn?.classList.add("hidden");
-  oblAddBtn?.classList.add("hidden");
   closeMonthBtn?.classList.add("hidden");
   reopenMonthBtn?.classList.add("hidden");
   closeYearBtn?.classList.add("hidden");
   reopenYearBtn?.classList.add("hidden");
+}
+if (!(canManage || canAdvanceRequest)) {
+  oblAddBtn?.classList.add("hidden");
 }
 
 coaAddBtn?.addEventListener("click", () => openCoaModal());
@@ -640,6 +831,16 @@ reopenMonthBtn?.addEventListener("click", () => void runCloseAction("month", "re
 closeYearBtn?.addEventListener("click", () => void runCloseAction("year", "close"));
 reopenYearBtn?.addEventListener("click", () => void runCloseAction("year", "reopen"));
 
+if (oblStatusFilter && !oblStatusFilter.dataset.workflowExtended) {
+  oblStatusFilter.dataset.workflowExtended = "1";
+  ["requested", "approved", "disbursed", "closed", "rejected"].forEach((stage) => {
+    const option = document.createElement("option");
+    option.value = stage;
+    option.textContent = obligationStageLabel(stage);
+    oblStatusFilter.appendChild(option);
+  });
+}
+
 closeMonthInput.value = new Date().toISOString().slice(0, 7);
 closeYearInput.value = String(new Date().getFullYear());
 
@@ -648,7 +849,7 @@ closeYearInput.value = String(new Date().getFullYear());
     await loadAll();
   } catch (error) {
     console.error("Accounting admin init failed:", error);
-    showToast("error", "Failed to load accounting admin");
+    showToast("error", t("accounting.msg.load_admin_failed"));
   }
 })();
 

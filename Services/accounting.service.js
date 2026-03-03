@@ -50,6 +50,16 @@ function normalizeObligationKind(value = "") {
   return "receivable";
 }
 
+function normalizeWorkflowStage(value = "", kind = "") {
+  const normalized = String(value || "").trim().toLowerCase();
+  const obligationKind = normalizeObligationKind(kind);
+  const allowed = obligationKind === "advance"
+    ? ["requested", "approved", "disbursed", "closed", "rejected"]
+    : ["requested", "approved", "disbursed", "closed", "rejected"];
+  if (allowed.includes(normalized)) return normalized;
+  return obligationKind === "advance" ? "requested" : "disbursed";
+}
+
 function monthFromDate(dateValue = "") {
   const value = String(dateValue || "").trim();
   if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value.slice(0, 7);
@@ -321,12 +331,31 @@ export async function listAccountingObligations() {
 }
 
 export async function createAccountingObligation(payload = {}) {
+  const kind = normalizeObligationKind(payload.kind);
   const data = {
-    kind: normalizeObligationKind(payload.kind),
+    kind,
     partyName: String(payload.partyName || "").trim(),
     partyRef: String(payload.partyRef || "").trim(),
+    employeeUid: String(payload.employeeUid || "").trim(),
+    employeeCode: String(payload.employeeCode || "").trim(),
+    departmentId: String(payload.departmentId || "").trim(),
+    departmentName: String(payload.departmentName || "").trim(),
+    dueDate: String(payload.dueDate || "").trim(),
     balance: safeNumber(payload.balance),
     status: String(payload.status || "open").trim().toLowerCase(),
+    workflowStage: normalizeWorkflowStage(payload.workflowStage, kind),
+    requestedAt: ts(),
+    requestedByUid: String(payload.requestedByUid || payload.actorUid || "").trim(),
+    requestedByName: String(payload.requestedByName || payload.actorName || "").trim(),
+    approvedAt: null,
+    approvedByUid: "",
+    approvedByName: "",
+    disbursedAt: null,
+    disbursedByUid: "",
+    disbursedByName: "",
+    closedAt: null,
+    closedByUid: "",
+    closedByName: "",
     notes: String(payload.notes || "").trim(),
     createdAt: ts(),
     updatedAt: ts()
@@ -336,12 +365,19 @@ export async function createAccountingObligation(payload = {}) {
 }
 
 export async function updateAccountingObligation(id, payload = {}) {
+  const kind = normalizeObligationKind(payload.kind);
   await updateDoc(doc(db, "accounting_obligations", id), {
-    kind: normalizeObligationKind(payload.kind),
+    kind,
     partyName: String(payload.partyName || "").trim(),
     partyRef: String(payload.partyRef || "").trim(),
+    employeeUid: String(payload.employeeUid || "").trim(),
+    employeeCode: String(payload.employeeCode || "").trim(),
+    departmentId: String(payload.departmentId || "").trim(),
+    departmentName: String(payload.departmentName || "").trim(),
+    dueDate: String(payload.dueDate || "").trim(),
     balance: safeNumber(payload.balance),
     status: String(payload.status || "open").trim().toLowerCase(),
+    workflowStage: normalizeWorkflowStage(payload.workflowStage, kind),
     notes: String(payload.notes || "").trim(),
     updatedAt: ts()
   });
@@ -541,6 +577,12 @@ export async function closeAdvanceObligation(payload = {}) {
     }
 
     const amount = safeNumber(obligation.balance);
+    const stage = normalizeWorkflowStage(obligation.workflowStage, "advance");
+    if (stage !== "disbursed") {
+      const err = new Error("INVALID_STAGE");
+      err.code = "INVALID_STAGE";
+      throw err;
+    }
     if (amount <= 0 || String(obligation.status || "").toLowerCase() === "settled") {
       const err = new Error("ALREADY_SETTLED");
       err.code = "ALREADY_SETTLED";
@@ -574,6 +616,10 @@ export async function closeAdvanceObligation(payload = {}) {
     tx.update(obligationDoc, {
       balance: 0,
       status: "settled",
+      workflowStage: "closed",
+      closedAt: ts(),
+      closedByUid: actorUid,
+      closedByName: actorName,
       updatedAt: ts()
     });
 
@@ -595,4 +641,191 @@ export async function closeAdvanceObligation(payload = {}) {
 
     return { entryId: entryDoc.id, journalNo, balance: 0, amount };
   });
+}
+
+export async function approveAdvanceObligation(payload = {}) {
+  const obligationId = String(payload.obligationId || "").trim();
+  const actorUid = String(payload.actorUid || "").trim();
+  const actorName = String(payload.actorName || "").trim();
+  if (!obligationId) throw new Error("OBLIGATION_REQUIRED");
+
+  const obligationDoc = doc(db, "accounting_obligations", obligationId);
+  const movementDoc = doc(obligationMovementsRef);
+
+  return runTransaction(db, async (tx) => {
+    const snap = await tx.get(obligationDoc);
+    if (!snap.exists()) throw new Error("OBLIGATION_NOT_FOUND");
+    const obligation = snap.data() || {};
+    if (normalizeObligationKind(obligation.kind) !== "advance") throw new Error("INVALID_KIND");
+    const currentStage = normalizeWorkflowStage(obligation.workflowStage, "advance");
+    if (currentStage !== "requested") throw new Error("INVALID_STAGE");
+
+    tx.update(obligationDoc, {
+      workflowStage: "approved",
+      approvedAt: ts(),
+      approvedByUid: actorUid,
+      approvedByName: actorName,
+      updatedAt: ts()
+    });
+
+    tx.set(movementDoc, {
+      obligationId,
+      obligationKind: "advance",
+      operation: "approve",
+      amount: safeNumber(obligation.balance),
+      date: new Date().toISOString().slice(0, 10),
+      notes: String(payload.notes || "").trim(),
+      receiptNo: "",
+      externalReceiptNo: "",
+      journalNo: "",
+      entryId: "",
+      actorUid,
+      actorName,
+      createdAt: ts()
+    });
+
+    return { stage: "approved" };
+  });
+}
+
+export async function rejectAdvanceObligation(payload = {}) {
+  const obligationId = String(payload.obligationId || "").trim();
+  const actorUid = String(payload.actorUid || "").trim();
+  const actorName = String(payload.actorName || "").trim();
+  if (!obligationId) throw new Error("OBLIGATION_REQUIRED");
+
+  const obligationDoc = doc(db, "accounting_obligations", obligationId);
+  const movementDoc = doc(obligationMovementsRef);
+
+  return runTransaction(db, async (tx) => {
+    const snap = await tx.get(obligationDoc);
+    if (!snap.exists()) throw new Error("OBLIGATION_NOT_FOUND");
+    const obligation = snap.data() || {};
+    if (normalizeObligationKind(obligation.kind) !== "advance") throw new Error("INVALID_KIND");
+    const currentStage = normalizeWorkflowStage(obligation.workflowStage, "advance");
+    if (currentStage !== "requested" && currentStage !== "approved") throw new Error("INVALID_STAGE");
+
+    tx.update(obligationDoc, {
+      workflowStage: "rejected",
+      status: "settled",
+      updatedAt: ts()
+    });
+
+    tx.set(movementDoc, {
+      obligationId,
+      obligationKind: "advance",
+      operation: "reject",
+      amount: safeNumber(obligation.balance),
+      date: new Date().toISOString().slice(0, 10),
+      notes: String(payload.notes || "").trim(),
+      receiptNo: "",
+      externalReceiptNo: "",
+      journalNo: "",
+      entryId: "",
+      actorUid,
+      actorName,
+      createdAt: ts()
+    });
+
+    return { stage: "rejected" };
+  });
+}
+
+export async function disburseAdvanceObligation(payload = {}) {
+  const obligationId = String(payload.obligationId || "").trim();
+  const date = String(payload.date || "").trim();
+  const notes = String(payload.notes || "").trim();
+  const actorUid = String(payload.actorUid || "").trim();
+  const actorName = String(payload.actorName || "").trim();
+
+  if (!obligationId) throw new Error("OBLIGATION_REQUIRED");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error("DATE_REQUIRED");
+  await assertDateOpen(date);
+
+  const obligationDoc = doc(db, "accounting_obligations", obligationId);
+  const entryDoc = doc(accountingRef);
+  const movementDoc = doc(obligationMovementsRef);
+
+  return runTransaction(db, async (tx) => {
+    const snap = await tx.get(obligationDoc);
+    if (!snap.exists()) throw new Error("OBLIGATION_NOT_FOUND");
+    const obligation = snap.data() || {};
+    if (normalizeObligationKind(obligation.kind) !== "advance") throw new Error("INVALID_KIND");
+
+    const currentStage = normalizeWorkflowStage(obligation.workflowStage, "advance");
+    if (currentStage !== "approved") throw new Error("INVALID_STAGE");
+
+    const amount = safeNumber(obligation.balance);
+    if (amount <= 0) throw new Error("AMOUNT_REQUIRED");
+
+    const journalNo = await nextJournalNumberInTx(tx, date);
+    const partyName = String(obligation.partyName || "");
+    const partyRef = String(obligation.partyRef || "");
+    const movementText = `ADVANCE DISBURSE${partyName ? ` - ${partyName}` : ""}${partyRef ? ` (${partyRef})` : ""}`;
+    const mergedNotes = notes ? `${movementText} | ${notes}` : movementText;
+
+    tx.set(entryDoc, {
+      journalNo,
+      type: "out",
+      amount,
+      date,
+      category: "Advance Disbursement",
+      receiptNo: "",
+      externalReceiptNo: "",
+      notes: mergedNotes,
+      attachmentUrl: "",
+      attachmentName: "",
+      source: "obligations_disburse",
+      createdByUid: actorUid,
+      createdByName: actorName,
+      createdAt: ts(),
+      updatedAt: ts()
+    });
+
+    tx.update(obligationDoc, {
+      workflowStage: "disbursed",
+      status: "open",
+      disbursedAt: ts(),
+      disbursedByUid: actorUid,
+      disbursedByName: actorName,
+      updatedAt: ts()
+    });
+
+    tx.set(movementDoc, {
+      obligationId,
+      obligationKind: "advance",
+      operation: "disburse_out",
+      amount,
+      date,
+      notes,
+      receiptNo: "",
+      externalReceiptNo: "",
+      journalNo,
+      entryId: entryDoc.id,
+      actorUid,
+      actorName,
+      createdAt: ts()
+    });
+
+    return { stage: "disbursed", journalNo, amount, entryId: entryDoc.id };
+  });
+}
+
+export async function listAccountingObligationMovements(filter = {}) {
+  try {
+    const snap = await getDocs(obligationMovementsRef);
+    const rows = snap.docs
+      .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
+      .sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt));
+
+    const obligationId = String(filter.obligationId || "").trim();
+    const kind = normalizeObligationKind(filter.kind || "");
+    return rows.filter((row) => {
+      if (obligationId && String(row.obligationId || "") !== obligationId) return false;
+      if (filter.kind && normalizeObligationKind(row.obligationKind || "") !== kind) return false;
+      return true;
+    });
+  } catch (_) {
+    return [];
+  }
 }

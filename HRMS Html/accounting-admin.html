@@ -25,38 +25,38 @@
         <div class="page-header">
           <div>
             <h1 class="page-title" data-i18n="accounting_admin.title">Accounting Master</h1>
-            <p class="text-muted">Chart of Accounts, obligations, and monthly/yearly close control.</p>
+            <p class="text-muted" data-i18n="accounting_admin.subtitle">Chart of Accounts, obligations, and monthly/yearly close control.</p>
           </div>
         </div>
 
         <section class="card admin-card">
           <div class="card-header">
-            <h3 class="section-title"><i data-lucide="book-open-check"></i> Chart of Accounts</h3>
+            <h3 class="section-title"><i data-lucide="book-open-check"></i> <span data-i18n="accounting_admin.coa">Chart of Accounts</span></h3>
             <div class="admin-head-actions">
               <button class="btn btn-ghost" id="coa-export-excel-btn">
                 <i data-lucide="file-spreadsheet"></i>
-                Export Excel
+                <span data-i18n="advances_report.export_excel">Export Excel</span>
               </button>
               <button class="btn btn-ghost" id="coa-export-pdf-btn">
                 <i data-lucide="file-text"></i>
-                Export PDF
+                <span data-i18n="advances_report.export_pdf">Export PDF</span>
               </button>
-              <button class="btn btn-primary" id="coa-add-btn">Add Account</button>
+              <button class="btn btn-primary" id="coa-add-btn" data-i18n="accounting_admin.add_account">Add Account</button>
             </div>
           </div>
           <div class="admin-tools">
-            <input class="input" id="coa-search" type="search" placeholder="Search code, name, type, parent..." />
+            <input class="input" id="coa-search" type="search" data-i18n-placeholder="accounting_admin.coa_search" placeholder="Search code, name, type, parent..." />
           </div>
           <div class="table-scroll">
             <table class="table">
               <thead>
                 <tr>
-                  <th>Code</th>
-                  <th>Name</th>
-                  <th>Type</th>
-                  <th>Parent</th>
-                  <th>Status</th>
-                  <th>Actions</th>
+                  <th data-i18n="common.code">Code</th>
+                  <th data-i18n="common.name">Name</th>
+                  <th data-i18n="common.type">Type</th>
+                  <th data-i18n="common.parent">Parent</th>
+                  <th data-i18n="common.status">Status</th>
+                  <th data-i18n="common.actions">Actions</th>
                 </tr>
               </thead>
               <tbody id="coa-body"></tbody>
@@ -66,38 +66,38 @@
 
         <section class="card admin-card">
           <div class="card-header">
-            <h3 class="section-title"><i data-lucide="wallet-cards"></i> Custody / Advances / AR / AP</h3>
+            <h3 class="section-title"><i data-lucide="wallet-cards"></i> <span data-i18n="accounting_admin.obligations">Custody / Advances / AR / AP</span></h3>
             <div class="admin-head-actions">
               <button class="btn btn-ghost" id="obl-export-excel-btn">
                 <i data-lucide="file-spreadsheet"></i>
-                Export Excel
+                <span data-i18n="advances_report.export_excel">Export Excel</span>
               </button>
               <button class="btn btn-ghost" id="obl-export-pdf-btn">
                 <i data-lucide="file-text"></i>
-                Export PDF
+                <span data-i18n="advances_report.export_pdf">Export PDF</span>
               </button>
-              <button class="btn btn-primary" id="obl-add-btn">Add Invoice/Item</button>
+              <button class="btn btn-primary" id="obl-add-btn" data-i18n="accounting_admin.add_item">Add Invoice/Item</button>
             </div>
           </div>
           <div class="admin-tools two-cols">
-            <input class="input" id="obl-search" type="search" placeholder="Search party, reference, kind..." />
+            <input class="input" id="obl-search" type="search" data-i18n-placeholder="accounting_admin.obligation_search" placeholder="Search party, reference, kind..." />
             <select class="select" id="obl-status-filter">
-              <option value="">All Status</option>
-              <option value="open">Open</option>
-              <option value="settled">Settled</option>
+              <option value="" data-i18n="accounting_admin.all_status">All Status</option>
+              <option value="open" data-i18n="accounting_admin.status_open">Open</option>
+              <option value="settled" data-i18n="accounting_admin.status_settled">Settled</option>
             </select>
           </div>
           <section class="admin-summary grid-3">
             <div class="card summary-card summary-total">
-              <div class="text-muted">Total Invoices/Items</div>
+              <div class="text-muted" data-i18n="accounting_admin.total_items">Total Invoices/Items</div>
               <div class="summary-value" id="obl-total-count">0</div>
             </div>
             <div class="card summary-card summary-open">
-              <div class="text-muted">Open</div>
+              <div class="text-muted" data-i18n="accounting_admin.status_open">Open</div>
               <div class="summary-value" id="obl-open-count">0</div>
             </div>
             <div class="card summary-card summary-settled">
-              <div class="text-muted">Settled</div>
+              <div class="text-muted" data-i18n="accounting_admin.status_settled">Settled</div>
               <div class="summary-value" id="obl-settled-count">0</div>
             </div>
           </section>
@@ -105,12 +105,14 @@
             <table class="table">
               <thead>
                 <tr>
-                  <th>Kind</th>
-                  <th>Party</th>
-                  <th>Ref</th>
-                  <th>Balance</th>
-                  <th>Status</th>
-                  <th>Actions</th>
+                  <th data-i18n="common.kind">Kind</th>
+                  <th data-i18n="common.party">Party</th>
+                  <th data-i18n="common.ref">Ref</th>
+                  <th data-i18n="common.balance">Balance</th>
+                  <th data-i18n="common.status">Status</th>
+                  <th data-i18n="accounting.employee_id">Employee ID</th>
+                  <th data-i18n="accounting.due_date">Due Date</th>
+                  <th data-i18n="common.actions">Actions</th>
                 </tr>
               </thead>
               <tbody id="obl-body"></tbody>
@@ -120,33 +122,33 @@
 
         <section class="card admin-card">
           <div class="card-header">
-            <h3 class="section-title"><i data-lucide="lock"></i> Period Closing</h3>
+            <h3 class="section-title"><i data-lucide="lock"></i> <span data-i18n="accounting_admin.period_closing">Period Closing</span></h3>
           </div>
           <div class="close-grid">
             <div class="close-box">
-              <label class="text-muted" for="close-month-input">Month</label>
+              <label class="text-muted" for="close-month-input" data-i18n="common.month">Month</label>
               <input class="input" id="close-month-input" type="month" />
               <div class="close-actions">
-                <button class="btn btn-outline" id="close-month-btn">Close Month</button>
-                <button class="btn btn-ghost" id="reopen-month-btn">Reopen Month</button>
+                <button class="btn btn-outline" id="close-month-btn" data-i18n="accounting_admin.close_month">Close Month</button>
+                <button class="btn btn-ghost" id="reopen-month-btn" data-i18n="accounting_admin.reopen_month">Reopen Month</button>
               </div>
             </div>
             <div class="close-box">
-              <label class="text-muted" for="close-year-input">Year</label>
+              <label class="text-muted" for="close-year-input" data-i18n="common.year">Year</label>
               <input class="input" id="close-year-input" type="number" min="2000" max="2999" />
               <div class="close-actions">
-                <button class="btn btn-outline" id="close-year-btn">Close Year</button>
-                <button class="btn btn-ghost" id="reopen-year-btn">Reopen Year</button>
+                <button class="btn btn-outline" id="close-year-btn" data-i18n="accounting_admin.close_year">Close Year</button>
+                <button class="btn btn-ghost" id="reopen-year-btn" data-i18n="accounting_admin.reopen_year">Reopen Year</button>
               </div>
             </div>
           </div>
           <div class="close-lists">
             <div>
-              <div class="text-muted">Closed Months</div>
+              <div class="text-muted" data-i18n="accounting_admin.closed_months">Closed Months</div>
               <div id="closed-months-list" class="chip-list"></div>
             </div>
             <div>
-              <div class="text-muted">Closed Years</div>
+              <div class="text-muted" data-i18n="accounting_admin.closed_years">Closed Years</div>
               <div id="closed-years-list" class="chip-list"></div>
             </div>
           </div>

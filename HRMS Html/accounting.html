@@ -25,51 +25,59 @@
         <div class="page-header">
           <div>
             <h1 class="page-title" data-i18n="accounting.title">Accounting System</h1>
-            <p class="text-muted">Finance overview with isolated payroll and daily fund tracking.</p>
+            <p class="text-muted" data-i18n="accounting.subtitle">Finance overview with isolated payroll and daily fund tracking.</p>
           </div>
           <div class="acc-head-actions">
             <button class="btn btn-ghost" id="accounting-opening-btn">
               <i data-lucide="piggy-bank"></i>
-              Set Opening Balance
+              <span data-i18n="accounting.set_opening">Set Opening Balance</span>
             </button>
             <button class="btn btn-primary" id="accounting-quick-in-btn">
               <i data-lucide="plus-circle"></i>
-              Quick In
+              <span data-i18n="accounting.quick_in">Quick In</span>
             </button>
             <button class="btn btn-outline" id="accounting-quick-out-btn">
               <i data-lucide="minus-circle"></i>
-              Quick Out
+              <span data-i18n="accounting.quick_out">Quick Out</span>
             </button>
           </div>
         </div>
 
-        <section class="acc-summary grid-7">
+        <section class="acc-summary grid-9">
           <div class="card summary-card summary-opening">
-            <div class="text-muted">Opening Balance</div>
+            <div class="text-muted" data-i18n="accounting.opening_balance">Opening Balance</div>
             <div class="summary-value" id="acc-opening-balance">0</div>
           </div>
           <div class="card summary-card summary-in">
-            <div class="text-muted">Month In</div>
+            <div class="text-muted" data-i18n="accounting.month_in">Month In</div>
             <div class="summary-value" id="acc-total-in">0</div>
           </div>
           <div class="card summary-card summary-out">
-            <div class="text-muted">Month Out</div>
+            <div class="text-muted" data-i18n="accounting.month_out">Month Out</div>
             <div class="summary-value" id="acc-total-out">0</div>
           </div>
           <div class="card summary-card summary-expense">
-            <div class="text-muted">Daily Expenses</div>
+            <div class="text-muted" data-i18n="accounting.daily_expenses">Daily Expenses</div>
             <div class="summary-value" id="acc-total-expense">0</div>
           </div>
           <div class="card summary-card summary-advance-count">
-            <div class="text-muted">Open Advances Count</div>
+            <div class="text-muted" data-i18n="accounting.open_advances_count">Open Advances Count</div>
             <div class="summary-value" id="acc-advance-count">0</div>
           </div>
           <div class="card summary-card summary-advance-deduction">
-            <div class="text-muted">Open Advances Amount</div>
+            <div class="text-muted" data-i18n="accounting.open_advances_amount">Open Advances Amount</div>
             <div class="summary-value" id="acc-advance-deduction">0</div>
           </div>
+          <div class="card summary-card summary-month-movement">
+            <div class="text-muted" data-i18n="accounting.month_movement">Month Movement</div>
+            <div class="summary-value" id="acc-month-movement">0</div>
+          </div>
+          <div class="card summary-card summary-closure-rate">
+            <div class="text-muted" data-i18n="accounting.advance_closure_rate">Advance Closure Rate</div>
+            <div class="summary-value" id="acc-advance-closure-rate">0%</div>
+          </div>
           <div class="card summary-card summary-net">
-            <div class="text-muted">Net Balance</div>
+            <div class="text-muted" data-i18n="accounting.net_balance">Net Balance</div>
             <div class="summary-value" id="acc-total-net">0</div>
           </div>
         </section>
@@ -78,11 +86,11 @@
           <div class="acc-links">
             <button class="btn btn-ghost" id="accounting-open-flow">
               <i data-lucide="arrow-left-right"></i>
-              Open Cash In/Out
+              <span data-i18n="accounting.open_cash_flow">Open Cash In/Out</span>
             </button>
             <button class="btn btn-ghost" id="accounting-open-cashbox">
               <i data-lucide="receipt-text"></i>
-              Open Daily Cashbox
+              <span data-i18n="accounting.open_cashbox">Open Daily Cashbox</span>
             </button>
           </div>
         </section>
@@ -91,26 +99,26 @@
           <div class="card-header">
             <h3 class="section-title">
               <i data-lucide="history"></i>
-              Latest Transactions
+              <span data-i18n="accounting.latest_transactions">Latest Transactions</span>
             </h3>
           </div>
           <div class="table-scroll">
             <table class="table">
               <thead>
                 <tr>
-                  <th>Journal No</th>
-                  <th>Date</th>
-                  <th>Type</th>
-                  <th>Amount</th>
-                  <th>Category</th>
-                  <th>Notes</th>
-                  <th>Actions</th>
+                  <th data-i18n="accounting.journal_no">Journal No</th>
+                  <th data-i18n="common.date">Date</th>
+                  <th data-i18n="common.type">Type</th>
+                  <th data-i18n="common.amount">Amount</th>
+                  <th data-i18n="common.category">Category</th>
+                  <th data-i18n="common.notes">Notes</th>
+                  <th data-i18n="common.actions">Actions</th>
                 </tr>
               </thead>
               <tbody id="accounting-recent-body"></tbody>
             </table>
           </div>
-          <div id="accounting-empty" class="empty-state hidden">No accounting entries yet.</div>
+          <div id="accounting-empty" class="empty-state hidden" data-i18n="accounting.empty">No accounting entries yet.</div>
         </div>
       </main>
     </div>
