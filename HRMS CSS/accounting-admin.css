@@ -1,5 +1,52 @@
 .admin-card {
   margin-bottom: var(--space-5);
+  background: linear-gradient(160deg, var(--surface-strong), color-mix(in srgb, var(--primary) 5%, var(--surface)));
+  border: 1px solid color-mix(in srgb, var(--primary) 18%, var(--border));
+  box-shadow: 0 10px 24px -18px color-mix(in srgb, var(--primary) 38%, transparent);
+  animation: adminCardIn 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  transition: box-shadow 180ms ease, transform 180ms ease;
+}
+
+.admin-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 28px -22px color-mix(in srgb, var(--primary) 46%, transparent);
+}
+
+.admin-head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  justify-content: flex-end;
+}
+
+.admin-tools {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.admin-tools.two-cols {
+  grid-template-columns: 1.5fr minmax(180px, 0.6fr);
+}
+
+.admin-summary {
+  margin-bottom: var(--space-3);
+}
+
+.summary-total {
+  border-inline-start: 4px solid #334155;
+  background: linear-gradient(150deg, color-mix(in srgb, #334155 10%, var(--surface)), var(--surface-strong));
+}
+
+.summary-open {
+  border-inline-start: 4px solid #b45309;
+  background: linear-gradient(150deg, color-mix(in srgb, #b45309 10%, var(--surface)), var(--surface-strong));
+}
+
+.summary-settled {
+  border-inline-start: 4px solid #15803d;
+  background: linear-gradient(150deg, color-mix(in srgb, #15803d 10%, var(--surface)), var(--surface-strong));
 }
 
 .table-scroll {
@@ -20,6 +67,13 @@
   padding: var(--space-3);
   display: grid;
   gap: var(--space-2);
+  background: linear-gradient(165deg, color-mix(in srgb, var(--primary-soft) 22%, var(--surface)), var(--surface-strong));
+  transition: border-color 180ms ease, transform 180ms ease;
+}
+
+.close-box:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
 }
 
 .close-actions {
@@ -49,9 +103,50 @@
   padding: 4px 10px;
   background: color-mix(in srgb, var(--primary) 8%, var(--surface));
   font-size: 0.82rem;
+  animation: chipPopIn 360ms ease both;
+}
+
+@keyframes adminCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.996);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes chipPopIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-card,
+  .chip {
+    animation: none;
+  }
+
+  .admin-card,
+  .close-box {
+    transition: none;
+  }
 }
 
 @media (max-width: 900px) {
+  .admin-head-actions {
+    justify-content: flex-start;
+  }
+
+  .admin-tools.two-cols,
+  .admin-summary,
   .close-grid,
   .close-lists {
     grid-template-columns: 1fr;

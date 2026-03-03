@@ -5,10 +5,14 @@ import { renderSidebar } from "../Collaboration interface/ui-sidebar.js";
 import { openModal } from "../Collaboration interface/ui-modal.js";
 import { showToast } from "../Collaboration interface/ui-toast.js";
 import { trackUxEvent } from "../Services/telemetry.service.js";
+import { canDo } from "../Services/permissions.service.js";
 import {
   createAccountingEntry,
+  deleteAccountingEntry,
   getCashboxConfig,
   listAccountingEntries,
+  listAccountingObligations,
+  updateAccountingEntry,
   upsertCashboxConfig
 } from "../Services/accounting.service.js";
 
@@ -25,11 +29,15 @@ if (window.lucide?.createIcons) {
   window.lucide.createIcons();
 }
 
-const canManage = ["super_admin", "hr_admin", "manager"].includes(role);
+const canCreate = canDo({ role, entity: "accounting", action: "create" });
+const canEdit = canDo({ role, entity: "accounting", action: "edit" });
+const canDelete = canDo({ role, entity: "accounting", action: "delete" });
 const openingBalanceEl = document.getElementById("acc-opening-balance");
 const totalInEl = document.getElementById("acc-total-in");
 const totalOutEl = document.getElementById("acc-total-out");
 const totalExpenseEl = document.getElementById("acc-total-expense");
+const advanceCountEl = document.getElementById("acc-advance-count");
+const advanceDeductionEl = document.getElementById("acc-advance-deduction");
 const netEl = document.getElementById("acc-total-net");
 const recentBody = document.getElementById("accounting-recent-body");
 const emptyState = document.getElementById("accounting-empty");
@@ -40,6 +48,7 @@ const openFlowBtn = document.getElementById("accounting-open-flow");
 const openCashboxBtn = document.getElementById("accounting-open-cashbox");
 
 let entries = [];
+let obligations = [];
 let openingBalance = 0;
 
 function todayKey() {
@@ -90,12 +99,17 @@ function renderSummary() {
   const totalIn = monthRows.filter((r) => r.type === "in").reduce((sum, r) => sum + safeNumber(r.amount), 0);
   const totalOut = monthRows.filter((r) => r.type === "out").reduce((sum, r) => sum + safeNumber(r.amount), 0);
   const totalExpense = monthRows.filter((r) => r.type === "expense").reduce((sum, r) => sum + safeNumber(r.amount), 0);
+  const openAdvances = obligations.filter((item) => String(item.kind || "").toLowerCase() === "advance" && String(item.status || "").toLowerCase() === "open");
+  const openAdvanceCount = openAdvances.length;
+  const openAdvanceDue = openAdvances.reduce((sum, item) => sum + safeNumber(item.balance), 0);
   const totalNet = openingBalance + totalIn - totalOut - totalExpense;
 
   if (openingBalanceEl) openingBalanceEl.textContent = currency(openingBalance);
   totalInEl.textContent = currency(totalIn);
   totalOutEl.textContent = currency(totalOut);
   totalExpenseEl.textContent = currency(totalExpense);
+  if (advanceCountEl) advanceCountEl.textContent = String(openAdvanceCount);
+  if (advanceDeductionEl) advanceDeductionEl.textContent = currency(openAdvanceDue);
   netEl.textContent = currency(totalNet);
 }
 
@@ -103,6 +117,13 @@ function renderRecent() {
   const rows = entries.slice(0, 8);
   recentBody.innerHTML = rows
     .map((entry, index) => {
+      const actions = [];
+      if (canEdit) {
+        actions.push(`<button class="btn btn-ghost" data-action="edit" data-id="${entry.id}">Edit</button>`);
+      }
+      if (canDelete) {
+        actions.push(`<button class="btn btn-ghost" data-action="delete" data-id="${entry.id}">Delete</button>`);
+      }
       return `
         <tr class="acc-row type-${typeBadge(entry.type)}" style="--acc-accent:${accentFor(entry)};--row-index:${index};">
           <td>${entry.journalNo || "-"}</td>
@@ -111,23 +132,122 @@ function renderRecent() {
           <td>${currency(entry.amount)}</td>
           <td>${entry.category || "-"}</td>
           <td>${entry.notes || "-"}</td>
+          <td>${actions.join("") || "<span class=\"text-muted\">View only</span>"}</td>
         </tr>
       `;
     })
     .join("");
+  if (canEdit || canDelete) {
+    recentBody.querySelectorAll("button[data-action]").forEach((button) => {
+      button.addEventListener("click", () => {
+        void handleRecentAction(button.dataset.action, button.dataset.id);
+      });
+    });
+  }
   emptyState.classList.toggle("hidden", rows.length > 0);
 }
 
+function openEditModal(entry) {
+  if (!entry || !canEdit) return;
+  const currentType = typeBadge(entry.type);
+  openModal({
+    title: "Edit Entry",
+    content: `
+      <label>Date<input id="acc-edit-date" class="input" type="date" value="${entry.date || todayKey()}" /></label>
+      <label>Type
+        <select id="acc-edit-type" class="select">
+          <option value="in" ${currentType === "in" ? "selected" : ""}>In</option>
+          <option value="out" ${currentType === "out" ? "selected" : ""}>Out</option>
+          <option value="expense" ${currentType === "expense" ? "selected" : ""}>Expense</option>
+        </select>
+      </label>
+      <label>Amount<input id="acc-edit-amount" class="input" type="number" min="0" step="0.01" value="${safeNumber(entry.amount)}" /></label>
+      <label>Category<input id="acc-edit-category" class="input" value="${entry.category || ""}" /></label>
+      <label>Notes<textarea id="acc-edit-notes" class="textarea">${entry.notes || ""}</textarea></label>
+    `,
+    actions: [
+      {
+        label: "Save",
+        className: "btn btn-primary",
+        onClick: async () => {
+          try {
+            const amount = safeNumber(document.getElementById("acc-edit-amount").value);
+            if (amount <= 0) {
+              showToast("error", "Amount must be greater than 0");
+              return false;
+            }
+            await updateAccountingEntry(entry.id, {
+              date: document.getElementById("acc-edit-date").value || todayKey(),
+              type: document.getElementById("acc-edit-type").value,
+              amount,
+              category: document.getElementById("acc-edit-category").value.trim(),
+              notes: document.getElementById("acc-edit-notes").value.trim(),
+              receiptNo: entry.receiptNo || "",
+              externalReceiptNo: entry.externalReceiptNo || "",
+              attachmentUrl: entry.attachmentUrl || "",
+              attachmentName: entry.attachmentName || "",
+              source: entry.source || "accounting_overview"
+            });
+            showToast("success", "Entry updated");
+            await loadAccounting();
+            return true;
+          } catch (error) {
+            console.error("Accounting overview update failed:", error);
+            if (error?.code === "PERIOD_CLOSED" || String(error?.message || "").includes("PERIOD_CLOSED")) {
+              showToast("error", "This entry is in a closed period and cannot be edited.");
+              return false;
+            }
+            showToast("error", "Failed to update entry");
+            return false;
+          }
+        }
+      },
+      { label: "Cancel", className: "btn btn-ghost" }
+    ]
+  });
+}
+
+async function handleRecentAction(action, id) {
+  const entry = entries.find((item) => item.id === id);
+  if (!entry) return;
+
+  if (action === "edit" && canEdit) {
+    openEditModal(entry);
+    return;
+  }
+
+  if (action === "delete" && canDelete) {
+    if (!window.confirm("Delete this accounting entry?")) return;
+    try {
+      await deleteAccountingEntry(id);
+      showToast("success", "Entry deleted");
+      await loadAccounting();
+    } catch (error) {
+      console.error("Accounting overview delete failed:", error);
+      if (error?.code === "PERIOD_CLOSED" || String(error?.message || "").includes("PERIOD_CLOSED")) {
+        showToast("error", "This entry is in a closed period and cannot be deleted.");
+        return;
+      }
+      showToast("error", "Failed to delete entry");
+    }
+  }
+}
+
 async function loadAccounting() {
-  const [entryRows, config] = await Promise.all([listAccountingEntries(), getCashboxConfig()]);
+  const [entryRows, config, obligationRows] = await Promise.all([
+    listAccountingEntries(),
+    getCashboxConfig(),
+    listAccountingObligations()
+  ]);
   entries = entryRows;
+  obligations = obligationRows;
   openingBalance = safeNumber(config?.openingBalance);
   renderSummary();
   renderRecent();
 }
 
 function openOpeningBalanceModal() {
-  if (!canManage) return;
+  if (!canCreate) return;
   openModal({
     title: "Set Cashbox Opening Balance",
     content: `
@@ -161,7 +281,7 @@ function openOpeningBalanceModal() {
 }
 
 function openQuickModal(type) {
-  if (!canManage) return;
+  if (!canCreate) return;
   openModal({
     title: type === "in" ? "Add Cash In" : "Add Cash Out",
     content: `
@@ -210,7 +330,7 @@ function openQuickModal(type) {
   });
 }
 
-if (!canManage) {
+if (!canCreate) {
   openingBtn?.classList.add("hidden");
   quickInBtn?.classList.add("hidden");
   quickOutBtn?.classList.add("hidden");

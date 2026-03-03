@@ -507,3 +507,92 @@ export async function postAccountingObligationMovement(payload = {}) {
     return { entryId: entryDoc.id, journalNo, balance: nextBalance };
   });
 }
+
+export async function closeAdvanceObligation(payload = {}) {
+  const obligationId = String(payload.obligationId || "").trim();
+  const date = String(payload.date || "").trim();
+  const notes = String(payload.notes || "").trim();
+  const actorUid = String(payload.actorUid || "").trim();
+  const actorName = String(payload.actorName || "").trim();
+
+  if (!obligationId) throw new Error("OBLIGATION_REQUIRED");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error("DATE_REQUIRED");
+
+  await assertDateOpen(date);
+
+  const obligationDoc = doc(db, "accounting_obligations", obligationId);
+  const entryDoc = doc(accountingRef);
+  const movementDoc = doc(obligationMovementsRef);
+
+  return runTransaction(db, async (tx) => {
+    const obligationSnap = await tx.get(obligationDoc);
+    if (!obligationSnap.exists()) {
+      const err = new Error("OBLIGATION_NOT_FOUND");
+      err.code = "OBLIGATION_NOT_FOUND";
+      throw err;
+    }
+
+    const obligation = obligationSnap.data() || {};
+    const kind = normalizeObligationKind(obligation.kind);
+    if (kind !== "advance") {
+      const err = new Error("INVALID_KIND");
+      err.code = "INVALID_KIND";
+      throw err;
+    }
+
+    const amount = safeNumber(obligation.balance);
+    if (amount <= 0 || String(obligation.status || "").toLowerCase() === "settled") {
+      const err = new Error("ALREADY_SETTLED");
+      err.code = "ALREADY_SETTLED";
+      throw err;
+    }
+
+    const journalNo = await nextJournalNumberInTx(tx, date);
+    const partyName = String(obligation.partyName || "");
+    const partyRef = String(obligation.partyRef || "");
+    const baseNote = `ADVANCE CLOSE${partyName ? ` - ${partyName}` : ""}${partyRef ? ` (${partyRef})` : ""}`;
+    const mergedNotes = notes ? `${baseNote} | ${notes}` : baseNote;
+
+    tx.set(entryDoc, {
+      journalNo,
+      type: "out",
+      amount,
+      date,
+      category: "Advance Close",
+      receiptNo: "",
+      externalReceiptNo: "",
+      notes: mergedNotes,
+      attachmentUrl: "",
+      attachmentName: "",
+      source: "obligations_close",
+      createdByUid: actorUid,
+      createdByName: actorName,
+      createdAt: ts(),
+      updatedAt: ts()
+    });
+
+    tx.update(obligationDoc, {
+      balance: 0,
+      status: "settled",
+      updatedAt: ts()
+    });
+
+    tx.set(movementDoc, {
+      obligationId,
+      obligationKind: "advance",
+      operation: "close_out",
+      amount,
+      date,
+      notes,
+      receiptNo: "",
+      externalReceiptNo: "",
+      journalNo,
+      entryId: entryDoc.id,
+      actorUid,
+      actorName,
+      createdAt: ts()
+    });
+
+    return { entryId: entryDoc.id, journalNo, balance: 0, amount };
+  });
+}

@@ -14,6 +14,7 @@ import {
   getAccountingClosures,
   listAccountingObligations,
   listChartAccounts,
+  closeAdvanceObligation,
   postAccountingObligationMovement,
   reopenAccountingMonth,
   reopenAccountingYear,
@@ -40,6 +41,16 @@ const coaBody = document.getElementById("coa-body");
 const oblBody = document.getElementById("obl-body");
 const coaAddBtn = document.getElementById("coa-add-btn");
 const oblAddBtn = document.getElementById("obl-add-btn");
+const coaSearchInput = document.getElementById("coa-search");
+const oblSearchInput = document.getElementById("obl-search");
+const oblStatusFilter = document.getElementById("obl-status-filter");
+const coaExportExcelBtn = document.getElementById("coa-export-excel-btn");
+const coaExportPdfBtn = document.getElementById("coa-export-pdf-btn");
+const oblExportExcelBtn = document.getElementById("obl-export-excel-btn");
+const oblExportPdfBtn = document.getElementById("obl-export-pdf-btn");
+const oblTotalCountEl = document.getElementById("obl-total-count");
+const oblOpenCountEl = document.getElementById("obl-open-count");
+const oblSettledCountEl = document.getElementById("obl-settled-count");
 const closeMonthInput = document.getElementById("close-month-input");
 const closeYearInput = document.getElementById("close-year-input");
 const closeMonthBtn = document.getElementById("close-month-btn");
@@ -57,13 +68,53 @@ function money(value) {
   return new Intl.NumberFormat(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(Number(value) || 0);
 }
 
+function norm(value = "") {
+  return String(value || "").trim().toLowerCase();
+}
+
+function todayKey() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 function obligationKindLabel(kind = "") {
-  const normalized = String(kind || "").toLowerCase();
+  const normalized = norm(kind);
   if (normalized === "custody") return "Custody (عهد)";
   if (normalized === "advance") return "Advance (سلف)";
   if (normalized === "receivable") return "AR Receivable (ذمم مدينة)";
   if (normalized === "payable") return "AP Payable (ذمم دائنة)";
   return kind || "-";
+}
+
+function filteredChartRows() {
+  const query = norm(coaSearchInput?.value);
+  return chart.filter((item) => {
+    if (!query) return true;
+    return [item.code, item.name, item.type, item.parentCode, item.status]
+      .filter(Boolean)
+      .some((field) => norm(field).includes(query));
+  });
+}
+
+function filteredObligationRows() {
+  const query = norm(oblSearchInput?.value);
+  const status = norm(oblStatusFilter?.value);
+  return obligations.filter((item) => {
+    const matchesStatus = !status || norm(item.status) === status;
+    if (!matchesStatus) return false;
+    if (!query) return true;
+    return [item.kind, item.partyName, item.partyRef, item.status, item.notes]
+      .filter(Boolean)
+      .some((field) => norm(field).includes(query));
+  });
+}
+
+function renderObligationStats() {
+  const total = obligations.length;
+  const open = obligations.filter((item) => norm(item.status) === "open").length;
+  const settled = obligations.filter((item) => norm(item.status) === "settled").length;
+  if (oblTotalCountEl) oblTotalCountEl.textContent = String(total);
+  if (oblOpenCountEl) oblOpenCountEl.textContent = String(open);
+  if (oblSettledCountEl) oblSettledCountEl.textContent = String(settled);
 }
 
 function renderClosures() {
@@ -74,7 +125,7 @@ function renderClosures() {
 }
 
 function renderChart() {
-  coaBody.innerHTML = chart
+  coaBody.innerHTML = filteredChartRows()
     .map((item) => {
       return `
         <tr>
@@ -108,8 +159,9 @@ function renderChart() {
 }
 
 function renderObligations() {
-  oblBody.innerHTML = obligations
+  oblBody.innerHTML = filteredObligationRows()
     .map((item) => {
+      const isAdvance = norm(item.kind) === "advance";
       return `
         <tr>
           <td>${obligationKindLabel(item.kind)}</td>
@@ -122,7 +174,7 @@ function renderObligations() {
               canManage
                 ? `
               <button class="btn btn-ghost" data-obl-action="edit" data-id="${item.id}">Edit</button>
-              <button class="btn btn-ghost" data-obl-action="post" data-id="${item.id}">Post</button>
+              <button class="btn btn-ghost" data-obl-action="${isAdvance ? "close" : "post"}" data-id="${item.id}">${isAdvance ? "Close" : "Post"}</button>
               <button class="btn btn-ghost" data-obl-action="delete" data-id="${item.id}">Delete</button>
             `
                 : "<span class='text-muted'>View only</span>"
@@ -142,31 +194,84 @@ function renderObligations() {
   }
 }
 
+function openAdvanceCloseModal(item) {
+  if (!item || !canManage) return;
+  const currentBalance = Number(item.balance || 0);
+  if (currentBalance <= 0) {
+    showToast("info", "This advance is already settled.");
+    return;
+  }
+
+  openModal({
+    title: `Close Advance - ${item.partyName || item.id}`,
+    content: `
+      <p class="text-muted">Closing this advance will deduct <strong>${money(currentBalance)}</strong> from cash and reduce Net Balance.</p>
+      <label>Date<input id="adv-close-date" class="input" type="date" value="${todayKey()}" /></label>
+      <label>Notes<textarea id="adv-close-notes" class="textarea" placeholder="Optional note"></textarea></label>
+    `,
+    actions: [
+      {
+        label: "Close Advance",
+        className: "btn btn-primary",
+        onClick: async () => {
+          try {
+            const result = await closeAdvanceObligation({
+              obligationId: item.id,
+              date: document.getElementById("adv-close-date").value || todayKey(),
+              notes: document.getElementById("adv-close-notes").value.trim(),
+              actorUid: user.uid || "",
+              actorName: user.name || user.email || user.uid || ""
+            });
+            showToast("success", `Advance closed. Journal: ${result.journalNo}`);
+            await loadAll();
+            return true;
+          } catch (error) {
+            console.error("Close advance failed:", error);
+            const msg = String(error?.code || error?.message || "");
+            if (msg.includes("PERIOD_CLOSED")) {
+              showToast("error", "Selected period is closed. Reopen month/year first.");
+              return false;
+            }
+            if (msg.includes("ALREADY_SETTLED")) {
+              showToast("info", "This advance is already settled.");
+              await loadAll();
+              return true;
+            }
+            showToast("error", "Failed to close advance");
+            return false;
+          }
+        }
+      },
+      { label: "Cancel", className: "btn btn-ghost" }
+    ]
+  });
+}
+
 function openObligationPostModal(item) {
   if (!item || !canManage) return;
-  const kind = String(item.kind || "").toLowerCase();
+  const kind = norm(item.kind);
   let operationOptions = "";
   if (kind === "custody" || kind === "advance") {
     operationOptions = `
-      <option value="issue_out">Issue (Decrease Cash)</option>
-      <option value="settle_in">Settlement (Increase Cash)</option>
+      <option value="issue_out">Issue Invoice/Advance (Decrease Cash)</option>
+      <option value="settle_in">Settlement / Close (No Extra Deduction)</option>
     `;
   } else if (kind === "receivable") {
-    operationOptions = `<option value="collect_in">Collect (Increase Cash)</option>`;
+    operationOptions = `<option value="collect_in">Collection / Close (Increase Cash)</option>`;
   } else if (kind === "payable") {
-    operationOptions = `<option value="pay_out">Pay (Decrease Cash)</option>`;
+    operationOptions = `<option value="pay_out">Payment Invoice (Decrease Cash)</option>`;
   }
 
   openModal({
     title: `Post Movement - ${item.partyName || item.id}`,
     content: `
-      <p class="text-muted">This will create automatic journal entry and update this balance.</p>
+      <p class="text-muted">Posting here creates accounting entry automatically and updates invoice/item status and balance.</p>
       <label>Operation
         <select id="obl-post-operation" class="select">
           ${operationOptions}
         </select>
       </label>
-      <label>Date<input id="obl-post-date" class="input" type="date" value="${new Date().toISOString().slice(0, 10)}" /></label>
+      <label>Date<input id="obl-post-date" class="input" type="date" value="${todayKey()}" /></label>
       <label>Amount<input id="obl-post-amount" class="input" type="number" min="0" step="0.01" value="0" /></label>
       <label>Expense Receipt No<input id="obl-post-receipt-no" class="input" /></label>
       <label>External Receipt No<input id="obl-post-external-receipt-no" class="input" /></label>
@@ -296,7 +401,7 @@ function openObligationModal(existing = null) {
         </select>
       </label>
       <label>Party Name<input id="obl-name" class="input" value="${rec.partyName || ""}" /></label>
-      <label>Reference<input id="obl-ref" class="input" value="${rec.partyRef || ""}" /></label>
+      <label>Reference/Invoice No<input id="obl-ref" class="input" value="${rec.partyRef || ""}" /></label>
       <label>Balance<input id="obl-balance" class="input" type="number" min="0" step="0.01" value="${Number(rec.balance || 0)}" /></label>
       <label>Status
         <select id="obl-status" class="select">
@@ -363,6 +468,10 @@ async function handleObligationAction(action, id) {
     openObligationModal(item);
     return;
   }
+  if (action === "close") {
+    openAdvanceCloseModal(item);
+    return;
+  }
   if (action === "post") {
     openObligationPostModal(item);
     return;
@@ -403,6 +512,96 @@ async function runCloseAction(kind, op) {
   }
 }
 
+function fileDateToken() {
+  return todayKey();
+}
+
+function getChartExportRows() {
+  return filteredChartRows().map((item) => ({
+    Code: item.code || "",
+    Name: item.name || "",
+    Type: item.type || "",
+    Parent: item.parentCode || "",
+    Status: item.status || "",
+    Notes: item.notes || ""
+  }));
+}
+
+function getObligationExportRows() {
+  return filteredObligationRows().map((item) => ({
+    Kind: obligationKindLabel(item.kind),
+    Party: item.partyName || "",
+    Ref: item.partyRef || "",
+    Balance: Number(item.balance) || 0,
+    Status: item.status || "",
+    Notes: item.notes || ""
+  }));
+}
+
+function exportExcel(rows, sheetName, fileName) {
+  if (!rows.length) {
+    showToast("info", "No rows to export");
+    return;
+  }
+  if (!window.XLSX) {
+    showToast("error", "Excel export library not loaded");
+    return;
+  }
+  const sheet = window.XLSX.utils.json_to_sheet(rows);
+  const workbook = window.XLSX.utils.book_new();
+  window.XLSX.utils.book_append_sheet(workbook, sheet, sheetName);
+  window.XLSX.writeFile(workbook, fileName);
+}
+
+function exportPdf(rows, fileName, title, headers) {
+  if (!rows.length) {
+    showToast("info", "No rows to export");
+    return;
+  }
+  const jsPdfLib = window.jspdf?.jsPDF;
+  if (!jsPdfLib) {
+    showToast("error", "PDF export library not loaded");
+    return;
+  }
+
+  const doc = new jsPdfLib({ orientation: "landscape" });
+  doc.setFontSize(13);
+  doc.text(title, 14, 14);
+  const body = rows.map((row) => headers.map((header) => String(row[header] ?? "")));
+  if (typeof doc.autoTable === "function") {
+    doc.autoTable({
+      startY: 20,
+      head: [headers],
+      body
+    });
+  } else {
+    let y = 24;
+    body.forEach((r) => {
+      doc.text(r.join(" | "), 14, y);
+      y += 7;
+    });
+  }
+  doc.save(fileName);
+}
+
+function exportChartExcel() {
+  exportExcel(getChartExportRows(), "ChartOfAccounts", `chart-of-accounts-${fileDateToken()}.xlsx`);
+}
+
+function exportChartPdf() {
+  const rows = getChartExportRows();
+  exportPdf(rows, `chart-of-accounts-${fileDateToken()}.pdf`, "Chart of Accounts", ["Code", "Name", "Type", "Parent", "Status", "Notes"]);
+}
+
+function exportObligationExcel() {
+  exportExcel(getObligationExportRows(), "InvoicesObligations", `invoices-obligations-${fileDateToken()}.xlsx`);
+}
+
+function exportObligationPdf() {
+  const rows = getObligationExportRows();
+  exportPdf(rows, `invoices-obligations-${fileDateToken()}.pdf`, "Custody / Advances / AR / AP", ["Kind", "Party", "Ref", "Balance", "Status", "Notes"]);
+}
+
 async function loadAll() {
   const [chartRows, obligationRows, closeState] = await Promise.all([
     listChartAccounts(),
@@ -412,6 +611,7 @@ async function loadAll() {
   chart = chartRows;
   obligations = obligationRows;
   closures = closeState;
+  renderObligationStats();
   renderChart();
   renderObligations();
   renderClosures();
@@ -428,6 +628,13 @@ if (!canManage) {
 
 coaAddBtn?.addEventListener("click", () => openCoaModal());
 oblAddBtn?.addEventListener("click", () => openObligationModal());
+coaSearchInput?.addEventListener("input", renderChart);
+oblSearchInput?.addEventListener("input", renderObligations);
+oblStatusFilter?.addEventListener("change", renderObligations);
+coaExportExcelBtn?.addEventListener("click", exportChartExcel);
+coaExportPdfBtn?.addEventListener("click", exportChartPdf);
+oblExportExcelBtn?.addEventListener("click", exportObligationExcel);
+oblExportPdfBtn?.addEventListener("click", exportObligationPdf);
 closeMonthBtn?.addEventListener("click", () => void runCloseAction("month", "close"));
 reopenMonthBtn?.addEventListener("click", () => void runCloseAction("month", "reopen"));
 closeYearBtn?.addEventListener("click", () => void runCloseAction("year", "close"));
