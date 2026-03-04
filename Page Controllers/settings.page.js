@@ -39,7 +39,6 @@ const userSearch = document.getElementById("settings-user-search");
 const addUserBtn = document.getElementById("settings-add-user-btn");
 
 let roleVisibility = parseStorage(STORAGE_KEYS.roleVisibility, {});
-let userPermissions = parseStorage(STORAGE_KEYS.userPermissions, {});
 let users = [];
 
 if (!canManageUsers) {
@@ -61,11 +60,11 @@ function persistUsersDraft() {
 
 function persistRbacLocal() {
   localStorage.setItem(STORAGE_KEYS.roleVisibility, JSON.stringify(roleVisibility));
-  localStorage.setItem(STORAGE_KEYS.userPermissions, JSON.stringify(userPermissions));
+  localStorage.removeItem(STORAGE_KEYS.userPermissions);
 }
 
 async function syncRbacRemote() {
-  await upsertSettingsRbacConfig({ roleVisibility, userPermissions });
+  await upsertSettingsRbacConfig({ roleVisibility, userPermissions: {} });
 }
 
 let rbacSyncTimer = null;
@@ -166,8 +165,6 @@ function normalizeUser(raw = {}) {
 }
 
 function userAllowedPages(item) {
-  const custom = userPermissions[item.uid];
-  if (Object.prototype.hasOwnProperty.call(userPermissions, item.uid) && Array.isArray(custom)) return custom;
   return defaultPagesForRole(item.role);
 }
 
@@ -242,7 +239,6 @@ function renderUsersTable() {
                         canManageTargetUser(item)
                           ? `
                           <button class="btn btn-ghost" data-action="edit" data-id="${escapeHtml(item.uid)}">Edit</button>
-                          <button class="btn btn-ghost" data-action="perm" data-id="${escapeHtml(item.uid)}">Permissions</button>
                           <button class="btn btn-ghost" data-action="delete" data-id="${escapeHtml(item.uid)}" ${item.uid === user.uid ? "disabled" : ""}>Delete</button>
                         `
                           : "<span class=\"text-muted\">View only</span>"
@@ -260,27 +256,6 @@ function renderUsersTable() {
   usersTable.querySelectorAll("button[data-action]").forEach((button) => {
     button.addEventListener("click", () => handleUserAction(button.dataset.action, button.dataset.id));
   });
-}
-
-function buildPermissionChecklist(selected = []) {
-  const set = new Set(selected);
-  return `
-    <div class="perm-grid">
-      ${MENU_ITEMS.map((item) => {
-        const checked = set.has(item.key);
-        return `
-          <label class="perm-item">
-            <input type="checkbox" value="${item.key}" ${checked ? "checked" : ""} />
-            <span>${item.key}</span>
-          </label>
-        `;
-      }).join("")}
-    </div>
-  `;
-}
-
-function readSelectedPermissions() {
-  return Array.from(document.querySelectorAll('.perm-grid input[type="checkbox"]:checked')).map((input) => input.value);
 }
 
 function openUserModal(existing = null) {
@@ -309,8 +284,6 @@ function openUserModal(existing = null) {
       <label>Manager ID<input class="input" id="set-user-manager" value="${record.managerId}" /></label>
       <label>Job Title<input class="input" id="set-user-title" value="${record.title}" /></label>
       <label>Phone<input class="input" id="set-user-phone" value="${record.phone}" /></label>
-      <label>Custom Page Permissions (optional)</label>
-      ${buildPermissionChecklist(userPermissions[record.uid] || defaultPagesForRole(selectedRole))}
     `,
     actions: [
       {
@@ -338,15 +311,13 @@ function openUserModal(existing = null) {
           users = users.filter((item) => item.uid !== uid);
           users.unshift(payload);
           persistUsersDraft();
-
-          userPermissions[uid] = readSelectedPermissions();
           persistRbacLocal();
           syncRbacRemoteSafe();
 
           try {
             await upsertUser(uid, {
               ...payload,
-              permissions: userPermissions[uid]
+              permissions: null
             });
           } catch (_) {
             showToast("info", "Saved locally. Firebase sync can be completed later.");
@@ -354,6 +325,7 @@ function openUserModal(existing = null) {
 
           if (uid === user.uid) {
             const updatedSelf = { ...user, ...payload };
+            updatedSelf.permissions = null;
             localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(updatedSelf));
             localStorage.setItem(STORAGE_KEYS.role, payload.role);
           }
@@ -379,47 +351,6 @@ function openUserModal(existing = null) {
   });
 }
 
-function openPermissionsModal(uid) {
-  const item = users.find((entry) => entry.uid === uid);
-  if (!item || !canManageTargetUser(item)) return;
-  const selected = userPermissions[uid] || defaultPagesForRole(item.role);
-  openModal({
-    title: `Permissions - ${item.name || item.uid}`,
-    content: buildPermissionChecklist(selected),
-    actions: [
-      {
-        label: "Save",
-        className: "btn btn-primary",
-        onClick: async () => {
-          userPermissions[uid] = readSelectedPermissions();
-          persistRbacLocal();
-          syncRbacRemoteSafe();
-          try {
-            await upsertUser(uid, { permissions: userPermissions[uid] });
-          } catch (_) {
-            showToast("info", "Permissions saved locally. Firebase sync can be completed later.");
-          }
-          renderUsersTable();
-          renderSidebar("settings");
-          await safeLogSecurityEvent({
-            action: "permissions_updated",
-            severity: "warning",
-            status: "success",
-            actorUid: user?.uid || "",
-            actorEmail: user?.email || "",
-            actorRole: role || "",
-            entity: "users",
-            entityId: uid,
-            message: "User custom permissions were changed."
-          });
-          showToast("success", "Permissions updated");
-        }
-      },
-      { label: "Cancel", className: "btn btn-ghost" }
-    ]
-  });
-}
-
 async function handleUserAction(action, uid) {
   const item = users.find((entry) => entry.uid === uid);
   if (!item || !canManageTargetUser(item)) return;
@@ -429,15 +360,9 @@ async function handleUserAction(action, uid) {
     return;
   }
 
-  if (action === "perm") {
-    openPermissionsModal(uid);
-    return;
-  }
-
   if (action === "delete") {
     users = users.filter((entry) => entry.uid !== uid);
     persistUsersDraft();
-    delete userPermissions[uid];
     persistRbacLocal();
     syncRbacRemoteSafe();
     try {
@@ -477,7 +402,10 @@ async function loadUsers() {
     }
     showToast("info", "Running in local mode. Firebase sync can be enabled later.");
   }
+
   persistUsersDraft();
+  persistRbacLocal();
+  syncRbacRemoteSafe();
   renderUsersTable();
 }
 
@@ -485,7 +413,6 @@ async function loadRbacConfig() {
   try {
     const remote = await getSettingsRbacConfig();
     roleVisibility = { ...roleVisibility, ...(remote.roleVisibility || {}) };
-    userPermissions = { ...userPermissions, ...(remote.userPermissions || {}) };
     persistRbacLocal();
   } catch (_) {
     showToast("info", "Using local RBAC settings. Firebase sync can be enabled later.");

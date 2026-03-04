@@ -505,9 +505,9 @@ async function loadLeaves() {
   try {
     showTableSkeleton(tbody, { rows: 6, cols: 7 });
     const [leavesData, employeesData, balancesData] = await Promise.all([
-      listLeaves(),
-      listEmployees(),
-      listTimeoffBalances()
+      listLeaves({ limitCount: 400 }),
+      listEmployees({ limitCount: 200 }),
+      listTimeoffBalances({ limitCount: 200 })
     ]);
     allLeaves = leavesData.map((item) => ({ ...item, status: normalizeStatus(item.status) }));
     employees = employeesData;

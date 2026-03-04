@@ -9,10 +9,12 @@ import {
   deleteDoc,
   query,
   orderBy,
-  onSnapshot
+  onSnapshot,
+  limit
 } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
 const vaultRef = collection(db, "secure_vault_entries");
+const DEFAULT_VAULT_LIMIT = 150;
 
 function normalizePayload(payload = {}) {
   return {
@@ -33,14 +35,16 @@ function byUpdatedAtDesc(a, b) {
   return bTime - aTime;
 }
 
-export async function listVaultEntries() {
+export async function listVaultEntries(options = {}) {
+  const parsedLimit = Number(options.limitCount);
+  const limitCount = Number.isFinite(parsedLimit) && parsedLimit > 0 ? Math.min(500, Math.floor(parsedLimit)) : DEFAULT_VAULT_LIMIT;
   try {
-    const q = query(vaultRef, orderBy("updatedAt", "desc"));
+    const q = query(vaultRef, orderBy("updatedAt", "desc"), limit(limitCount));
     const snap = await getDocs(q);
     return snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
   } catch (_) {
     try {
-      const snap = await getDocs(vaultRef);
+      const snap = await getDocs(query(vaultRef, limit(limitCount)));
       return snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() })).sort(byUpdatedAtDesc);
     } catch (_) {
       return [];
@@ -48,8 +52,10 @@ export async function listVaultEntries() {
   }
 }
 
-export function watchVaultEntries(onChange, onError) {
-  const q = query(vaultRef, orderBy("updatedAt", "desc"));
+export function watchVaultEntries(onChange, onError, options = {}) {
+  const parsedLimit = Number(options.limitCount);
+  const limitCount = Number.isFinite(parsedLimit) && parsedLimit > 0 ? Math.min(500, Math.floor(parsedLimit)) : DEFAULT_VAULT_LIMIT;
+  const q = query(vaultRef, orderBy("updatedAt", "desc"), limit(limitCount));
   return onSnapshot(
     q,
     (snap) => {

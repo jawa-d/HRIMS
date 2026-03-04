@@ -8,22 +8,21 @@ import {
   updateDoc,
   deleteDoc,
   query,
-  orderBy
+  orderBy,
+  limit
 } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
 const usersRef = collection(db, "users");
+const DEFAULT_USERS_LIMIT = 120;
 
-export async function listUsers() {
+export async function listUsers(options = {}) {
+  const parsedLimit = Number(options.limitCount);
+  const limitCount = Number.isFinite(parsedLimit) && parsedLimit > 0 ? Math.min(500, Math.floor(parsedLimit)) : DEFAULT_USERS_LIMIT;
   try {
-    const snap = await getDocs(query(usersRef, orderBy("createdAt", "desc")));
+    const snap = await getDocs(query(usersRef, orderBy("createdAt", "desc"), limit(limitCount)));
     return snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
   } catch (_) {
-    try {
-      const snap = await getDocs(usersRef);
-      return snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
-    } catch (_) {
-      return [];
-    }
+    return [];
   }
 }
 

@@ -10,11 +10,13 @@ import {
   query,
   orderBy,
   where,
-  onSnapshot
+  onSnapshot,
+  limit
 } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
 const announcementsRef = collection(db, "announcements");
 const LOCAL_ANNOUNCEMENTS_KEY = "hrms_announcements_local";
+const DEFAULT_ANNOUNCEMENTS_LIMIT = 120;
 
 function nowTs() {
   return { seconds: Math.floor(Date.now() / 1000), nanoseconds: 0 };
@@ -61,18 +63,18 @@ function byCreatedAtDesc(a, b) {
 
 export async function listAnnouncements(filter = {}) {
   const status = String(filter.status || "").trim().toLowerCase();
+  const parsedLimit = Number(filter.limitCount);
+  const limitCount = Number.isFinite(parsedLimit) && parsedLimit > 0 ? Math.min(500, Math.floor(parsedLimit)) : DEFAULT_ANNOUNCEMENTS_LIMIT;
   const constraints = [];
   if (status) constraints.push(where("status", "==", status));
+  constraints.push(orderBy("createdAt", "desc"), limit(limitCount));
 
   try {
-    const q = constraints.length
-      ? query(announcementsRef, ...constraints, orderBy("createdAt", "desc"))
-      : query(announcementsRef, orderBy("createdAt", "desc"));
-    const snap = await getDocs(q);
+    const snap = await getDocs(query(announcementsRef, ...constraints));
     return snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
   } catch (_) {
     try {
-      const q = constraints.length ? query(announcementsRef, ...constraints) : announcementsRef;
+      const q = status ? query(announcementsRef, where("status", "==", status), limit(limitCount)) : query(announcementsRef, limit(limitCount));
       const snap = await getDocs(q);
       return snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() })).sort(byCreatedAtDesc);
     } catch (_) {
@@ -84,11 +86,12 @@ export async function listAnnouncements(filter = {}) {
 
 export function watchAnnouncements(onChange, onError, filter = {}) {
   const status = String(filter.status || "").trim().toLowerCase();
+  const parsedLimit = Number(filter.limitCount);
+  const limitCount = Number.isFinite(parsedLimit) && parsedLimit > 0 ? Math.min(500, Math.floor(parsedLimit)) : DEFAULT_ANNOUNCEMENTS_LIMIT;
   const constraints = [];
   if (status) constraints.push(where("status", "==", status));
-  const q = constraints.length
-    ? query(announcementsRef, ...constraints, orderBy("createdAt", "desc"))
-    : query(announcementsRef, orderBy("createdAt", "desc"));
+  constraints.push(orderBy("createdAt", "desc"), limit(limitCount));
+  const q = query(announcementsRef, ...constraints);
 
   return onSnapshot(
     q,

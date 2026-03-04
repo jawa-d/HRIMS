@@ -10,10 +10,12 @@ import {
   query,
   orderBy,
   where,
-  onSnapshot
+  onSnapshot,
+  limit
 } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
 const ticketsRef = collection(db, "tickets");
+const DEFAULT_TICKETS_LIMIT = 200;
 
 function normalizeTicketPayload(payload = {}) {
   return {
@@ -32,45 +34,34 @@ function normalizeTicketPayload(payload = {}) {
   };
 }
 
-function byCreatedAtDesc(a, b) {
-  const aTime = a?.createdAt?.seconds || 0;
-  const bTime = b?.createdAt?.seconds || 0;
-  return bTime - aTime;
-}
-
 export async function listTickets(filter = {}) {
   const scopeUid = String(filter.scopeUid || "").trim();
   const status = String(filter.status || "").trim().toLowerCase();
+  const parsedLimit = Number(filter.limitCount);
+  const limitCount = Number.isFinite(parsedLimit) && parsedLimit > 0 ? Math.min(500, Math.floor(parsedLimit)) : DEFAULT_TICKETS_LIMIT;
   const constraints = [];
   if (scopeUid) constraints.push(where("requesterUid", "==", scopeUid));
   if (status) constraints.push(where("status", "==", status));
+  constraints.push(orderBy("createdAt", "desc"), limit(limitCount));
 
   try {
-    const q = constraints.length
-      ? query(ticketsRef, ...constraints, orderBy("createdAt", "desc"))
-      : query(ticketsRef, orderBy("createdAt", "desc"));
-    const snap = await getDocs(q);
+    const snap = await getDocs(query(ticketsRef, ...constraints));
     return snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
   } catch (_) {
-    try {
-      const q = constraints.length ? query(ticketsRef, ...constraints) : ticketsRef;
-      const snap = await getDocs(q);
-      return snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() })).sort(byCreatedAtDesc);
-    } catch (_) {
-      return [];
-    }
+    return [];
   }
 }
 
 export function watchTickets(onChange, onError, filter = {}) {
   const scopeUid = String(filter.scopeUid || "").trim();
   const status = String(filter.status || "").trim().toLowerCase();
+  const parsedLimit = Number(filter.limitCount);
+  const limitCount = Number.isFinite(parsedLimit) && parsedLimit > 0 ? Math.min(500, Math.floor(parsedLimit)) : DEFAULT_TICKETS_LIMIT;
   const constraints = [];
   if (scopeUid) constraints.push(where("requesterUid", "==", scopeUid));
   if (status) constraints.push(where("status", "==", status));
-  const q = constraints.length
-    ? query(ticketsRef, ...constraints, orderBy("createdAt", "desc"))
-    : query(ticketsRef, orderBy("createdAt", "desc"));
+  constraints.push(orderBy("createdAt", "desc"), limit(limitCount));
+  const q = query(ticketsRef, ...constraints);
 
   return onSnapshot(
     q,

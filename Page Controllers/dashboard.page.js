@@ -248,13 +248,13 @@ async function loadDashboard() {
   }
 
   const results = await Promise.allSettled([
-    listEmployees(),
-    listDepartments(),
-    listPositions(),
-    listLeaves(),
-    listPayroll(),
-    listAttendance(),
-    listNotifications()
+    listEmployees({ limitCount: 120 }),
+    listDepartments({ limitCount: 80 }),
+    listPositions({ limitCount: 120 }),
+    listLeaves({ limitCount: 200 }),
+    listPayroll({ limitCount: 200 }),
+    listAttendance({ limitCount: 300 }),
+    listNotifications({ limitCount: 50 })
   ]);
 
   const getValue = (index, fallback = []) => {

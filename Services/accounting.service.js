@@ -6,9 +6,13 @@ import {
   doc,
   getDoc,
   getDocs,
+  limit,
+  orderBy,
+  query,
   runTransaction,
   setDoc,
-  updateDoc
+  updateDoc,
+  where
 } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 import {
   getDownloadURL,
@@ -24,6 +28,7 @@ const obligationsRef = collection(db, "accounting_obligations");
 const obligationMovementsRef = collection(db, "accounting_obligation_movements");
 const accountingClosuresRef = doc(db, "app_config", "accounting_closures");
 const accountingSequenceRef = doc(db, "app_config", "accounting_sequence");
+const DEFAULT_ACCOUNTING_LIMIT = 300;
 
 function toMillis(value) {
   if (!value) return 0;
@@ -160,9 +165,15 @@ export async function upsertCashboxConfig(payload = {}) {
   );
 }
 
-export async function listAccountingEntries() {
+export async function listAccountingEntries(filter = {}) {
+  const parsedLimit = Number(filter.limitCount);
+  const limitCount = Number.isFinite(parsedLimit) && parsedLimit > 0 ? Math.min(500, Math.floor(parsedLimit)) : DEFAULT_ACCOUNTING_LIMIT;
   try {
-    const snap = await getDocs(accountingRef);
+    const constraints = [];
+    if (filter.source) constraints.push(where("source", "==", String(filter.source).trim()));
+    if (filter.type) constraints.push(where("type", "==", normalizeType(filter.type)));
+    constraints.push(orderBy("createdAt", "desc"), limit(limitCount));
+    const snap = await getDocs(query(accountingRef, ...constraints));
     return snap.docs
       .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
       .sort((a, b) => {
@@ -279,7 +290,7 @@ export async function uploadAccountingAttachment(file, scope = "general", actorU
 
 export async function listChartAccounts() {
   try {
-    const snap = await getDocs(chartAccountsRef);
+    const snap = await getDocs(query(chartAccountsRef, orderBy("code", "asc"), limit(DEFAULT_ACCOUNTING_LIMIT)));
     return snap.docs
       .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
       .sort((a, b) => String(a.code || "").localeCompare(String(b.code || "")));
@@ -319,9 +330,15 @@ export async function deleteChartAccount(id) {
   await deleteDoc(doc(db, "accounting_chart_accounts", id));
 }
 
-export async function listAccountingObligations() {
+export async function listAccountingObligations(filter = {}) {
+  const parsedLimit = Number(filter.limitCount);
+  const limitCount = Number.isFinite(parsedLimit) && parsedLimit > 0 ? Math.min(500, Math.floor(parsedLimit)) : DEFAULT_ACCOUNTING_LIMIT;
   try {
-    const snap = await getDocs(obligationsRef);
+    const constraints = [];
+    if (filter.kind) constraints.push(where("kind", "==", normalizeObligationKind(filter.kind)));
+    if (filter.status) constraints.push(where("status", "==", String(filter.status).trim().toLowerCase()));
+    constraints.push(orderBy("createdAt", "desc"), limit(limitCount));
+    const snap = await getDocs(query(obligationsRef, ...constraints));
     return snap.docs
       .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
       .sort((a, b) => String(a.partyName || "").localeCompare(String(b.partyName || "")));
@@ -813,18 +830,15 @@ export async function disburseAdvanceObligation(payload = {}) {
 
 export async function listAccountingObligationMovements(filter = {}) {
   try {
-    const snap = await getDocs(obligationMovementsRef);
-    const rows = snap.docs
-      .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
-      .sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt));
-
+    const parsedLimit = Number(filter.limitCount);
+    const limitCount = Number.isFinite(parsedLimit) && parsedLimit > 0 ? Math.min(500, Math.floor(parsedLimit)) : DEFAULT_ACCOUNTING_LIMIT;
+    const constraints = [];
     const obligationId = String(filter.obligationId || "").trim();
-    const kind = normalizeObligationKind(filter.kind || "");
-    return rows.filter((row) => {
-      if (obligationId && String(row.obligationId || "") !== obligationId) return false;
-      if (filter.kind && normalizeObligationKind(row.obligationKind || "") !== kind) return false;
-      return true;
-    });
+    if (obligationId) constraints.push(where("obligationId", "==", obligationId));
+    if (filter.kind) constraints.push(where("obligationKind", "==", normalizeObligationKind(filter.kind || "")));
+    constraints.push(orderBy("createdAt", "desc"), limit(limitCount));
+    const snap = await getDocs(query(obligationMovementsRef, ...constraints));
+    return snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
   } catch (_) {
     return [];
   }

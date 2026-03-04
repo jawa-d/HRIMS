@@ -5,7 +5,7 @@ import { renderSidebar } from "../Collaboration interface/ui-sidebar.js";
 import { showToast } from "../Collaboration interface/ui-toast.js";
 import { showTableSkeleton } from "../Collaboration interface/ui-skeleton.js";
 import { trackUxEvent } from "../Services/telemetry.service.js";
-import { listPayroll, createPayroll, updatePayroll } from "../Services/payroll.service.js";
+import { listPayroll, createPayroll, updatePayroll, batchUpsertPayroll } from "../Services/payroll.service.js";
 import { listEmployees } from "../Services/employees.service.js";
 
 if (!enforceAuth("payroll")) {
@@ -341,7 +341,7 @@ async function savePayroll(status = "draft", overridesByEmployee = null) {
   const scopedEmployees = getScopedEmployees().filter(
     (emp) => !removedSet.has(String(emp.id)) && !removedSet.has(String(emp.empId || ""))
   );
-  const tasks = scopedEmployees.map(async (employee) => {
+  const upsertItems = scopedEmployees.map((employee) => {
     const employeeId = String(employee.id || "");
     const row = rowMap.get(employeeId) || null;
     const entry = findPayrollEntryForEmployee(employee, monthEntries);
@@ -380,24 +380,15 @@ async function savePayroll(status = "draft", overridesByEmployee = null) {
       status
     };
 
-    if (entryId) {
-      await updatePayroll(entryId, payload);
-      return;
-    }
-
     const existing = findPayrollEntryForEmployee(employee || { id: employeeId, empId: employeeCode }, monthEntries);
-    if (existing?.id) {
-      await updatePayroll(existing.id, payload);
-      if (row) row.dataset.entryId = existing.id;
-      return;
-    }
-
-    const newId = await createPayroll(payload);
-    if (row) row.dataset.entryId = newId;
+    return {
+      id: entryId || existing?.id || "",
+      payload
+    };
   });
 
   try {
-    await Promise.all(tasks);
+    await batchUpsertPayroll(upsertItems);
     showToast("success", status === "approved" ? "Payroll month approved" : "Payroll month saved");
     await loadPayroll();
   } catch (error) {
@@ -414,19 +405,20 @@ async function resetPayrollMonth() {
   const removedEntries = monthEntries.filter((entry) => entry.status === "removed");
   try {
     if (removedEntries.length) {
-      await Promise.all(
+      await batchUpsertPayroll(
         removedEntries
           .filter((entry) => entry.id)
-          .map((entry) =>
-            updatePayroll(entry.id, {
+          .map((entry) => ({
+            id: entry.id,
+            payload: {
               ...entry,
               base: 0,
               allowancesTotal: 0,
               deductionsTotal: 0,
               net: 0,
               status: "draft"
-            })
-          )
+            }
+          }))
       );
       await loadPayroll();
     }
@@ -567,7 +559,7 @@ function exportToPdf() {
 }
 
 async function loadEmployees() {
-  const data = await listEmployees();
+  const data = await listEmployees({ includeArchived: false, limitCount: 250 });
   employees = data.filter((emp) => emp.status !== "inactive");
 }
 
@@ -575,11 +567,11 @@ async function loadPayroll() {
   try {
     showTableSkeleton(tbody, { rows: 6, cols: 7 });
     if (isEmployee) {
-      const byUid = await listPayroll({ employeeId: user.uid, month: currentMonth });
+      const byUid = await listPayroll({ employeeId: user.uid, month: currentMonth, limitCount: 120 });
       if (byUid.length) {
         payrollEntries = byUid;
       } else {
-        const allMonth = await listPayroll({ month: currentMonth });
+        const allMonth = await listPayroll({ month: currentMonth, limitCount: 400 });
         const mail = String(user?.email || "").trim().toLowerCase();
         payrollEntries = allMonth.filter((item) => {
           const id = String(item.employeeId || "").trim();
@@ -590,7 +582,7 @@ async function loadPayroll() {
         });
       }
     } else {
-      payrollEntries = await listPayroll({ month: currentMonth });
+      payrollEntries = await listPayroll({ month: currentMonth, limitCount: 400 });
     }
     renderPayroll();
   } catch (error) {

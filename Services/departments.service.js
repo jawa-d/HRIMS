@@ -9,27 +9,28 @@ import {
   deleteDoc,
   query,
   orderBy,
-  onSnapshot
+  onSnapshot,
+  limit
 } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
 const departmentsRef = collection(db, "departments");
+const DEFAULT_DEPARTMENT_LIMIT = 120;
 
-export async function listDepartments() {
+export async function listDepartments(options = {}) {
+  const parsedLimit = Number(options.limitCount);
+  const limitCount = Number.isFinite(parsedLimit) && parsedLimit > 0 ? Math.min(500, Math.floor(parsedLimit)) : DEFAULT_DEPARTMENT_LIMIT;
   try {
-    const snap = await getDocs(query(departmentsRef, orderBy("createdAt", "desc")));
+    const snap = await getDocs(query(departmentsRef, orderBy("createdAt", "desc"), limit(limitCount)));
     return snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
-  } catch (primaryError) {
-    try {
-      const snap = await getDocs(departmentsRef);
-      return snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
-    } catch (fallbackError) {
-      throw fallbackError || primaryError;
-    }
+  } catch (error) {
+    throw error;
   }
 }
 
-export function watchDepartments(onChange, onError) {
-  const departmentsQuery = query(departmentsRef, orderBy("createdAt", "desc"));
+export function watchDepartments(onChange, onError, options = {}) {
+  const parsedLimit = Number(options.limitCount);
+  const limitCount = Number.isFinite(parsedLimit) && parsedLimit > 0 ? Math.min(500, Math.floor(parsedLimit)) : DEFAULT_DEPARTMENT_LIMIT;
+  const departmentsQuery = query(departmentsRef, orderBy("createdAt", "desc"), limit(limitCount));
   return onSnapshot(
     departmentsQuery,
     (snap) => {

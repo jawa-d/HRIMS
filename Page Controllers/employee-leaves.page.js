@@ -234,17 +234,17 @@ async function submitRequest() {
 async function loadMyLeaves() {
   try {
     showTableSkeleton(tbody, { rows: 6, cols: 6 });
-    const employeesData = await listEmployees();
+    const employeesData = await listEmployees({ limitCount: 200 });
     currentEmployee = resolveEmployeeForUser(user, employeesData);
 
     let leavesData = [];
     if (currentEmployee?.id) {
-      leavesData = await listLeaves({ employeeId: currentEmployee.id });
+      leavesData = await listLeaves({ employeeId: currentEmployee.id, limitCount: 200 });
       if (!leavesData.length) {
-        leavesData = await listLeaves();
+        leavesData = await listLeaves({ limitCount: 300 });
       }
     } else {
-      leavesData = await listLeaves();
+      leavesData = await listLeaves({ limitCount: 300 });
     }
 
     myLeaves = leavesData.filter(matchesMine).sort(sortByNewest);

@@ -58,6 +58,7 @@ const actor = {
   name: user?.name || "",
   role: role || ""
 };
+const BACKUP_KEEP_COUNT = 30;
 
 function normalizeLabel(value) {
   const label = (value || "").toString().trim();
@@ -449,7 +450,7 @@ async function refreshBackupStatus() {
 }
 
 async function backupNow() {
-  const result = await createBackupSnapshot(actor);
+  const result = await createBackupSnapshot(actor, { keepCount: BACKUP_KEEP_COUNT });
   latestBackup = { id: result.id, payload: result.snapshot, createdAtIso: result.snapshot.createdAtIso };
   if (backupStatusLabel) backupStatusLabel.textContent = `Latest backup: ${result.snapshot.createdAtIso}`;
 }
@@ -457,12 +458,12 @@ async function backupNow() {
 async function loadReports() {
   try {
     const [employees, leaves, departments, positions, attendance, payroll] = await Promise.all([
-      listEmployees(),
-      listLeaves(),
-      listDepartments(),
-      listPositions(),
-      listAttendance(),
-      listPayroll()
+      listEmployees({ limitCount: 300 }),
+      listLeaves({ limitCount: 400 }),
+      listDepartments({ limitCount: 120 }),
+      listPositions({ limitCount: 120 }),
+      listAttendance({ limitCount: 500 }),
+      listPayroll({ limitCount: 400 })
     ]);
 
     totalsEls.employees.textContent = employees.length;
@@ -690,7 +691,7 @@ loadReports();
 async function initBackupPanel() {
   await refreshBackupStatus();
   try {
-    const daily = await runDailyBackup(actor);
+    const daily = await runDailyBackup(actor, { keepCount: BACKUP_KEEP_COUNT });
     if (!daily.skipped) {
       await refreshBackupStatus();
     }

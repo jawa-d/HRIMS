@@ -13,6 +13,7 @@ import {
 
 const BACKUPS_COLLECTION = "system_backups";
 const DAILY_BACKUP_KEY = "hrms_daily_backup_last_date";
+const DEFAULT_BACKUP_KEEP_COUNT = 30;
 
 export const BACKUP_COLLECTIONS = [
   "employees",
@@ -88,8 +89,9 @@ export async function collectSystemBackup() {
   };
 }
 
-export async function createBackupSnapshot(actor = {}) {
+export async function createBackupSnapshot(actor = {}, options = {}) {
   const snapshot = await collectSystemBackup();
+  const keepCount = Math.max(1, Number(options.keepCount) || DEFAULT_BACKUP_KEEP_COUNT);
   const ref = await addDoc(collection(db, BACKUPS_COLLECTION), {
     createdAt: ts(),
     createdAtIso: snapshot.createdAtIso,
@@ -101,6 +103,7 @@ export async function createBackupSnapshot(actor = {}) {
     summary: snapshot.summary,
     payload: snapshot
   });
+  await pruneBackupSnapshots(keepCount);
   return {
     id: ref.id,
     snapshot
@@ -113,12 +116,26 @@ export async function listBackupSnapshots(maxItems = 10) {
   return snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
 }
 
-export async function runDailyBackup(actor = {}) {
+export async function pruneBackupSnapshots(keepCount = DEFAULT_BACKUP_KEEP_COUNT) {
+  const safeKeep = Math.max(1, Number(keepCount) || DEFAULT_BACKUP_KEEP_COUNT);
+  const snap = await getDocs(query(collection(db, BACKUPS_COLLECTION), orderBy("createdAt", "desc")));
+  const stale = snap.docs.slice(safeKeep);
+  for (const docsChunk of chunk(stale, 400)) {
+    const batch = writeBatch(db);
+    docsChunk.forEach((docSnap) => {
+      batch.delete(doc(db, BACKUPS_COLLECTION, docSnap.id));
+    });
+    await batch.commit();
+  }
+  return stale.length;
+}
+
+export async function runDailyBackup(actor = {}, options = {}) {
   const today = todayKey();
   if (localStorage.getItem(DAILY_BACKUP_KEY) === today) {
     return { skipped: true };
   }
-  const result = await createBackupSnapshot(actor);
+  const result = await createBackupSnapshot(actor, options);
   localStorage.setItem(DAILY_BACKUP_KEY, today);
   return { skipped: false, ...result };
 }

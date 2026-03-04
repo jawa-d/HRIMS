@@ -5,14 +5,24 @@ import {
   getDocs,
   addDoc,
   updateDoc,
+  writeBatch,
   query,
   where,
   orderBy,
-  onSnapshot
+  onSnapshot,
+  limit
 } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 import { getStoredProfile } from "../Aman/auth.js";
 
 const notificationsRef = collection(db, "notifications");
+const DEFAULT_NOTIFICATIONS_LIMIT = 100;
+const BATCH_CHUNK_SIZE = 400;
+
+function normalizeLimit(value, fallback = DEFAULT_NOTIFICATIONS_LIMIT) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
+  return Math.min(500, Math.floor(parsed));
+}
 
 function currentUid() {
   return getStoredProfile()?.uid || null;
@@ -43,14 +53,16 @@ export async function createNotification(payload) {
 }
 
 export async function listNotifications(options = {}) {
-  const { includeArchived = false } = options;
+  const { includeArchived = false, limitCount = DEFAULT_NOTIFICATIONS_LIMIT } = options;
+  const safeLimit = normalizeLimit(limitCount);
   const uid = currentUid();
   if (!uid) return [];
   try {
     const q = query(
       notificationsRef,
       where("toUid", "==", uid),
-      orderBy("createdAt", "desc")
+      orderBy("createdAt", "desc"),
+      limit(safeLimit)
     );
     const snap = await getDocs(q);
     const items = snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
@@ -73,7 +85,8 @@ export async function getUnreadCount() {
     const q = query(
       notificationsRef,
       where("toUid", "==", uid),
-      where("isRead", "==", false)
+      where("isRead", "==", false),
+      limit(DEFAULT_NOTIFICATIONS_LIMIT)
     );
     const snap = await getDocs(q);
     return snap.docs.filter((docSnap) => docSnap.data()?.isArchived !== true).length;
@@ -99,7 +112,8 @@ export function watchUnreadCount(callback) {
   const q = query(
     notificationsRef,
     where("toUid", "==", uid),
-    where("isRead", "==", false)
+    where("isRead", "==", false),
+    limit(DEFAULT_NOTIFICATIONS_LIMIT)
   );
   return onSnapshot(
     q,
@@ -123,7 +137,8 @@ export function watchUnreadCount(callback) {
 }
 
 export function watchNotifications(callback, options = {}) {
-  const { includeArchived = false } = options;
+  const { includeArchived = false, limitCount = DEFAULT_NOTIFICATIONS_LIMIT } = options;
+  const safeLimit = normalizeLimit(limitCount);
   const uid = currentUid();
   if (!uid) {
     callback([]);
@@ -132,7 +147,8 @@ export function watchNotifications(callback, options = {}) {
   const q = query(
     notificationsRef,
     where("toUid", "==", uid),
-    orderBy("createdAt", "desc")
+    orderBy("createdAt", "desc"),
+    limit(safeLimit)
   );
   return onSnapshot(
     q,
@@ -157,9 +173,16 @@ export async function markNotificationRead(id) {
 }
 
 export async function markAllNotificationsRead() {
-  const items = await listNotifications({ includeArchived: false });
+  const items = await listNotifications({ includeArchived: false, limitCount: DEFAULT_NOTIFICATIONS_LIMIT });
   const pending = items.filter((item) => item.isRead !== true);
-  await Promise.all(pending.map((item) => markNotificationRead(item.id)));
+  for (let i = 0; i < pending.length; i += BATCH_CHUNK_SIZE) {
+    const slice = pending.slice(i, i + BATCH_CHUNK_SIZE);
+    const batch = writeBatch(db);
+    slice.forEach((item) => {
+      batch.update(doc(db, "notifications", item.id), { isRead: true });
+    });
+    await batch.commit();
+  }
 }
 
 export async function archiveNotification(id) {

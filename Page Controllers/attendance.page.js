@@ -230,13 +230,13 @@ async function loadAttendance() {
     showTableSkeleton(tbody, { rows: 6, cols: 7 });
     let data = [];
     if (role === "employee" && user?.uid) {
-      data = await listAttendance({ employeeId: user.uid });
+      data = await listAttendance({ employeeId: user.uid, limitCount: 200 });
       if (!data.length) {
-        const fallback = await listAttendance();
+        const fallback = await listAttendance({ limitCount: 300 });
         data = fallback.filter(matchesCurrentUser);
       }
     } else {
-      data = await listAttendance();
+      data = await listAttendance({ limitCount: 400 });
     }
     records = data;
     renderAttendance();

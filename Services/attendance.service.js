@@ -9,29 +9,29 @@ import {
   deleteDoc,
   query,
   orderBy,
-  where
+  where,
+  limit
 } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
 const attendanceRef = collection(db, "attendance");
+const DEFAULT_ATTENDANCE_LIMIT = 300;
 
 export async function listAttendance(filter = {}) {
-  const constraints = [orderBy("date", "desc")];
+  const parsedLimit = Number(filter.limitCount);
+  const limitCount = Number.isFinite(parsedLimit) && parsedLimit > 0 ? Math.min(500, Math.floor(parsedLimit)) : DEFAULT_ATTENDANCE_LIMIT;
+  const constraints = [];
   if (filter.employeeId) {
     constraints.push(where("employeeId", "==", filter.employeeId));
   }
+  if (filter.status) {
+    constraints.push(where("status", "==", String(filter.status).trim().toLowerCase()));
+  }
+  constraints.push(orderBy("date", "desc"), limit(limitCount));
   try {
     const snap = await getDocs(query(attendanceRef, ...constraints));
     return snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
   } catch (_) {
-    try {
-      const fallback = [];
-      if (filter.employeeId) fallback.push(where("employeeId", "==", filter.employeeId));
-      const q = fallback.length ? query(attendanceRef, ...fallback) : attendanceRef;
-      const snap = await getDocs(q);
-      return snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
-    } catch (_) {
-      return [];
-    }
+    return [];
   }
 }
 

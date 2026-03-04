@@ -7,11 +7,16 @@ import {
   addDoc,
   updateDoc,
   deleteDoc,
+  writeBatch,
   query,
-  where
+  where,
+  orderBy,
+  limit
 } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
 const payrollRef = collection(db, "payroll");
+const DEFAULT_PAYROLL_LIMIT = 300;
+const BATCH_CHUNK_SIZE = 300;
 
 function tsToMillis(value) {
   if (!value) return 0;
@@ -21,12 +26,15 @@ function tsToMillis(value) {
 }
 
 export async function listPayroll(filter = {}) {
+  const parsedLimit = Number(filter.limitCount);
+  const limitCount = Number.isFinite(parsedLimit) && parsedLimit > 0 ? Math.min(500, Math.floor(parsedLimit)) : DEFAULT_PAYROLL_LIMIT;
   const constraints = [];
   if (filter.employeeId) constraints.push(where("employeeId", "==", filter.employeeId));
   if (filter.month) constraints.push(where("month", "==", filter.month));
+  constraints.push(orderBy("createdAt", "desc"), limit(limitCount));
 
   try {
-    const snap = constraints.length ? await getDocs(query(payrollRef, ...constraints)) : await getDocs(payrollRef);
+    const snap = await getDocs(query(payrollRef, ...constraints));
     return snap.docs
       .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
       .sort((a, b) => {
@@ -61,4 +69,23 @@ export async function updatePayroll(id, payload) {
 
 export async function deletePayroll(id) {
   await deleteDoc(doc(db, "payroll", id));
+}
+
+export async function batchUpsertPayroll(entries = []) {
+  const items = Array.isArray(entries) ? entries : [];
+  for (let i = 0; i < items.length; i += BATCH_CHUNK_SIZE) {
+    const chunk = items.slice(i, i + BATCH_CHUNK_SIZE);
+    const batch = writeBatch(db);
+    chunk.forEach((item) => {
+      const payload = item?.payload || {};
+      const id = String(item?.id || "").trim();
+      const target = id ? doc(db, "payroll", id) : doc(payrollRef);
+      batch.set(target, {
+        ...payload,
+        updatedAt: ts(),
+        createdAt: payload.createdAt || ts()
+      }, { merge: true });
+    });
+    await batch.commit();
+  }
 }

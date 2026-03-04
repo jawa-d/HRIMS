@@ -83,7 +83,7 @@ export async function probeFirebaseHealth() {
 export async function loadSystemHealthData() {
   const [firebase, auditEvents] = await Promise.all([
     probeFirebaseHealth(),
-    listSecurityEvents()
+    listSecurityEvents(120)
   ]);
   const uiErrors = listUiErrors(12);
   const pageStates = listPageAvailability();

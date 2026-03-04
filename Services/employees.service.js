@@ -5,49 +5,54 @@ import {
   getDoc,
   getDocs,
   addDoc,
-  setDoc,
   updateDoc,
   deleteDoc,
   query,
   orderBy,
   where,
-  onSnapshot
+  onSnapshot,
+  limit,
+  writeBatch
 } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
 const employeesRef = collection(db, "employees");
+const DEFAULT_EMPLOYEE_LIMIT = 200;
 
 function normalizeListOptions(options = {}) {
+  const parsedLimit = Number(options.limitCount);
+  const limitCount = Number.isFinite(parsedLimit) && parsedLimit > 0
+    ? Math.min(500, Math.floor(parsedLimit))
+    : DEFAULT_EMPLOYEE_LIMIT;
   return {
-    includeArchived: Boolean(options.includeArchived)
+    includeArchived: Boolean(options.includeArchived),
+    limitCount
   };
 }
 
 export async function listEmployees(options = {}) {
-  const { includeArchived } = normalizeListOptions(options);
-  let items = [];
+  const { includeArchived, limitCount } = normalizeListOptions(options);
   try {
-    const snap = await getDocs(query(employeesRef, orderBy("createdAt", "desc")));
-    items = snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+    const constraints = [];
+    if (!includeArchived) constraints.push(where("isArchived", "==", false));
+    constraints.push(orderBy("createdAt", "desc"), limit(limitCount));
+    const snap = await getDocs(query(employeesRef, ...constraints));
+    return snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
   } catch (_) {
-    try {
-      const snap = await getDocs(employeesRef);
-      items = snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
-    } catch (_) {
-      items = [];
-    }
+    return [];
   }
-  if (includeArchived) return items;
-  return items.filter((item) => !item.isArchived);
 }
 
 export function watchEmployees(onChange, onError, options = {}) {
-  const { includeArchived } = normalizeListOptions(options);
-  const employeesQuery = query(employeesRef, orderBy("createdAt", "desc"));
+  const { includeArchived, limitCount } = normalizeListOptions(options);
+  const constraints = [];
+  if (!includeArchived) constraints.push(where("isArchived", "==", false));
+  constraints.push(orderBy("createdAt", "desc"), limit(limitCount));
+  const employeesQuery = query(employeesRef, ...constraints);
   return onSnapshot(
     employeesQuery,
     (snap) => {
       const items = snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
-      onChange(includeArchived ? items : items.filter((item) => !item.isArchived));
+      onChange(items);
     },
     onError
   );
@@ -114,7 +119,7 @@ export async function hasEmployeeDuplicate(payload, excludeId = "") {
   ].filter(Boolean);
 
   for (const check of checks) {
-    const snap = await getDocs(query(employeesRef, where(check.field, "==", check.value)));
+    const snap = await getDocs(query(employeesRef, where(check.field, "==", check.value), limit(5)));
     const hit = snap.docs
       .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
       .find((item) => !item.isArchived && item.id !== excludeId);
@@ -136,23 +141,31 @@ export async function exportEmployeesBackup() {
 
 export async function restoreEmployeesBackup(data = {}, actor = {}) {
   const rows = Array.isArray(data?.rows) ? data.rows : [];
+  const chunkSize = 300;
   let restored = 0;
-  for (const row of rows) {
-    const id = String(row?.id || "").trim();
-    if (!id) continue;
-    const { id: _discard, ...rowData } = row;
-    const payload = {
-      ...rowData,
-      updatedAt: ts(),
-      restoredAt: ts(),
-      restoredBy: {
-        uid: actor.uid || "",
-        email: actor.email || "",
-        role: actor.role || ""
-      }
-    };
-    await setDoc(doc(db, "employees", id), payload, { merge: true });
-    restored += 1;
+  for (let i = 0; i < rows.length; i += chunkSize) {
+    const chunk = rows.slice(i, i + chunkSize);
+    const batch = writeBatch(db);
+    let operations = 0;
+    for (const row of chunk) {
+      const id = String(row?.id || "").trim();
+      if (!id) continue;
+      const { id: _discard, ...rowData } = row;
+      const payload = {
+        ...rowData,
+        updatedAt: ts(),
+        restoredAt: ts(),
+        restoredBy: {
+          uid: actor.uid || "",
+          email: actor.email || "",
+          role: actor.role || ""
+        }
+      };
+      batch.set(doc(db, "employees", id), payload, { merge: true });
+      operations += 1;
+      restored += 1;
+    }
+    if (operations > 0) await batch.commit();
   }
   return restored;
 }

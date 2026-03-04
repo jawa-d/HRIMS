@@ -8,22 +8,21 @@ import {
   updateDoc,
   deleteDoc,
   query,
-  orderBy
+  orderBy,
+  limit
 } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
 const assetsRef = collection(db, "assets");
+const DEFAULT_ASSET_LIMIT = 200;
 
-export async function listAssets() {
+export async function listAssets(options = {}) {
+  const parsedLimit = Number(options.limitCount);
+  const limitCount = Number.isFinite(parsedLimit) && parsedLimit > 0 ? Math.min(500, Math.floor(parsedLimit)) : DEFAULT_ASSET_LIMIT;
   try {
-    const snap = await getDocs(query(assetsRef, orderBy("createdAt", "desc")));
+    const snap = await getDocs(query(assetsRef, orderBy("createdAt", "desc"), limit(limitCount)));
     return snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
   } catch (_) {
-    try {
-      const snap = await getDocs(assetsRef);
-      return snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
-    } catch (_) {
-      return [];
-    }
+    return [];
   }
 }
 

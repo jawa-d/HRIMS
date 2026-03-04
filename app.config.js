@@ -84,15 +84,7 @@ export const ROLE_PERMISSIONS = {
     "profile"
   ],
   employee: [
-    "dashboard",
-    "employees",
-    "leaves",
-    "my_leaves",
-    "payroll",
-    "attendance",
-    "assets",
-    "timeoff",
-    "profile"
+    "dashboard"
   ]
 };
 

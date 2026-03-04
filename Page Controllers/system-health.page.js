@@ -140,9 +140,12 @@ async function refreshHealth(showSuccess = false) {
 
 refreshBtn?.addEventListener("click", () => refreshHealth(true));
 refreshHealth();
-setInterval(() => {
+const healthRefreshTimer = setInterval(() => {
   refreshHealth(false);
-}, 30000);
+}, 300000);
+window.addEventListener("beforeunload", () => {
+  clearInterval(healthRefreshTimer);
+});
 
 if (window.lucide?.createIcons) {
   window.lucide.createIcons();

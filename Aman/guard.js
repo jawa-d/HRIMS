@@ -23,20 +23,13 @@ export function getUserProfile() {
 }
 
 export function getAllowedPages(role = getRole(), profile = getUserProfile()) {
+  void profile;
   if (role === "super_admin") {
     return MENU_ITEMS.map((item) => item.key);
   }
 
   const roleVisibility = parseStorage(STORAGE_KEYS.roleVisibility, {});
-  const userPermissions = parseStorage(STORAGE_KEYS.userPermissions, {});
-
   const roleBase = roleVisibility?.[role] || ROLE_PERMISSIONS[role] || [];
-  const uid = profile?.uid || "";
-  const userCustom = uid ? userPermissions?.[uid] : null;
-
-  if (uid && Object.prototype.hasOwnProperty.call(userPermissions, uid) && Array.isArray(userCustom)) {
-    return Array.from(new Set(userCustom));
-  }
   return Array.from(new Set(roleBase));
 }
 
@@ -66,6 +59,10 @@ export function enforceAuth(pageKey) {
   if (!isAuthenticated()) {
     const returnTo = window.location.pathname.split("/").pop() || "dashboard.html";
     window.location.href = `login.html?next=${encodeURIComponent(returnTo)}`;
+    return false;
+  }
+  if (pageKey && !canAccess(pageKey)) {
+    window.location.href = getDefaultPage();
     return false;
   }
   if (pageKey && !isPageEnabled(pageKey)) {

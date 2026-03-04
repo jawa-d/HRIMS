@@ -1,0 +1,152 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function userRole() {
+      return isSignedIn() && userDoc().exists() ? userDoc().data.role : "";
+    }
+
+    function hasRole(roles) {
+      return isSignedIn() && userRole() in roles;
+    }
+
+    function isAdmin() {
+      return hasRole(["super_admin", "hr_admin"]);
+    }
+
+    function isManagerOrAbove() {
+      return hasRole(["super_admin", "hr_admin", "manager"]);
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function immutableFieldsUnchanged(fields) {
+      return request.resource.data.diff(resource.data).changedKeys().hasAny(fields) == false;
+    }
+
+    match /users/{uid} {
+      allow read: if isOwner(uid) || isManagerOrAbove();
+      allow create: if isAdmin() && request.resource.data.uid == uid;
+      allow update: if isAdmin() || (isOwner(uid) && immutableFieldsUnchanged(["role", "status", "permissions"]));
+      allow delete: if isAdmin();
+    }
+
+    match /employees/{id} {
+      allow read: if isManagerOrAbove() || isSignedIn();
+      allow create, update, delete: if isManagerOrAbove();
+    }
+
+    match /departments/{id} {
+      allow read: if isSignedIn();
+      allow write: if isManagerOrAbove();
+    }
+
+    match /positions/{id} {
+      allow read: if isSignedIn();
+      allow write: if isManagerOrAbove();
+    }
+
+    match /leaves/{id} {
+      allow read: if isManagerOrAbove() || (isSignedIn() && resource.data.employeeId == request.auth.uid);
+      allow create: if isSignedIn() && request.resource.data.employeeId == request.auth.uid;
+      allow update: if isManagerOrAbove() || (isSignedIn() && resource.data.employeeId == request.auth.uid);
+      allow delete: if isManagerOrAbove() || (isSignedIn() && resource.data.employeeId == request.auth.uid);
+    }
+
+    match /attendance/{id} {
+      allow read: if isManagerOrAbove() || (isSignedIn() && resource.data.employeeId == request.auth.uid);
+      allow write: if isManagerOrAbove();
+    }
+
+    match /payroll/{id} {
+      allow read: if isManagerOrAbove() || (isSignedIn() && resource.data.employeeId == request.auth.uid);
+      allow write: if isAdmin();
+    }
+
+    match /assets/{id} {
+      allow read: if isSignedIn();
+      allow write: if isManagerOrAbove();
+    }
+
+    match /timeoff_balances/{id} {
+      allow read: if isManagerOrAbove() || isOwner(id);
+      allow write: if isManagerOrAbove();
+    }
+
+    match /tickets/{id} {
+      allow read: if isManagerOrAbove() || (isSignedIn() && resource.data.requesterUid == request.auth.uid);
+      allow create: if isSignedIn() && request.resource.data.requesterUid == request.auth.uid;
+      allow update, delete: if isManagerOrAbove() || (isSignedIn() && resource.data.requesterUid == request.auth.uid);
+    }
+
+    match /notifications/{id} {
+      allow read: if isSignedIn() && resource.data.toUid == request.auth.uid;
+      allow create: if isManagerOrAbove();
+      allow update: if isSignedIn() && resource.data.toUid == request.auth.uid;
+      allow delete: if isAdmin();
+    }
+
+    match /announcements/{id} {
+      allow read: if isSignedIn();
+      allow write: if isManagerOrAbove();
+    }
+
+    match /secure_vault_entries/{id} {
+      allow read, write: if isAdmin();
+    }
+
+    match /security_audit/{id} {
+      allow read: if isManagerOrAbove();
+      allow create: if isSignedIn();
+      allow update, delete: if false;
+    }
+
+    match /accounting_entries/{id} {
+      allow read: if isManagerOrAbove();
+      allow write: if hasRole(["super_admin", "hr_admin"]);
+    }
+
+    match /accounting_chart_accounts/{id} {
+      allow read: if isManagerOrAbove();
+      allow write: if hasRole(["super_admin", "hr_admin"]);
+    }
+
+    match /accounting_obligations/{id} {
+      allow read: if isManagerOrAbove();
+      allow write: if hasRole(["super_admin", "hr_admin"]);
+    }
+
+    match /accounting_obligation_movements/{id} {
+      allow read: if isManagerOrAbove();
+      allow write: if hasRole(["super_admin", "hr_admin"]);
+    }
+
+    match /excel_sheet_inputs/{id} {
+      allow read: if isSignedIn();
+      allow write: if isManagerOrAbove();
+    }
+
+    match /system_backups/{id} {
+      allow read, write: if isAdmin();
+    }
+
+    match /app_config/{id} {
+      allow read: if isManagerOrAbove();
+      allow write: if isAdmin();
+    }
+
+    match /app_settings/{id} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+  }
+}

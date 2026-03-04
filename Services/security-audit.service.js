@@ -5,7 +5,8 @@ import {
   addDoc,
   getDocs,
   query,
-  orderBy
+  orderBy,
+  limit
 } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
 const auditRef = collection(db, "security_audit");
@@ -133,15 +134,16 @@ function remoteToLocalShape(docSnap) {
   };
 }
 
-export async function listSecurityEvents() {
+export async function listSecurityEvents(maxItems = MAX_LOCAL_EVENTS) {
+  const safeLimit = Math.max(1, Math.min(Number(maxItems) || MAX_LOCAL_EVENTS, MAX_LOCAL_EVENTS));
   const localEvents = readLocal();
   try {
-    const snap = await getDocs(query(auditRef, orderBy("createdAt", "desc")));
+    const snap = await getDocs(query(auditRef, orderBy("createdAt", "desc"), limit(safeLimit)));
     const remoteEvents = snap.docs.map(remoteToLocalShape);
     const merged = [...remoteEvents, ...localEvents];
     merged.sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0));
-    return merged.slice(0, MAX_LOCAL_EVENTS);
+    return merged.slice(0, safeLimit);
   } catch (_) {
-    return localEvents;
+    return localEvents.slice(0, safeLimit);
   }
 }

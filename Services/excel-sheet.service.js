@@ -4,12 +4,15 @@ import {
   doc,
   getDocs,
   setDoc,
-  deleteDoc,
+  writeBatch,
   query,
-  where
+  where,
+  limit
 } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
 const excelSheetRef = collection(db, "excel_sheet_inputs");
+const DEFAULT_YEAR_LIMIT = 300;
+const BATCH_CHUNK_SIZE = 400;
 
 function normalizeInputs(inputs = []) {
   const arr = Array.isArray(inputs) ? inputs : [];
@@ -25,7 +28,7 @@ function docIdFor(employeeId, year) {
 }
 
 export async function listExcelSheetInputs(year) {
-  const q = query(excelSheetRef, where("year", "==", Number(year)));
+  const q = query(excelSheetRef, where("year", "==", Number(year)), limit(DEFAULT_YEAR_LIMIT));
   const snap = await getDocs(q);
   const out = {};
   snap.docs.forEach((docSnap) => {
@@ -50,7 +53,14 @@ export async function upsertExcelSheetInput({ year, employeeId, inputs }) {
 }
 
 export async function clearExcelSheetYear(year) {
-  const q = query(excelSheetRef, where("year", "==", Number(year)));
+  const q = query(excelSheetRef, where("year", "==", Number(year)), limit(DEFAULT_YEAR_LIMIT));
   const snap = await getDocs(q);
-  await Promise.all(snap.docs.map((docSnap) => deleteDoc(doc(db, "excel_sheet_inputs", docSnap.id))));
+  for (let i = 0; i < snap.docs.length; i += BATCH_CHUNK_SIZE) {
+    const slice = snap.docs.slice(i, i + BATCH_CHUNK_SIZE);
+    const batch = writeBatch(db);
+    slice.forEach((docSnap) => {
+      batch.delete(doc(db, "excel_sheet_inputs", docSnap.id));
+    });
+    await batch.commit();
+  }
 }

@@ -9,27 +9,28 @@ import {
   deleteDoc,
   query,
   orderBy,
-  onSnapshot
+  onSnapshot,
+  limit
 } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
 const positionsRef = collection(db, "positions");
+const DEFAULT_POSITION_LIMIT = 120;
 
-export async function listPositions() {
+export async function listPositions(options = {}) {
+  const parsedLimit = Number(options.limitCount);
+  const limitCount = Number.isFinite(parsedLimit) && parsedLimit > 0 ? Math.min(500, Math.floor(parsedLimit)) : DEFAULT_POSITION_LIMIT;
   try {
-    const snap = await getDocs(query(positionsRef, orderBy("createdAt", "desc")));
+    const snap = await getDocs(query(positionsRef, orderBy("createdAt", "desc"), limit(limitCount)));
     return snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
   } catch (_) {
-    try {
-      const snap = await getDocs(positionsRef);
-      return snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
-    } catch (_) {
-      return [];
-    }
+    return [];
   }
 }
 
-export function watchPositions(onChange, onError) {
-  const positionsQuery = query(positionsRef, orderBy("createdAt", "desc"));
+export function watchPositions(onChange, onError, options = {}) {
+  const parsedLimit = Number(options.limitCount);
+  const limitCount = Number.isFinite(parsedLimit) && parsedLimit > 0 ? Math.min(500, Math.floor(parsedLimit)) : DEFAULT_POSITION_LIMIT;
+  const positionsQuery = query(positionsRef, orderBy("createdAt", "desc"), limit(limitCount));
   return onSnapshot(
     positionsQuery,
     (snap) => {
