@@ -140,7 +140,7 @@ service cloud.firestore {
     }
 
     match /app_config/{id} {
-      allow read: if isManagerOrAbove();
+      allow read: if isManagerOrAbove() || (isSignedIn() && id == "settings_rbac");
       allow write: if isAdmin();
     }
 

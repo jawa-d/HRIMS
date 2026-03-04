@@ -15,6 +15,7 @@ import {
 import { auth, db } from "./firebase.js";
 import { STORAGE_KEYS, MENU_ITEMS, DIRECT_SYSTEM_ADMIN } from "../app.config.js";
 import { logSecurityEvent } from "../Services/security-audit.service.js";
+import { getSettingsRbacConfig } from "../Services/settings-config.service.js";
 
 const session = {
   profile: null
@@ -44,6 +45,18 @@ function setSession(profile) {
   localStorage.setItem(STORAGE_KEYS.role, profile.role || "employee");
   localStorage.setItem(STORAGE_KEYS.session, "1");
   syncSessionPermissions(profile);
+}
+
+async function syncRoleVisibilityFromRemote() {
+  try {
+    const remote = await getSettingsRbacConfig();
+    const roleVisibility = remote?.roleVisibility && typeof remote.roleVisibility === "object"
+      ? remote.roleVisibility
+      : {};
+    localStorage.setItem(STORAGE_KEYS.roleVisibility, JSON.stringify(roleVisibility));
+  } catch (_) {
+    // Keep local defaults when remote config cannot be loaded.
+  }
 }
 
 function clearSession() {
@@ -79,6 +92,7 @@ export async function hydrateUser(user) {
     role: raw.role || "employee"
   };
   setSession(profile);
+  await syncRoleVisibilityFromRemote();
   await logSecurityEvent({
     action: "login_success",
     severity: "info",
@@ -116,6 +130,7 @@ export async function loginWithEmailOnly(email) {
       permissions: MENU_ITEMS.map((item) => item.key)
     };
     setSession(profile);
+    await syncRoleVisibilityFromRemote();
     await logSecurityEvent({
       action: "login_success",
       severity: "info",
@@ -165,6 +180,7 @@ export async function loginWithEmailOnly(email) {
   };
 
   setSession(profile);
+  await syncRoleVisibilityFromRemote();
   await logSecurityEvent({
     action: "login_success",
     severity: "info",
