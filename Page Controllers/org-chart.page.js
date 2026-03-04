@@ -25,6 +25,7 @@ const treeRoot = document.getElementById("org-tree");
 const emptyState = document.getElementById("org-empty");
 const searchInput = document.getElementById("org-search");
 const collapseBtn = document.getElementById("org-collapse-btn");
+const ORG_CHART_CACHE_KEY = "hrms_orgchart_cache_v1";
 
 let employees = [];
 let departments = [];
@@ -38,6 +39,46 @@ let dataReady = {
   positions: false
 };
 let fallbackLoading = false;
+let syncErrorNotified = false;
+
+function readOrgChartCache() {
+  try {
+    const raw = localStorage.getItem(ORG_CHART_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return null;
+    return {
+      employees: Array.isArray(parsed.employees) ? parsed.employees : [],
+      departments: Array.isArray(parsed.departments) ? parsed.departments : [],
+      positions: Array.isArray(parsed.positions) ? parsed.positions : []
+    };
+  } catch (_) {
+    return null;
+  }
+}
+
+function persistOrgChartCache() {
+  try {
+    localStorage.setItem(
+      ORG_CHART_CACHE_KEY,
+      JSON.stringify({
+        employees,
+        departments,
+        positions,
+        savedAt: Date.now()
+      })
+    );
+  } catch (_) {
+    // Ignore storage quota or private mode issues.
+  }
+}
+
+function applyNextData(current, next) {
+  if (!Array.isArray(next)) return current;
+  // Avoid wiping visible data when Firebase call fails and a service returns [] fallback.
+  if (next.length === 0 && Array.isArray(current) && current.length > 0) return current;
+  return next;
+}
 
 function hashSeed(input = "") {
   let hash = 0;
@@ -264,7 +305,10 @@ function renderWhenReady() {
 
 function onRealtimeError(error) {
   console.error("Org chart realtime sync failed", error);
-  showToast("error", "Could not sync org chart data from Firebase");
+  if (!syncErrorNotified) {
+    showToast("error", "Could not sync org chart data from Firebase");
+    syncErrorNotified = true;
+  }
   void loadSnapshotFallback();
 }
 
@@ -272,19 +316,29 @@ async function loadSnapshotFallback() {
   if (fallbackLoading) return;
   fallbackLoading = true;
   try {
-    const [employeesData, departmentsData, positionsData] = await Promise.all([
+    const [employeesResult, departmentsResult, positionsResult] = await Promise.allSettled([
       listEmployees(),
       listDepartments(),
       listPositions()
     ]);
-    employees = employeesData;
-    departments = departmentsData;
-    positions = positionsData;
-    dataReady = {
-      employees: true,
-      departments: true,
-      positions: true
-    };
+
+    if (employeesResult.status === "fulfilled") {
+      employees = applyNextData(employees, employeesResult.value);
+      dataReady.employees = true;
+    }
+    if (departmentsResult.status === "fulfilled") {
+      departments = applyNextData(departments, departmentsResult.value);
+      dataReady.departments = true;
+    }
+    if (positionsResult.status === "fulfilled") {
+      positions = applyNextData(positions, positionsResult.value);
+      dataReady.positions = true;
+    }
+
+    if (dataReady.employees && dataReady.departments && dataReady.positions) {
+      persistOrgChartCache();
+    }
+
     renderWhenReady();
   } catch (error) {
     console.error("Org chart fallback load failed", error);
@@ -299,6 +353,7 @@ function initRealtimeSync() {
       (data) => {
         employees = data;
         dataReady.employees = true;
+        persistOrgChartCache();
         renderWhenReady();
       },
       onRealtimeError
@@ -307,6 +362,7 @@ function initRealtimeSync() {
       (data) => {
         departments = data;
         dataReady.departments = true;
+        persistOrgChartCache();
         renderWhenReady();
       },
       onRealtimeError
@@ -315,6 +371,7 @@ function initRealtimeSync() {
       (data) => {
         positions = data;
         dataReady.positions = true;
+        persistOrgChartCache();
         renderWhenReady();
       },
       onRealtimeError
@@ -339,4 +396,16 @@ window.addEventListener("beforeunload", () => {
 });
 
 trackUxEvent({ event: "page_open", module: "orgchart" });
+const cached = readOrgChartCache();
+if (cached) {
+  employees = cached.employees;
+  departments = cached.departments;
+  positions = cached.positions;
+  dataReady = {
+    employees: true,
+    departments: true,
+    positions: true
+  };
+  renderWhenReady();
+}
 initRealtimeSync();
