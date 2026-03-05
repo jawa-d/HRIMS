@@ -6,6 +6,7 @@ import { MENU_ITEMS } from "../app.config.js";
 import { logSecurityEvent } from "../Services/security-audit.service.js";
 
 initI18n();
+initLoginVariant();
 initNetworkBackground();
 
 const form = document.getElementById("login-form");
@@ -175,5 +176,19 @@ function initNetworkBackground() {
 
   window.addEventListener("resize", resize, { passive: true });
   document.addEventListener("visibilitychange", onVisibilityChange);
+}
+
+function initLoginVariant() {
+  const params = new URLSearchParams(window.location.search);
+  const variant = String(params.get("variant") || "executive").toLowerCase();
+  const useCreative = variant === "creative";
+  document.body.classList.toggle("login-creative", useCreative);
+  const links = document.querySelectorAll(".style-switch a");
+  links.forEach((link) => {
+    const href = link.getAttribute("href") || "";
+    const isCreative = href.includes("variant=creative");
+    const active = useCreative ? isCreative : !isCreative;
+    link.classList.toggle("active", active);
+  });
 }
 

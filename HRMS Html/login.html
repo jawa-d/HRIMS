@@ -6,35 +6,33 @@
   <title>HRMS | Login</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="../HRMS%20CSS/tokens.css" />
   <link rel="stylesheet" href="../HRMS%20CSS/global.css" />
   <link rel="stylesheet" href="../HRMS%20CSS/components.css" />
   <link rel="stylesheet" href="../HRMS%20CSS/toast.css" />
   <style>
     :root {
-      --login-bg-a: #dff7f2;
-      --login-bg-b: #e8f4ff;
-      --login-bg-c: #f4f7e9;
-      --orb-teal: rgba(16, 185, 129, 0.34);
-      --orb-cyan: rgba(14, 165, 233, 0.3);
-      --orb-lime: rgba(132, 204, 22, 0.24);
-      --orb-sky: rgba(56, 189, 248, 0.22);
+      --navy-900: #0f1d36;
+      --navy-800: #14284b;
+      --navy-700: #1f3a6b;
+      --steel-300: #cbd5e1;
+      --steel-200: #e2e8f0;
+      --accent-gold: #c4a869;
+      --accent-cyan: #67e8f9;
     }
 
     .auth-layout {
       min-height: 100vh;
       display: grid;
       place-items: center;
-      padding: 32px;
+      padding: 20px;
       position: relative;
       overflow: hidden;
       background:
-        radial-gradient(1200px 760px at 8% 12%, var(--login-bg-a), transparent 66%),
-        radial-gradient(900px 680px at 92% 4%, var(--login-bg-b), transparent 73%),
-        radial-gradient(1000px 820px at 55% 100%, var(--login-bg-c), transparent 75%),
-        #e9edf5;
-      animation: skyShift 16s ease-in-out infinite alternate;
+        radial-gradient(1200px 780px at 0% 0%, #e9f0fa, transparent 72%),
+        radial-gradient(920px 720px at 100% 100%, #eef4ff, transparent 72%),
+        #f4f7fc;
     }
 
     .network-bg {
@@ -43,146 +41,256 @@
       width: 100%;
       height: 100%;
       z-index: 0;
-      opacity: 0.92;
+      opacity: 0.46;
       pointer-events: none;
     }
 
-    .auth-layout::before,
-    .auth-layout::after {
+    .auth-shell {
+      width: min(1140px, 96vw);
+      min-height: min(700px, 92vh);
+      border-radius: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.7);
+      box-shadow: 0 24px 44px rgba(15, 23, 42, 0.16);
+      overflow: hidden;
+      z-index: 2;
+      display: grid;
+      grid-template-columns: 1.08fr 0.92fr;
+      background: rgba(255, 255, 255, 0.88);
+      backdrop-filter: blur(8px);
+    }
+
+    .auth-hero {
+      position: relative;
+      padding: clamp(24px, 4vw, 52px);
+      color: #e2e8f0;
+      background:
+        linear-gradient(165deg, rgba(31, 58, 107, 0.96), rgba(15, 29, 54, 0.98)),
+        repeating-linear-gradient(
+          120deg,
+          rgba(148, 163, 184, 0.06) 0,
+          rgba(148, 163, 184, 0.06) 4px,
+          transparent 4px,
+          transparent 16px
+        );
+      display: grid;
+      align-content: space-between;
+      gap: 18px;
+    }
+
+    body.login-creative .auth-hero {
+      background:
+        radial-gradient(540px 340px at 26% 14%, rgba(34, 211, 238, 0.24), transparent 70%),
+        radial-gradient(500px 320px at 82% 90%, rgba(16, 185, 129, 0.22), transparent 72%),
+        linear-gradient(160deg, rgba(13, 27, 61, 0.9), rgba(14, 33, 77, 0.84));
+    }
+
+    body.login-creative .auth-form .btn-primary {
+      background: linear-gradient(140deg, #0ea5e9, #10b981);
+    }
+
+    .style-switch {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      width: fit-content;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      border-radius: 999px;
+      padding: 5px;
+      background: rgba(2, 6, 23, 0.32);
+    }
+
+    .style-switch a {
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #bfdbfe;
+    }
+
+    .style-switch a.active {
+      color: #0b1220;
+      background: linear-gradient(115deg, var(--accent-cyan), #dbeafe);
+    }
+
+    .hero-brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      width: fit-content;
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(196, 168, 105, 0.44);
+      color: #f5e7c8;
+      background: rgba(196, 168, 105, 0.11);
+      font-weight: 700;
+      font-size: 0.84rem;
+      margin-top: 10px;
+    }
+
+    .hero-seal-wrap {
+      margin-top: 20px;
+      display: grid;
+      place-items: center;
+    }
+
+    .hero-seal {
+      width: clamp(150px, 20vw, 210px);
+      aspect-ratio: 1;
+      border-radius: 50%;
+      border: 2px solid rgba(196, 168, 105, 0.65);
+      background:
+        radial-gradient(circle at 50% 30%, rgba(196, 168, 105, 0.28), transparent 65%),
+        radial-gradient(circle at 50% 70%, rgba(103, 232, 249, 0.2), transparent 62%),
+        rgba(15, 23, 42, 0.3);
+      box-shadow:
+        inset 0 0 0 1px rgba(226, 232, 240, 0.2),
+        0 18px 28px rgba(2, 6, 23, 0.35);
+      display: grid;
+      place-items: center;
+      position: relative;
+      animation: floatSeal 4.6s ease-in-out infinite;
+    }
+
+    .hero-seal::before {
       content: "";
       position: absolute;
-      width: 520px;
-      height: 520px;
-      border-radius: 999px;
-      filter: blur(20px);
-      z-index: 0;
-      opacity: 0.7;
-      animation: orbFloat 15s ease-in-out infinite;
+      inset: 10px;
+      border-radius: 50%;
+      border: 1px dashed rgba(148, 163, 184, 0.48);
+      animation: spinSeal 16s linear infinite;
     }
 
-    .auth-layout::before {
-      top: -190px;
-      left: -160px;
-      background: radial-gradient(circle at 28% 28%, var(--orb-teal), transparent 64%);
+    .hero-seal svg {
+      width: 46%;
+      height: 46%;
+      color: #f8fafc;
+      filter: drop-shadow(0 4px 8px rgba(2, 6, 23, 0.5));
     }
 
-    .auth-layout::after {
-      bottom: -220px;
-      right: -180px;
-      background: radial-gradient(circle at 30% 30%, var(--orb-lime), transparent 62%);
-      animation-delay: -5s;
+    .hero-title {
+      font-size: clamp(1.65rem, 2.8vw, 2.35rem);
+      line-height: 1.14;
+      margin: 22px 0 0;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      max-width: 17ch;
     }
 
-    .auth-layout .aurora {
-      position: absolute;
-      inset: -14% -8% auto auto;
-      width: 560px;
-      height: 560px;
-      border-radius: 999px;
-      background: radial-gradient(circle at 45% 45%, var(--orb-cyan), transparent 65%);
-      filter: blur(22px);
-      transform: translate3d(0, 0, 0);
-      animation: auroraMove 18s cubic-bezier(0.25, 0.65, 0.3, 1) infinite;
-      z-index: 0;
-      opacity: 0.7;
-      pointer-events: none;
+    .hero-subtitle {
+      margin-top: 12px;
+      max-width: 45ch;
+      color: #cbd5e1;
+      line-height: 1.7;
     }
 
-    .auth-layout .aurora::after {
-      content: "";
-      position: absolute;
-      inset: 40% auto auto -40%;
-      width: 480px;
-      height: 480px;
-      border-radius: 999px;
-      background: radial-gradient(circle at 40% 40%, var(--orb-sky), transparent 68%);
-      filter: blur(18px);
-      animation: orbFloat 20s ease-in-out infinite reverse;
+    .hero-foot {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .hero-chip {
+      text-align: center;
+      border: 1px solid rgba(148, 163, 184, 0.28);
+      border-radius: 12px;
+      padding: 10px 8px;
+      background: rgba(15, 23, 42, 0.26);
+      color: #cbd5e1;
+      font-size: 0.8rem;
+    }
+
+    .hero-chip strong {
+      display: block;
+      font-size: 1rem;
+      color: #e2e8f0;
+      margin-bottom: 3px;
+    }
+
+    .auth-panel {
+      padding: clamp(24px, 3.2vw, 48px);
+      display: grid;
+      align-content: center;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(248, 250, 252, 0.88));
     }
 
     .auth-card {
-      width: min(420px, 92vw);
+      width: min(420px, 100%);
+      margin-inline: auto;
+      border: 1px solid rgba(148, 163, 184, 0.34);
+      border-radius: 18px;
+      background: white;
+      box-shadow: 0 14px 28px rgba(15, 23, 42, 0.09);
+      padding: clamp(18px, 2.2vw, 28px);
       display: grid;
       gap: 16px;
-      position: relative;
-      z-index: 1;
-      backdrop-filter: blur(8px);
-      background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(248, 250, 252, 0.92));
-      border-color: rgba(148, 163, 184, 0.35);
-      box-shadow: 0 20px 42px rgba(15, 23, 42, 0.14);
-      animation: cardEntrance 0.8s cubic-bezier(0.2, 0.7, 0.2, 1) both;
-    }
-
-    .auth-card p {
-      color: var(--text-muted);
+      animation: cardIn 450ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
     }
 
     .auth-badge {
       display: inline-flex;
       align-items: center;
       gap: 6px;
+      width: fit-content;
       padding: 6px 12px;
       border-radius: 999px;
-      background: var(--primary-soft);
-      color: var(--primary);
+      border: 1px solid rgba(31, 58, 107, 0.16);
+      color: var(--navy-700);
+      background: #f1f5f9;
       font-weight: 700;
       font-size: 0.8rem;
-      width: fit-content;
+    }
+
+    .auth-card h1 {
+      font-size: clamp(1.62rem, 2.6vw, 2.1rem);
+      line-height: 1.1;
+      margin: 0;
+      color: #0f172a;
+    }
+
+    .auth-card p {
+      color: #475569;
+      margin-top: 8px;
+      line-height: 1.65;
     }
 
     .auth-form {
       display: grid;
-      gap: 12px;
+      gap: 13px;
     }
 
     .auth-form label span {
       display: inline-block;
       margin-bottom: 6px;
-      color: var(--text-muted);
-      font-size: 0.85rem;
+      color: #334155;
+      font-size: 0.88rem;
+      font-weight: 700;
+    }
+
+    .auth-form .input {
+      min-height: 48px;
+      border-radius: 12px;
+      border-color: rgba(148, 163, 184, 0.42);
+      background: #fff;
     }
 
     .auth-form .btn-primary {
+      min-height: 48px;
+      border-radius: 12px;
       margin-top: 6px;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      background: linear-gradient(140deg, var(--navy-700), var(--navy-900));
+      box-shadow: 0 10px 16px rgba(15, 23, 42, 0.3);
     }
 
-    @keyframes skyShift {
-      0% {
-        filter: saturate(1) brightness(1);
-      }
-      100% {
-        filter: saturate(1.08) brightness(1.03);
-      }
+    .auth-form small {
+      color: #64748b;
     }
 
-    @keyframes orbFloat {
-      0% {
-        transform: translate3d(0, 0, 0) scale(1);
-      }
-      50% {
-        transform: translate3d(26px, 18px, 0) scale(1.06);
-      }
-      100% {
-        transform: translate3d(-18px, 12px, 0) scale(0.98);
-      }
-    }
-
-    @keyframes auroraMove {
-      0% {
-        transform: translate3d(0, 0, 0) rotate(0deg);
-      }
-      50% {
-        transform: translate3d(-30px, 24px, 0) rotate(8deg);
-      }
-      100% {
-        transform: translate3d(14px, -12px, 0) rotate(-4deg);
-      }
-    }
-
-    @keyframes cardEntrance {
+    @keyframes cardIn {
       from {
         opacity: 0;
-        transform: translateY(16px) scale(0.98);
+        transform: translateY(12px) scale(0.985);
       }
       to {
         opacity: 1;
@@ -190,9 +298,65 @@
       }
     }
 
+    @keyframes floatSeal {
+      0% {
+        transform: translateY(0);
+      }
+      50% {
+        transform: translateY(-8px);
+      }
+      100% {
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes spinSeal {
+      from {
+        transform: rotate(0deg);
+      }
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    @media (max-width: 980px) {
+      .auth-shell {
+        grid-template-columns: 1fr;
+      }
+
+      .hero-foot {
+        max-width: 560px;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .auth-layout {
+        padding: 10px;
+      }
+
+      .auth-shell {
+        border-radius: 16px;
+      }
+
+      .auth-hero {
+        padding: 18px;
+      }
+
+      .hero-foot {
+        grid-template-columns: 1fr;
+      }
+
+      .auth-panel {
+        padding: 14px;
+      }
+    }
+
     @media (prefers-reduced-motion: reduce) {
-      .network-bg {
-        display: none;
+      .network-bg,
+      .hero-seal,
+      .hero-seal::before,
+      .auth-card {
+        animation: none !important;
       }
     }
   </style>
@@ -200,25 +364,54 @@
 <body data-page="login">
   <div class="auth-layout">
     <canvas class="network-bg" id="network-bg" aria-hidden="true"></canvas>
-    <div class="aurora"></div>
-    <div class="card auth-card">
-      <span class="auth-badge" data-i18n="app.name">Wadi Al-Rafidain Company</span>
-      <div>
-        <h1 data-i18n="login.title">Welcome back</h1>
-        <p data-i18n="login.subtitle">Sign in to your HR workspace</p>
-      </div>
-      <form id="login-form" class="auth-form">
-        <label>
-          <span data-i18n="login.email">Email</span>
-          <input class="input" type="email" id="login-email" required autofocus />
-        </label>
-        <button class="btn btn-primary" type="submit" data-i18n="login.submit">Sign In</button>
-        <small data-i18n="login.helper">Use your company account</small>
-      </form>
-    </div>
+    <section class="auth-shell">
+      <aside class="auth-hero">
+        <div class="style-switch">
+          <a href="login.html?variant=executive" class="active">Executive</a>
+          <a href="login.html?variant=creative">Creative</a>
+        </div>
+        <div>
+          <span class="hero-brand">Wadi Al-Rafidain HR Authority</span>
+          <div class="hero-seal-wrap">
+            <div class="hero-seal" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="3"></circle>
+                <path d="M22 20v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a3 3 0 0 1 0 5.75"></path>
+              </svg>
+            </div>
+          </div>
+          <h2 class="hero-title">Institutional HR Control Gateway</h2>
+          <p class="hero-subtitle">Professional access portal for employee records, payroll operations, finance flow, and role-governed approvals.</p>
+        </div>
+        <div class="hero-foot">
+          <div class="hero-chip"><strong>ISO</strong>Governance</div>
+          <div class="hero-chip"><strong>RBAC</strong>Role Security</div>
+          <div class="hero-chip"><strong>Audit</strong>Traceability</div>
+        </div>
+      </aside>
+
+      <section class="auth-panel">
+        <div class="auth-card">
+          <span class="auth-badge" data-i18n="app.name">Wadi Al-Rafidain Company</span>
+          <div>
+            <h1 data-i18n="login.title">Welcome back</h1>
+            <p data-i18n="login.subtitle">Sign in to your HR workspace</p>
+          </div>
+          <form id="login-form" class="auth-form">
+            <label>
+              <span data-i18n="login.email">Email</span>
+              <input class="input" type="email" id="login-email" required autofocus />
+            </label>
+            <button class="btn btn-primary" type="submit" data-i18n="login.submit">Sign In</button>
+            <small data-i18n="login.helper">Use your company account</small>
+          </form>
+        </div>
+      </section>
+    </section>
   </div>
   <script src="https://unpkg.com/lucide@latest"></script>
   <script type="module" src="../Page%20Controllers/login.page.js"></script>
 </body>
 </html>
-
