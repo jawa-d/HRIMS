@@ -247,6 +247,10 @@ function collectEmployeeForm() {
   };
 }
 
+function isValidMoneyValue(value) {
+  return Number.isFinite(value) && value >= 0;
+}
+
 function bindEmployeeFormAutoId(emp) {
   const idInput = document.getElementById("emp-id");
   const departmentSelect = document.getElementById("emp-dept");
@@ -281,61 +285,72 @@ function openEmployeeModal(emp) {
         label: t("common.save"),
         className: "btn btn-primary",
         onClick: async () => {
-          const payload = collectEmployeeForm();
-          if (!payload.departmentId) {
-            showToast("error", "Department is required");
-            return;
+          try {
+            const payload = collectEmployeeForm();
+            if (!payload.departmentId) {
+              showToast("error", "Department is required");
+              return;
+            }
+            if (!isValidMoneyValue(payload.salaryBase) || !isValidMoneyValue(payload.allowances)) {
+              showToast("error", "Salary and allowances must be valid non-negative numbers");
+              return;
+            }
+            if (!emp) {
+              payload.empId = generateEmployeeId(payload.departmentId);
+            }
+            const duplicate = await hasEmployeeDuplicate(payload, emp?.id || "");
+            if (duplicate.exists) {
+              const fieldLabelMap = {
+                empId: "Employee ID",
+                email: "Email",
+                phone: "Phone"
+              };
+              const fieldLabel = fieldLabelMap[duplicate.field] || duplicate.field;
+              showToast("error", `Duplicate ${fieldLabel}. This value is already used.`);
+              await logSecurityEvent({
+                action: "employee_duplicate_blocked",
+                entity: "employees",
+                entityId: emp?.id || "",
+                severity: "warning",
+                actorUid: user?.uid || "",
+                actorEmail: user?.email || "",
+                actorRole: role || "",
+                message: `Blocked duplicate ${duplicate.field} during employee save.`
+              });
+              return;
+            }
+            if (emp) {
+              await updateEmployee(emp.id, payload);
+              await logSecurityEvent({
+                action: "employee_update",
+                entity: "employees",
+                entityId: emp.id,
+                actorUid: user?.uid || "",
+                actorEmail: user?.email || "",
+                actorRole: role || "",
+                message: `Updated employee ${payload.empId || emp.id}`
+              });
+              showToast("success", `${t("common.edit")} ${t("employees.title")}`);
+            } else {
+              const createdId = await createEmployee(payload);
+              await logSecurityEvent({
+                action: "employee_create",
+                entity: "employees",
+                entityId: createdId,
+                actorUid: user?.uid || "",
+                actorEmail: user?.email || "",
+                actorRole: role || "",
+                message: `Created employee ${payload.empId || createdId}`
+              });
+              showToast("success", `${t("common.add")} ${t("employees.title")}`);
+            }
+            await loadEmployees();
+          } catch (error) {
+            console.error("Employee save failed:", error);
+            const details = [error?.code, error?.message].filter(Boolean).join(" - ");
+            showToast("error", details ? `Employee save failed: ${details}` : "Employee save failed");
+            return false;
           }
-          if (!emp) {
-            payload.empId = generateEmployeeId(payload.departmentId);
-          }
-          const duplicate = await hasEmployeeDuplicate(payload, emp?.id || "");
-          if (duplicate.exists) {
-            const fieldLabelMap = {
-              empId: "Employee ID",
-              email: "Email",
-              phone: "Phone"
-            };
-            const fieldLabel = fieldLabelMap[duplicate.field] || duplicate.field;
-            showToast("error", `Duplicate ${fieldLabel}. This value is already used.`);
-            await logSecurityEvent({
-              action: "employee_duplicate_blocked",
-              entity: "employees",
-              entityId: emp?.id || "",
-              severity: "warning",
-              actorUid: user?.uid || "",
-              actorEmail: user?.email || "",
-              actorRole: role || "",
-              message: `Blocked duplicate ${duplicate.field} during employee save.`
-            });
-            return;
-          }
-          if (emp) {
-            await updateEmployee(emp.id, payload);
-            await logSecurityEvent({
-              action: "employee_update",
-              entity: "employees",
-              entityId: emp.id,
-              actorUid: user?.uid || "",
-              actorEmail: user?.email || "",
-              actorRole: role || "",
-              message: `Updated employee ${payload.empId || emp.id}`
-            });
-            showToast("success", `${t("common.edit")} ${t("employees.title")}`);
-          } else {
-            const createdId = await createEmployee(payload);
-            await logSecurityEvent({
-              action: "employee_create",
-              entity: "employees",
-              entityId: createdId,
-              actorUid: user?.uid || "",
-              actorEmail: user?.email || "",
-              actorRole: role || "",
-              message: `Created employee ${payload.empId || createdId}`
-            });
-            showToast("success", `${t("common.add")} ${t("employees.title")}`);
-          }
-          await loadEmployees();
         }
       },
       { label: t("common.cancel"), className: "btn btn-ghost" }

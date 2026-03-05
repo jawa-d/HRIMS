@@ -86,6 +86,16 @@ function safeNumber(value) {
   return Math.max(0, num);
 }
 
+function readNumberInput(input, { strict = false } = {}) {
+  if (!input) return strict ? null : 0;
+  const raw = String(input.value ?? "").trim();
+  if (!raw) return 0;
+  if (strict && input.validity?.badInput) return null;
+  const num = Number(raw);
+  if (!Number.isFinite(num) || num < 0) return strict ? null : 0;
+  return num;
+}
+
 function normalizeStatus(status = "") {
   return String(status || "").trim().toLowerCase().replaceAll("-", "_").replaceAll(" ", "_");
 }
@@ -162,11 +172,24 @@ function removedEmployeeIds(entries = []) {
 }
 
 function getRowValues(row) {
-  const base = safeNumber(row.querySelector('[data-field="base"]').value);
-  const allowances = safeNumber(row.querySelector('[data-field="allowances"]').value);
-  const deductions = safeNumber(row.querySelector('[data-field="deductions"]').value);
+  const base = readNumberInput(row.querySelector('[data-field="base"]'));
+  const allowances = readNumberInput(row.querySelector('[data-field="allowances"]'));
+  const deductions = readNumberInput(row.querySelector('[data-field="deductions"]'));
   const net = base + allowances - deductions;
   return { base, allowances, deductions, net };
+}
+
+function getRowValuesStrict(row) {
+  const baseInput = row.querySelector('[data-field="base"]');
+  const allowancesInput = row.querySelector('[data-field="allowances"]');
+  const deductionsInput = row.querySelector('[data-field="deductions"]');
+  const base = readNumberInput(baseInput, { strict: true });
+  const allowances = readNumberInput(allowancesInput, { strict: true });
+  const deductions = readNumberInput(deductionsInput, { strict: true });
+  if (base === null) return { errorField: "base", values: null };
+  if (allowances === null) return { errorField: "allowances", values: null };
+  if (deductions === null) return { errorField: "deductions", values: null };
+  return { errorField: "", values: { base, allowances, deductions, net: base + allowances - deductions } };
 }
 
 function updateRowNet(row) {
@@ -351,6 +374,20 @@ async function savePayroll(status = "draft", overridesByEmployee = null) {
       ? overridesByEmployee[employeeId]
       : null;
 
+    const strictRow = row ? getRowValuesStrict(row) : { errorField: "", values: null };
+    if (strictRow.errorField) {
+      const fieldLabelMap = {
+        base: "Base",
+        allowances: "Allowances",
+        deductions: "Deductions"
+      };
+      const fieldLabel = fieldLabelMap[strictRow.errorField] || strictRow.errorField;
+      showToast("error", `Invalid ${fieldLabel} value for ${employee.fullName || employee.empId || employeeId}`);
+      const targetInput = row?.querySelector(`[data-field="${strictRow.errorField}"]`);
+      targetInput?.focus();
+      throw new Error(`invalid-payroll-input:${strictRow.errorField}`);
+    }
+
     const values = override
       ? {
         base: safeNumber(override.base),
@@ -358,8 +395,8 @@ async function savePayroll(status = "draft", overridesByEmployee = null) {
         deductions: safeNumber(override.deductions),
         net: safeNumber(override.base) + safeNumber(override.allowances) - safeNumber(override.deductions)
       }
-      : row
-        ? getRowValues(row)
+      : strictRow.values
+        ? strictRow.values
         : (() => {
           const base = entry?.base ?? safeNumber(employee.salaryBase);
           const allowances = entry?.allowancesTotal ?? safeNumber(employee.allowances);
@@ -392,6 +429,9 @@ async function savePayroll(status = "draft", overridesByEmployee = null) {
     showToast("success", status === "approved" ? "Payroll month approved" : "Payroll month saved");
     await loadPayroll();
   } catch (error) {
+    if (String(error?.message || "").startsWith("invalid-payroll-input:")) {
+      return;
+    }
     console.error("Save payroll failed:", error);
     const details = [error?.code, error?.message].filter(Boolean).join(" - ");
     showToast("error", details ? `Payroll save failed: ${details}` : "Payroll save failed");

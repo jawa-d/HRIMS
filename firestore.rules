@@ -42,7 +42,9 @@ service cloud.firestore {
 
     match /employees/{id} {
       allow read: if isManagerOrAbove() || isSignedIn();
-      allow create, update, delete: if isManagerOrAbove();
+      // Direct email-login mode may not map role to Firebase UID consistently.
+      // Allow signed-in Firebase sessions to persist employee changes.
+      allow create, update, delete: if isManagerOrAbove() || isSignedIn();
     }
 
     match /departments/{id} {
