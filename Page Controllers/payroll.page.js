@@ -115,6 +115,10 @@ function payrollAccent(emp = {}) {
   return `hsl(${hue} 72% 44%)`;
 }
 
+function employeePrimaryId(emp = {}) {
+  return String(emp.id || emp.uid || emp.empId || emp.email || "").trim();
+}
+
 function buildMonthOptions() {
   const now = new Date();
   const months = Array.from({ length: 18 }).map((_, index) => {
@@ -134,7 +138,14 @@ function buildMonthOptions() {
 
 function getScopedEmployees() {
   if (isEmployee) {
-    return employees.filter((emp) => emp.id === user.uid || emp.empId === user.uid || emp.email === user.email);
+    const userUid = String(user?.uid || "").trim();
+    const userEmail = String(user?.email || "").trim().toLowerCase();
+    return employees.filter((emp) => {
+      const primaryId = employeePrimaryId(emp);
+      const empCode = String(emp.empId || "").trim();
+      const empEmail = String(emp.email || "").trim().toLowerCase();
+      return primaryId === userUid || empCode === userUid || empEmail === userEmail;
+    });
   }
   return employees;
 }
@@ -276,11 +287,11 @@ function renderPayroll() {
       const statusClass = status === "approved" ? "entry-badge entry-badge-approved" : "entry-badge";
 
       return `
-        <tr class="payroll-row" style="--payroll-accent:${payrollAccent(emp)};--row-index:${index};" data-employee-id="${emp.id}" data-employee-code="${emp.empId || ""}" data-entry-id="${entry?.id || ""}">
+        <tr class="payroll-row" style="--payroll-accent:${payrollAccent(emp)};--row-index:${index};" data-employee-id="${employeePrimaryId(emp)}" data-employee-code="${emp.empId || ""}" data-entry-id="${entry?.id || ""}">
           <td>
             <div class="employee-cell">
               <div class="employee-name"><span class="employee-dot"></span><span>${emp.fullName || emp.empId || emp.id}</span></div>
-              <div class="employee-meta">ID: ${emp.empId || emp.id} ${emp.email ? `| ${emp.email}` : ""}</div>
+              <div class="employee-meta">ID: ${emp.empId || employeePrimaryId(emp)} ${emp.email ? `| ${emp.email}` : ""}</div>
             </div>
           </td>
           <td><input class="input payroll-input" data-field="base" type="number" min="0" step="0.01" value="${base}" ${!canManage ? "disabled" : ""} /></td>
@@ -317,9 +328,14 @@ function attachActionEvents() {
       if (!window.confirm("Delete this payroll row from the selected month?")) return;
 
       try {
-        const employee = employees.find((emp) => String(emp.id) === String(employeeId)) || {};
+        const employee = employees.find((emp) => {
+          const primaryId = employeePrimaryId(emp);
+          const code = String(emp.empId || "").trim();
+          return primaryId === String(employeeId || "").trim() || (code && code === String(employeeId || "").trim());
+        }) || {};
+        const normalizedEmployeeId = employeePrimaryId(employee) || String(employeeId || "").trim();
         const payload = {
-          employeeId: String(employee.id || employeeId),
+          employeeId: normalizedEmployeeId,
           employeeName: employee.fullName || "",
           employeeCode: employee.empId || "",
           month: currentMonth,
@@ -334,7 +350,7 @@ function attachActionEvents() {
           await updatePayroll(entryId, payload);
         } else {
           const existing = findPayrollEntryForEmployee(
-            { id: employeeId, empId: employee.empId || "" },
+            { id: normalizedEmployeeId, empId: employee.empId || "" },
             monthEntries
           );
           if (existing?.id) {
@@ -358,17 +374,24 @@ async function savePayroll(status = "draft", overridesByEmployee = null) {
   if (!canManage) return;
 
   const rowMap = new Map(
-    Array.from(tbody.querySelectorAll("tr")).map((row) => [String(row.dataset.employeeId || ""), row])
+    Array.from(tbody.querySelectorAll("tr")).flatMap((row) => {
+      const keys = [
+        String(row.dataset.employeeId || "").trim(),
+        String(row.dataset.employeeCode || "").trim()
+      ].filter(Boolean);
+      return keys.map((key) => [key, row]);
+    })
   );
   const removedSet = removedEmployeeIds(monthEntries);
   const scopedEmployees = getScopedEmployees().filter(
     (emp) => !removedSet.has(String(emp.id)) && !removedSet.has(String(emp.empId || ""))
   );
   const upsertItems = scopedEmployees.map((employee) => {
-    const employeeId = String(employee.id || "");
-    const row = rowMap.get(employeeId) || null;
+    const employeeId = employeePrimaryId(employee);
+    const employeeCode = String(employee.empId || "").trim();
+    if (!employeeId) return null;
+    const row = rowMap.get(employeeId) || rowMap.get(employeeCode) || null;
     const entry = findPayrollEntryForEmployee(employee, monthEntries);
-    const employeeCode = employee.empId || "";
     const entryId = row?.dataset.entryId || entry?.id || "";
     const override = overridesByEmployee && Object.prototype.hasOwnProperty.call(overridesByEmployee, employeeId)
       ? overridesByEmployee[employeeId]
@@ -422,7 +445,7 @@ async function savePayroll(status = "draft", overridesByEmployee = null) {
       id: entryId || existing?.id || "",
       payload
     };
-  });
+  }).filter(Boolean);
 
   try {
     await batchUpsertPayroll(upsertItems);
@@ -492,13 +515,18 @@ async function resetPayrollMonth() {
 function buildExportData() {
   const rows = Array.from(tbody.querySelectorAll("tr"));
   return rows.map((row) => {
-    const employeeId = row.dataset.employeeId;
-    const employee = employees.find((emp) => emp.id === employeeId) || {};
+    const employeeId = String(row.dataset.employeeId || "").trim();
+    const employeeCode = String(row.dataset.employeeCode || "").trim();
+    const employee = employees.find((emp) => {
+      const primaryId = employeePrimaryId(emp);
+      const code = String(emp.empId || "").trim();
+      return primaryId === employeeId || (code && (code === employeeId || code === employeeCode));
+    }) || {};
     const { base, allowances, deductions, net } = getRowValues(row);
     const status = row.querySelector(".badge")?.textContent || "";
     return {
-      employeeName: employee.fullName || employee.empId || employee.id || employeeId,
-      employeeCode: employee.empId || employeeId,
+      employeeName: employee.fullName || employee.empId || employeePrimaryId(employee) || employeeId,
+      employeeCode: employee.empId || employeePrimaryId(employee) || employeeId,
       base,
       allowances,
       deductions,
