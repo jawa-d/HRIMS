@@ -557,58 +557,177 @@ function exportToPdf() {
 
   const printable = window.open("", "_blank");
   if (!printable) return;
+  const logoUrl = `${window.location.origin}/assets/logo.jpg`;
+  const printedAt = new Date().toLocaleString();
 
   printable.document.write(`
     <html>
       <head>
         <title>Payroll ${currentMonth}</title>
         <style>
-          body { font-family: Arial, sans-serif; padding: 24px; color: #111; }
-          h1 { margin-bottom: 8px; }
-          .totals { margin: 16px 0; }
-          table { width: 100%; border-collapse: collapse; margin-top: 16px; }
-          th, td { padding: 8px 10px; border-bottom: 1px solid #e5e5e5; text-align: left; }
-          th { background: #f3f5f7; }
+          @page { size: A4; margin: 14mm; }
+          body {
+            font-family: Arial, sans-serif;
+            color: #0f172a;
+            font-size: 12px;
+            margin: 0;
+          }
+          .sheet {
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            padding: 14px;
+          }
+          .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 2px solid #0f766e;
+            padding-bottom: 10px;
+            margin-bottom: 12px;
+          }
+          .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+          }
+          .brand img {
+            width: 46px;
+            height: 46px;
+            border-radius: 8px;
+            object-fit: cover;
+            border: 1px solid #cbd5e1;
+          }
+          .company-name {
+            font-size: 17px;
+            font-weight: 700;
+            margin: 0;
+          }
+          .doc-title {
+            margin: 2px 0 0;
+            font-size: 13px;
+            color: #334155;
+          }
+          .meta {
+            text-align: right;
+            color: #334155;
+            font-size: 11px;
+            line-height: 1.5;
+          }
+          .summary {
+            border: 1px solid #dbe3ea;
+            border-radius: 8px;
+            background: #f8fafc;
+            padding: 8px 10px;
+            margin-bottom: 12px;
+            line-height: 1.8;
+          }
+          .summary strong {
+            color: #0b1324;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 6px;
+            font-size: 11px;
+          }
+          th, td {
+            border: 1px solid #d6dee6;
+            padding: 7px 8px;
+            text-align: left;
+          }
+          th {
+            background: #e8f2f1;
+            font-weight: 700;
+            white-space: nowrap;
+          }
+          tr:nth-child(even) td {
+            background: #fcfdff;
+          }
+          .num {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+          }
+          .footer {
+            margin-top: 26px;
+            display: flex;
+            justify-content: flex-end;
+          }
+          .sign-box {
+            width: 260px;
+            text-align: center;
+          }
+          .sign-line {
+            margin-top: 38px;
+            border-top: 1px solid #1f2937;
+            padding-top: 6px;
+            font-weight: 700;
+          }
         </style>
       </head>
       <body>
-        <h1>Payroll - ${monthLabelFromKey(currentMonth)}</h1>
-        <div class="totals">
-          <strong>Total Base:</strong> ${totals.base} |
-          <strong>Total Allowances:</strong> ${totals.allowances} |
-          <strong>Total Deductions:</strong> ${totals.deductions} |
-          <strong>Total Net:</strong> ${totals.net}
+        <div class="sheet">
+          <header class="header">
+            <div class="brand">
+              <img src="${logoUrl}" alt="Company Logo" onerror="this.style.display='none'" />
+              <div>
+                <p class="company-name">شركة وادي الرافدين</p>
+                <p class="doc-title">Payroll Statement - ${monthLabelFromKey(currentMonth)}</p>
+              </div>
+            </div>
+            <div class="meta">
+              <div><strong>Month:</strong> ${currentMonth}</div>
+              <div><strong>Printed:</strong> ${printedAt}</div>
+            </div>
+          </header>
+
+          <div class="summary">
+            <strong>Total Base:</strong> ${totals.base}
+            &nbsp; | &nbsp;
+            <strong>Total Allowances:</strong> ${totals.allowances}
+            &nbsp; | &nbsp;
+            <strong>Total Deductions:</strong> ${totals.deductions}
+            &nbsp; | &nbsp;
+            <strong>Total Net:</strong> ${totals.net}
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Employee</th>
+                <th>Employee ID</th>
+                <th>Status</th>
+                <th class="num">Base</th>
+                <th class="num">Allowances</th>
+                <th class="num">Deductions</th>
+                <th class="num">Net</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows
+                .map(
+                  (row) => `
+                    <tr>
+                      <td>${row.employeeName}</td>
+                      <td>${row.employeeCode}</td>
+                      <td>${row.status}</td>
+                      <td class="num">${formatter.format(Number(row.base || 0))}</td>
+                      <td class="num">${formatter.format(Number(row.allowances || 0))}</td>
+                      <td class="num">${formatter.format(Number(row.deductions || 0))}</td>
+                      <td class="num"><strong>${formatter.format(Number(row.net || 0))}</strong></td>
+                    </tr>
+                  `
+                )
+                .join("")}
+            </tbody>
+          </table>
+
+          <div class="footer">
+            <div class="sign-box">
+              <div>المصادقة</div>
+              <div class="sign-line">توقيع المدير المفوض</div>
+            </div>
+          </div>
         </div>
-        <table>
-          <thead>
-            <tr>
-              <th>Employee</th>
-              <th>Employee ID</th>
-              <th>Base</th>
-              <th>Allowances</th>
-              <th>Deductions</th>
-              <th>Net</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rows
-              .map(
-                (row) => `
-                  <tr>
-                    <td>${row.employeeName}</td>
-                    <td>${row.employeeCode}</td>
-                    <td>${row.base}</td>
-                    <td>${row.allowances}</td>
-                    <td>${row.deductions}</td>
-                    <td>${row.net}</td>
-                    <td>${row.status}</td>
-                  </tr>
-                `
-              )
-              .join("")}
-          </tbody>
-        </table>
       </body>
     </html>
   `);
