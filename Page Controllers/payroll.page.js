@@ -393,7 +393,8 @@ async function savePayroll(status = "draft", overridesByEmployee = null) {
     await loadPayroll();
   } catch (error) {
     console.error("Save payroll failed:", error);
-    showToast("error", "Payroll save failed");
+    const details = [error?.code, error?.message].filter(Boolean).join(" - ");
+    showToast("error", details ? `Payroll save failed: ${details}` : "Payroll save failed");
   }
 }
 
