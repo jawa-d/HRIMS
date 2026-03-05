@@ -643,7 +643,10 @@ function exportToPdf() {
             white-space: nowrap;
           }
           th:first-child, td:first-child {
-            width: 28%;
+            width: 24%;
+          }
+          th:last-child, td:last-child {
+            width: 22%;
           }
           tr:nth-child(even) td {
             background: #fcfdff;
@@ -655,10 +658,11 @@ function exportToPdf() {
           .footer {
             margin-top: 22px;
             display: flex;
-            justify-content: flex-end;
+            justify-content: space-between;
+            gap: 22px;
           }
           .sign-box {
-            width: 260px;
+            width: 320px;
             text-align: center;
           }
           .sign-line {
@@ -703,6 +707,7 @@ function exportToPdf() {
                 <th class="num">Allowances</th>
                 <th class="num">Deductions</th>
                 <th class="num">Net</th>
+                <th>Employee Signature</th>
               </tr>
             </thead>
             <tbody>
@@ -715,6 +720,7 @@ function exportToPdf() {
                       <td class="num">${formatter.format(Number(row.allowances || 0))}</td>
                       <td class="num">${formatter.format(Number(row.deductions || 0))}</td>
                       <td class="num"><strong>${formatter.format(Number(row.net || 0))}</strong></td>
+                      <td></td>
                     </tr>
                   `
                 )
@@ -724,8 +730,12 @@ function exportToPdf() {
 
           <div class="footer">
             <div class="sign-box">
-              <div>المصادقة</div>
-              <div class="sign-line">توقيع المدير المفوض</div>
+              <div>توقيع المدير المفوض</div>
+              <div class="sign-line">احمد جاسم سلمان</div>
+            </div>
+            <div class="sign-box">
+              <div>توقيع قسم الحسابات</div>
+              <div class="sign-line">&nbsp;</div>
             </div>
           </div>
         </div>
