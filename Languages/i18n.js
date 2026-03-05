@@ -648,7 +648,7 @@ const dictionaries = {
     "dashboard.chart.payroll_label": "صافي الرواتب",
     "nav.language": "EN",
     "nav.theme": "المظهر",
-    "sidebar.footer": "جميع الحقوق محفوظة لدى شركة وادي الرافدين © 2026 | المبرمج: Jawad Kadhim Hadi",
+    "sidebar.footer": "البيانات محفوظة لدى قسم تكنولوجيا المعلومات شركة وادي الرافدين © 2026",
     "login.title": "مرحبًا بعودتك",
     "login.subtitle": "سجّل الدخول إلى مساحة عمل الموارد البشرية",
     "login.email": "البريد الإلكتروني",
