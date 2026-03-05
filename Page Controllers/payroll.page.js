@@ -373,31 +373,25 @@ function attachActionEvents() {
 async function savePayroll(status = "draft", overridesByEmployee = null) {
   if (!canManage) return;
 
-  const rowMap = new Map(
-    Array.from(tbody.querySelectorAll("tr")).flatMap((row) => {
-      const keys = [
-        String(row.dataset.employeeId || "").trim(),
-        String(row.dataset.employeeCode || "").trim()
-      ].filter(Boolean);
-      return keys.map((key) => [key, row]);
-    })
-  );
-  const removedSet = removedEmployeeIds(monthEntries);
-  const scopedEmployees = getScopedEmployees().filter(
-    (emp) => !removedSet.has(String(emp.id)) && !removedSet.has(String(emp.empId || ""))
-  );
-  const upsertItems = scopedEmployees.map((employee) => {
-    const employeeId = employeePrimaryId(employee);
-    const employeeCode = String(employee.empId || "").trim();
-    if (!employeeId) return null;
-    const row = rowMap.get(employeeId) || rowMap.get(employeeCode) || null;
-    const entry = findPayrollEntryForEmployee(employee, monthEntries);
-    const entryId = row?.dataset.entryId || entry?.id || "";
-    const override = overridesByEmployee && Object.prototype.hasOwnProperty.call(overridesByEmployee, employeeId)
-      ? overridesByEmployee[employeeId]
+  const rows = Array.from(tbody.querySelectorAll("tr"));
+  const upsertItems = rows.map((row) => {
+    const employeeId = String(row.dataset.employeeId || "").trim();
+    const employeeCode = String(row.dataset.employeeCode || "").trim();
+    if (!employeeId && !employeeCode) return null;
+
+    const employee = employees.find((emp) => {
+      const primaryId = employeePrimaryId(emp);
+      const code = String(emp.empId || "").trim();
+      return (employeeId && primaryId === employeeId)
+        || (employeeCode && code === employeeCode)
+        || (employeeId && code === employeeId);
+    }) || {};
+
+    const override = overridesByEmployee
+      ? (overridesByEmployee[employeeId] ?? overridesByEmployee[employeeCode] ?? null)
       : null;
 
-    const strictRow = row ? getRowValuesStrict(row) : { errorField: "", values: null };
+    const strictRow = getRowValuesStrict(row);
     if (strictRow.errorField) {
       const fieldLabelMap = {
         base: "Base",
@@ -405,8 +399,8 @@ async function savePayroll(status = "draft", overridesByEmployee = null) {
         deductions: "Deductions"
       };
       const fieldLabel = fieldLabelMap[strictRow.errorField] || strictRow.errorField;
-      showToast("error", `Invalid ${fieldLabel} value for ${employee.fullName || employee.empId || employeeId}`);
-      const targetInput = row?.querySelector(`[data-field="${strictRow.errorField}"]`);
+      showToast("error", `Invalid ${fieldLabel} value for ${employee.fullName || employeeCode || employeeId}`);
+      const targetInput = row.querySelector(`[data-field="${strictRow.errorField}"]`);
       targetInput?.focus();
       throw new Error(`invalid-payroll-input:${strictRow.errorField}`);
     }
@@ -418,32 +412,29 @@ async function savePayroll(status = "draft", overridesByEmployee = null) {
         deductions: safeNumber(override.deductions),
         net: safeNumber(override.base) + safeNumber(override.allowances) - safeNumber(override.deductions)
       }
-      : strictRow.values
-        ? strictRow.values
-        : (() => {
-          const base = entry?.base ?? safeNumber(employee.salaryBase);
-          const allowances = entry?.allowancesTotal ?? safeNumber(employee.allowances);
-          const deductions = entry?.deductionsTotal ?? 0;
-          const net = base + allowances - deductions;
-          return { base, allowances, deductions, net };
-        })();
+      : strictRow.values;
 
-    const payload = {
-      employeeId,
-      employeeName: employee.fullName || "",
-      employeeCode,
-      month: currentMonth,
-      base: values.base,
-      allowancesTotal: values.allowances,
-      deductionsTotal: values.deductions,
-      net: values.net,
-      status
-    };
+    const entryId = String(row.dataset.entryId || "").trim();
+    const fallbackExisting = monthEntries.find((entry) => {
+      const eid = String(entry.employeeId || "").trim();
+      const ecode = String(entry.employeeCode || "").trim();
+      return (employeeId && (eid === employeeId || ecode === employeeId))
+        || (employeeCode && (ecode === employeeCode || eid === employeeCode));
+    });
 
-    const existing = findPayrollEntryForEmployee(employee || { id: employeeId, empId: employeeCode }, monthEntries);
     return {
-      id: entryId || existing?.id || "",
-      payload
+      id: entryId || fallbackExisting?.id || "",
+      payload: {
+        employeeId: employeeId || employeeCode,
+        employeeName: employee.fullName || "",
+        employeeCode: employeeCode || String(employee.empId || "").trim(),
+        month: currentMonth,
+        base: values.base,
+        allowancesTotal: values.allowances,
+        deductionsTotal: values.deductions,
+        net: values.net,
+        status
+      }
     };
   }).filter(Boolean);
 
