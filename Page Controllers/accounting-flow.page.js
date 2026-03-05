@@ -1,5 +1,5 @@
 import { enforceAuth, getRole, getUserProfile } from "../Aman/guard.js";
-import { initI18n } from "../Languages/i18n.js";
+import { initI18n, t } from "../Languages/i18n.js";
 import { renderNavbar } from "../Collaboration interface/ui-navbar.js";
 import { renderSidebar } from "../Collaboration interface/ui-sidebar.js";
 import { openModal } from "../Collaboration interface/ui-modal.js";
@@ -44,6 +44,7 @@ const OUT_CATEGORIES = [
   "Maintenance",
   "Other"
 ];
+const CATEGORY_STORAGE_KEY = "hrms_accflow_custom_categories_v1";
 
 const canManage = ["super_admin", "hr_admin", "manager"].includes(role);
 const addBtn = document.getElementById("accflow-add-btn");
@@ -60,6 +61,7 @@ const totalNetEl = document.getElementById("accflow-total-net");
 
 let entries = [];
 let storageUnavailable = false;
+let customCategories = { in: [], out: [] };
 const MAX_EMBED_IMAGE_BYTES = 700 * 1024;
 
 function todayKey() {
@@ -113,7 +115,61 @@ function readFileAsDataUrl(file) {
 }
 
 function getCategoriesByType(type = "") {
-  return String(type || "").toLowerCase() === "in" ? IN_CATEGORIES : OUT_CATEGORIES;
+  const bucket = String(type || "").toLowerCase() === "in" ? "in" : "out";
+  const base = bucket === "in" ? IN_CATEGORIES : OUT_CATEGORIES;
+  const extras = Array.isArray(customCategories[bucket]) ? customCategories[bucket] : [];
+  const merged = [...base, ...extras];
+  const seen = new Set();
+  const out = [];
+  merged.forEach((item) => {
+    const label = String(item || "").trim().replace(/\s+/g, " ");
+    if (!label) return;
+    const key = label.toLocaleLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push(label);
+  });
+  if (!out.some((item) => item.toLocaleLowerCase() === "other")) {
+    out.push("Other");
+  }
+  return out;
+}
+
+function loadCustomCategories() {
+  try {
+    const raw = localStorage.getItem(CATEGORY_STORAGE_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    customCategories = {
+      in: Array.isArray(parsed?.in) ? parsed.in : [],
+      out: Array.isArray(parsed?.out) ? parsed.out : []
+    };
+  } catch (error) {
+    console.warn("Failed to load custom accounting-flow categories:", error);
+    customCategories = { in: [], out: [] };
+  }
+}
+
+function saveCustomCategories() {
+  try {
+    localStorage.setItem(CATEGORY_STORAGE_KEY, JSON.stringify(customCategories));
+  } catch (error) {
+    console.warn("Failed to save custom accounting-flow categories:", error);
+  }
+}
+
+function addCustomCategory(type = "", value = "") {
+  const label = String(value || "").trim().replace(/\s+/g, " ");
+  if (!label) return;
+  if (label.toLocaleLowerCase() === "other") return;
+  const bucket = String(type || "").toLowerCase() === "in" ? "in" : "out";
+  const base = bucket === "in" ? IN_CATEGORIES : OUT_CATEGORIES;
+  const existsInBase = base.some((item) => String(item || "").trim().toLocaleLowerCase() === label.toLocaleLowerCase());
+  if (existsInBase) return;
+  const existsInCustom = (customCategories[bucket] || []).some((item) => String(item || "").trim().toLocaleLowerCase() === label.toLocaleLowerCase());
+  if (existsInCustom) return;
+  customCategories[bucket].push(label);
+  saveCustomCategories();
 }
 
 function getCategoryValueFromModal() {
@@ -132,13 +188,13 @@ function buildCategoryField(type, selectedCategory = "") {
     .map((item) => `<option value="${item}" ${selected === item ? "selected" : ""}>${item}</option>`)
     .join("");
   return `
-    <label>Category
+    <label>${t("common.category")}
       <select id="accflow-category" class="select">
         ${options}
       </select>
     </label>
     <label id="accflow-category-custom-wrap" class="${selected === "Other" ? "" : "hidden"}">
-      Custom Category
+      ${t("accounting.custom_category")}
       <input id="accflow-category-custom" class="input" value="${isCustom ? selectedCategory : ""}" />
     </label>
   `;
@@ -275,46 +331,50 @@ function openEntryModal(existing = null) {
   const record = existing || {};
   const currentType = record.type || "out";
   openModal({
-    title: isEdit ? "Edit Entry" : "Add Entry",
+    title: isEdit ? t("common.edit") : t("common.add"),
     content: `
-      <label>Date<input id="accflow-date" class="input" type="date" value="${record.date || todayKey()}" /></label>
-      <label>Type
-        <select id="accflow-type" class="select">
-          <option value="in" ${currentType === "in" ? "selected" : ""}>In</option>
-          <option value="out" ${currentType === "out" ? "selected" : ""}>Out</option>
-        </select>
-      </label>
-      <label>Amount<input id="accflow-amount" class="input" type="number" min="0" step="0.01" value="${safeNumber(record.amount)}" /></label>
-      <div id="accflow-category-wrap">${buildCategoryField(currentType, record.category || "")}</div>
-      <label>Expense Receipt No<input id="accflow-receipt-no" class="input" value="${record.receiptNo || ""}" /></label>
-      <label>External Receipt No<input id="accflow-external-receipt-no" class="input" value="${record.externalReceiptNo || ""}" /></label>
-      <label>Notes<textarea id="accflow-notes" class="textarea">${record.notes || ""}</textarea></label>
-      <label>Attachment Image
-        <input id="accflow-attachment" class="input" type="file" accept="image/*" />
-      </label>
-      ${record.attachmentUrl ? `<a class="accflow-attachment" href="${record.attachmentUrl}" target="_blank" rel="noopener noreferrer">Current attachment: ${record.attachmentName || "View"}</a>` : ""}
+      <div class="modal-form-grid">
+        <label>${t("common.date")}<input id="accflow-date" class="input" type="date" value="${record.date || todayKey()}" /></label>
+        <label>${t("common.type")}
+          <select id="accflow-type" class="select">
+            <option value="in" ${currentType === "in" ? "selected" : ""}>In</option>
+            <option value="out" ${currentType === "out" ? "selected" : ""}>Out</option>
+          </select>
+        </label>
+        <label>${t("common.amount")}<input id="accflow-amount" class="input" type="number" min="0" step="0.01" value="${safeNumber(record.amount)}" /></label>
+        <div id="accflow-category-wrap">${buildCategoryField(currentType, record.category || "")}</div>
+        <label>${t("accounting.receipt_no")}<input id="accflow-receipt-no" class="input" value="${record.receiptNo || ""}" /></label>
+        <label>${t("accounting.external_receipt_no")}<input id="accflow-external-receipt-no" class="input" value="${record.externalReceiptNo || ""}" /></label>
+        <label class="field-full">${t("common.notes")}<textarea id="accflow-notes" class="textarea">${record.notes || ""}</textarea></label>
+        <label class="field-full">${t("accounting.attachment_image")}
+          <input id="accflow-attachment" class="input" type="file" accept="image/*" />
+        </label>
+        ${record.attachmentUrl ? `<a class="accflow-attachment field-full" href="${record.attachmentUrl}" target="_blank" rel="noopener noreferrer">Current attachment: ${record.attachmentName || t("common.view")}</a>` : ""}
+      </div>
     `,
     actions: [
       {
-        label: "Save",
+        label: t("common.save"),
         className: "btn btn-primary",
         onClick: async () => {
           try {
             const amount = safeNumber(document.getElementById("accflow-amount").value);
             if (amount <= 0) {
-              showToast("error", "Amount must be greater than 0");
+              showToast("error", t("accounting.msg.amount_gt_zero"));
               return false;
             }
             const category = getCategoryValueFromModal();
             if (!category) {
-              showToast("error", "Category is required");
+              showToast("error", t("accounting.msg.category_required"));
               return false;
             }
+            const selectedType = document.getElementById("accflow-type").value;
+            addCustomCategory(selectedType, category);
 
             const attachment = await readAttachmentFromModal(record);
             const payload = {
               date: document.getElementById("accflow-date").value || todayKey(),
-              type: document.getElementById("accflow-type").value,
+              type: selectedType,
               amount,
               category,
               receiptNo: document.getElementById("accflow-receipt-no").value.trim(),
@@ -348,7 +408,7 @@ function openEntryModal(existing = null) {
           }
         }
       },
-      { label: "Cancel", className: "btn btn-ghost" }
+      { label: t("common.cancel"), className: "btn btn-ghost" }
     ]
   });
 
@@ -476,3 +536,5 @@ monthFilter?.addEventListener("change", renderRows);
 })();
 
 trackUxEvent({ event: "page_open", module: "accounting_flow" });
+
+loadCustomCategories();

@@ -28,6 +28,10 @@
             <p class="text-muted" data-i18n="accounting.subtitle">Finance overview with isolated payroll and daily fund tracking.</p>
           </div>
           <div class="acc-head-actions">
+            <button class="btn btn-outline" id="accounting-export-excel-btn">
+              <i data-lucide="file-spreadsheet"></i>
+              <span data-i18n="accounting.export_finance_excel">Export Finance Excel</span>
+            </button>
             <button class="btn btn-ghost" id="accounting-opening-btn">
               <i data-lucide="piggy-bank"></i>
               <span data-i18n="accounting.set_opening">Set Opening Balance</span>
@@ -82,6 +86,115 @@
           </div>
         </section>
 
+        <section class="card finance-exec-card">
+          <div class="card-header">
+            <h3 class="section-title">
+              <i data-lucide="activity"></i>
+              <span data-i18n="accounting.exec_snapshot">Executive Financial Snapshot</span>
+            </h3>
+            <div class="finance-health-pill" id="acc-health-label">Score</div>
+          </div>
+          <div class="finance-exec-grid">
+            <article class="finance-health-box">
+              <div class="text-muted" data-i18n="accounting.health_score">Financial Health Score</div>
+              <div class="finance-health-score" id="acc-health-score">0</div>
+              <p class="text-muted" id="acc-health-note" data-i18n="accounting.health_waiting">Waiting for data.</p>
+            </article>
+            <article class="finance-bars-box">
+              <div class="finance-bar-line">
+                <div class="finance-bar-head"><span data-i18n="accounting.inflow_share">Inflow Share</span><strong id="acc-bar-in-value">0%</strong></div>
+                <div class="finance-bar-track"><div class="finance-bar-fill in" id="acc-bar-in"></div></div>
+              </div>
+              <div class="finance-bar-line">
+                <div class="finance-bar-head"><span data-i18n="accounting.outflow_share">Outflow Share</span><strong id="acc-bar-out-value">0%</strong></div>
+                <div class="finance-bar-track"><div class="finance-bar-fill out" id="acc-bar-out"></div></div>
+              </div>
+              <div class="finance-bar-line">
+                <div class="finance-bar-head"><span data-i18n="accounting.expense_share">Expense Share</span><strong id="acc-bar-expense-value">0%</strong></div>
+                <div class="finance-bar-track"><div class="finance-bar-fill expense" id="acc-bar-expense"></div></div>
+              </div>
+            </article>
+            <article class="finance-reco-box">
+              <div class="text-muted" data-i18n="accounting.recommended_actions">Recommended Actions</div>
+              <ul class="finance-reco-list" id="acc-reco-list"></ul>
+            </article>
+          </div>
+        </section>
+
+        <section class="card finance-roadmap-card">
+          <div class="card-header">
+            <h3 class="section-title">
+              <i data-lucide="route"></i>
+              <span data-i18n="accounting.work_roadmap">Financial Work Roadmap</span>
+            </h3>
+            <span class="finance-progress-label" id="acc-roadmap-progress-label">Progress 0%</span>
+          </div>
+          <div class="finance-progress-track">
+            <div class="finance-progress-fill" id="acc-roadmap-progress"></div>
+          </div>
+          <div class="finance-roadmap-grid">
+            <article class="finance-step" id="acc-step-opening">
+              <div class="finance-step-head">
+                <span class="finance-step-no">01</span>
+                <span class="finance-step-status" id="acc-step-opening-status">Pending</span>
+              </div>
+              <h4 data-i18n="accounting.roadmap.opening.title">Daily Opening Balance</h4>
+              <p data-i18n="accounting.roadmap.opening.desc">Set a clear opening amount before any daily transactions start.</p>
+            </article>
+            <article class="finance-step" id="acc-step-flow">
+              <div class="finance-step-head">
+                <span class="finance-step-no">02</span>
+                <span class="finance-step-status" id="acc-step-flow-status">Pending</span>
+              </div>
+              <h4 data-i18n="accounting.roadmap.flow.title">Record Cash In/Out</h4>
+              <p data-i18n="accounting.roadmap.flow.desc">Capture every in/out movement with category and notes immediately.</p>
+            </article>
+            <article class="finance-step" id="acc-step-obligation">
+              <div class="finance-step-head">
+                <span class="finance-step-no">03</span>
+                <span class="finance-step-status" id="acc-step-obligation-status">Pending</span>
+              </div>
+              <h4 data-i18n="accounting.roadmap.obligation.title">Control Advances & Dues</h4>
+              <p data-i18n="accounting.roadmap.obligation.desc">Monitor open advances and dues to reduce carry-over risk.</p>
+            </article>
+            <article class="finance-step" id="acc-step-close">
+              <div class="finance-step-head">
+                <span class="finance-step-no">04</span>
+                <span class="finance-step-status" id="acc-step-close-status">Pending</span>
+              </div>
+              <h4 data-i18n="accounting.roadmap.close.title">Monthly Review & Close</h4>
+              <p data-i18n="accounting.roadmap.close.desc">Review net result and export a formal Excel report for approval.</p>
+            </article>
+          </div>
+        </section>
+
+        <section class="card finance-concepts-card">
+          <div class="card-header">
+            <h3 class="section-title">
+              <i data-lucide="lightbulb"></i>
+              <span data-i18n="accounting.simple_concepts">Simple Financial Concepts</span>
+            </h3>
+          </div>
+          <div class="finance-concepts-grid">
+            <article class="finance-concept">
+              <h4 data-i18n="accounting.concept.opening.title">Opening Balance</h4>
+              <p data-i18n="accounting.concept.opening.desc">Starting financial point before any movement begins.</p>
+            </article>
+            <article class="finance-concept">
+              <h4 data-i18n="accounting.concept.movement.title">Month Movement</h4>
+              <p data-i18n="accounting.concept.movement.desc">Month movement = Inflow - Outflow - Expenses.</p>
+            </article>
+            <article class="finance-concept">
+              <h4 data-i18n="accounting.concept.net.title">Net Balance</h4>
+              <p data-i18n="accounting.concept.net.desc">Net = Opening + Inflow - Outflow - Expenses.</p>
+            </article>
+            <article class="finance-concept">
+              <h4 data-i18n="accounting.concept.closure.title">Advance Closure Rate</h4>
+              <p data-i18n="accounting.concept.closure.desc">Higher closure rate means better collections and control.</p>
+            </article>
+          </div>
+        </section>
+
         <section class="card acc-links-card">
           <div class="acc-links">
             <button class="btn btn-ghost" id="accounting-open-flow">
@@ -124,6 +237,7 @@
     </div>
   </div>
   <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script type="module" src="../Page%20Controllers/accounting.page.js"></script>
 </body>
 </html>

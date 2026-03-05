@@ -13,6 +13,10 @@
   z-index: 120;
 }
 
+body.modal-open {
+  overflow: hidden;
+}
+
 .modal-backdrop.open {
   opacity: 1;
   pointer-events: all;
@@ -37,6 +41,22 @@
   justify-content: space-between;
   align-items: center;
   gap: var(--space-3);
+}
+
+.modal-close-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 84%, var(--primary-soft));
+  color: var(--text);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.modal-close-btn:hover {
+  border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
 }
 
 .modal-header h3 {
@@ -64,12 +84,26 @@
   border-top: 1px solid var(--border);
 }
 
+[dir="rtl"] .modal-actions {
+  justify-content: flex-start;
+}
+
 .modal-body label {
   display: grid;
   gap: 6px;
   margin: 0;
   font-weight: 600;
   line-height: 1.35;
+}
+
+.modal-body .modal-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.modal-body .field-full {
+  grid-column: 1 / -1;
 }
 
 .modal-body .input,
@@ -130,6 +164,10 @@
 
   .modal-header {
     align-items: flex-start;
+  }
+
+  .modal-body .modal-form-grid {
+    grid-template-columns: 1fr;
   }
 
   .modal-actions {

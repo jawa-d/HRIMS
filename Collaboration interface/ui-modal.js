@@ -1,6 +1,7 @@
 import { translateDom } from "../Languages/i18n.js";
 
 let modalRoot;
+let isBound = false;
 function ensureModal() {
   if (!modalRoot) {
     modalRoot = document.createElement("div");
@@ -9,7 +10,7 @@ function ensureModal() {
       <div class="modal">
         <div class="modal-header">
           <h3 id="modal-title"></h3>
-          <button class="btn btn-ghost" id="modal-close">Close</button>
+          <button class="modal-close-btn" id="modal-close" type="button" data-i18n="common.close" aria-label="Close modal">×</button>
         </div>
         <div class="modal-body" id="modal-body"></div>
         <div class="modal-actions" id="modal-actions"></div>
@@ -20,6 +21,14 @@ function ensureModal() {
     modalRoot.addEventListener("click", (event) => {
       if (event.target === modalRoot) closeModal();
     });
+  }
+  if (!isBound) {
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && modalRoot?.classList.contains("open")) {
+        closeModal();
+      }
+    });
+    isBound = true;
   }
 }
 export function openModal({ title, content, actions = [] }) {
@@ -57,9 +66,11 @@ export function openModal({ title, content, actions = [] }) {
   });
   translateDom(modalRoot);
   modalRoot.classList.add("open");
+  document.body.classList.add("modal-open");
 }
 export function closeModal() {
   if (modalRoot) {
     modalRoot.classList.remove("open");
   }
+  document.body.classList.remove("modal-open");
 }
