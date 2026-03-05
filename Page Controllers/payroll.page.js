@@ -565,7 +565,7 @@ function exportToPdf() {
       <head>
         <title>Payroll ${currentMonth}</title>
         <style>
-          @page { size: A4; margin: 14mm; }
+          @page { size: A4 landscape; margin: 12mm; }
           body {
             font-family: Arial, sans-serif;
             color: #0f172a;
@@ -576,6 +576,7 @@ function exportToPdf() {
             border: 1px solid #cbd5e1;
             border-radius: 10px;
             padding: 14px;
+            max-width: 100%;
           }
           .header {
             display: flex;
@@ -628,7 +629,8 @@ function exportToPdf() {
             width: 100%;
             border-collapse: collapse;
             margin-top: 6px;
-            font-size: 11px;
+            font-size: 12px;
+            table-layout: fixed;
           }
           th, td {
             border: 1px solid #d6dee6;
@@ -640,6 +642,9 @@ function exportToPdf() {
             font-weight: 700;
             white-space: nowrap;
           }
+          th:first-child, td:first-child {
+            width: 28%;
+          }
           tr:nth-child(even) td {
             background: #fcfdff;
           }
@@ -648,7 +653,7 @@ function exportToPdf() {
             font-variant-numeric: tabular-nums;
           }
           .footer {
-            margin-top: 26px;
+            margin-top: 22px;
             display: flex;
             justify-content: flex-end;
           }
@@ -694,8 +699,6 @@ function exportToPdf() {
             <thead>
               <tr>
                 <th>Employee</th>
-                <th>Employee ID</th>
-                <th>Status</th>
                 <th class="num">Base</th>
                 <th class="num">Allowances</th>
                 <th class="num">Deductions</th>
@@ -708,8 +711,6 @@ function exportToPdf() {
                   (row) => `
                     <tr>
                       <td>${row.employeeName}</td>
-                      <td>${row.employeeCode}</td>
-                      <td>${row.status}</td>
                       <td class="num">${formatter.format(Number(row.base || 0))}</td>
                       <td class="num">${formatter.format(Number(row.allowances || 0))}</td>
                       <td class="num">${formatter.format(Number(row.deductions || 0))}</td>
