@@ -1,4 +1,5 @@
 import { trackActivity } from "../Services/activity.service.js";
+import { translateText } from "../Languages/i18n.js";
 let toastRoot;
 
 function ensureToastRoot() {
@@ -11,6 +12,8 @@ function ensureToastRoot() {
 
 export function showToast(type, message, title = "", options = {}) {
   ensureToastRoot();
+  const resolvedMessage = translateText(message || "");
+  const resolvedTitle = translateText(title || "");
   const icons = {
     success: "check-circle-2",
     error: "x-circle",
@@ -24,8 +27,8 @@ export function showToast(type, message, title = "", options = {}) {
       <i data-lucide="${icons[type] || "info"}"></i>
     </div>
     <div class="toast-body">
-      ${title ? `<strong>${title}</strong>` : ""}
-      <div>${message}</div>
+      ${resolvedTitle ? `<strong>${resolvedTitle}</strong>` : ""}
+      <div>${resolvedMessage}</div>
     </div>
     <button class="toast-close" aria-label="Close notification">
       <i data-lucide="x"></i>
@@ -37,8 +40,8 @@ export function showToast(type, message, title = "", options = {}) {
   const shouldTrack = options.trackActivity !== false && type !== "info";
   if (shouldTrack) {
     trackActivity({
-      title: title || message || "Activity",
-      subtitle: title ? message : "",
+      title: resolvedTitle || resolvedMessage || translateText("Activity"),
+      subtitle: resolvedTitle ? resolvedMessage : "",
       pageKey: document.body?.dataset?.page || "",
       href: window.location.pathname.split("/").pop() || ""
     });
@@ -59,7 +62,5 @@ export function showToast(type, message, title = "", options = {}) {
   }
 }
   
-
-
 
 

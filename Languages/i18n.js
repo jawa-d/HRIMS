@@ -142,6 +142,122 @@ const dictionaries = {
     "login.direct_note": "Update demo credentials if needed",
     "login.helper": "Use your company account",
     "login.data_notice": "Data is retained by Wadi Al-Rafidain IT Department.",
+    "auto.assets.subtitle": "Track company equipment issuance and returns.",
+    "auto.attendance.subtitle": "Daily attendance insights and punctuality tracking.",
+    "auto.cashbox.subtitle": "Daily expense journal for petty cash operations.",
+    "auto.cashflow.subtitle": "Track incoming and outgoing cash records with Firebase sync.",
+    "auto.org.subtitle": "Interactive organizational structure with reporting lines.",
+    "auto.profile.subtitle": "Manage your account, contact details, and work profile.",
+    "auto.reports.subtitle": "Unified HR analytics across the entire system.",
+    "auto.security_center.subtitle": "Complete audit visibility for sign-in activity, privileged actions, and security events.",
+    "auto.settings.subtitle": "Control system preferences, RBAC templates, and user access definitions.",
+    "auto.timeoff.subtitle": "Annual leave balances and usage by employee.",
+    "auto.tickets.subtitle": "Create and track internal IT/HR requests with clear ownership and SLA status.",
+    "auto.search_label": "Search",
+    "auto.status_label": "Status",
+    "auto.all_status": "All Status",
+    "auto.available": "Available",
+    "auto.assigned": "Assigned",
+    "auto.maintenance": "Maintenance",
+    "auto.total_assets": "Total Assets",
+    "auto.total_logs": "Total Logs",
+    "auto.opening_balance": "Opening Balance",
+    "auto.selected_day": "Selected Day",
+    "auto.current_month": "Current Month",
+    "auto.all_entries": "All Entries",
+    "auto.cashbox_net": "Cashbox Net",
+    "auto.total_in": "Total In",
+    "auto.total_out": "Total Out",
+    "auto.net": "Net",
+    "auto.asset": "Asset",
+    "auto.tag": "Tag",
+    "auto.assigned_to": "Assigned To",
+    "auto.employee": "Employee",
+    "auto.check_in": "Check In",
+    "auto.check_out": "Check Out",
+    "auto.hours": "Hours",
+    "auto.created_by": "Created By",
+    "auto.no_assets": "No assets found",
+    "auto.no_attendance": "No attendance records",
+    "auto.no_cashflow": "No cash in/out entries found.",
+    "auto.no_cashbox": "No expense entries found.",
+    "auto.no_org": "No employees found",
+    "auto.no_credentials": "No credentials saved yet.",
+    "auto.total_events": "Total Events",
+    "auto.failed_logins_24h": "Failed Logins (24h)",
+    "auto.high_severity": "High Severity",
+    "auto.unique_actors": "Unique Actors",
+    "auto.all_severity": "All Severity",
+    "auto.info": "Info",
+    "auto.warning": "Warning",
+    "auto.critical": "Critical",
+    "auto.action": "Action",
+    "auto.message": "Message",
+    "auto.no_security_events": "No security events found",
+    "auto.detected_attempts": "Detected Attempts",
+    "auto.high_risk": "High Risk",
+    "auto.blocked_actors": "Blocked Actors",
+    "auto.ai_confidence": "AI Confidence",
+    "auto.risk_critical": "Critical (85+)",
+    "auto.risk_high": "High (70+)",
+    "auto.risk_medium": "Medium (50+)",
+    "auto.risk_low": "Low (<50)",
+    "auto.auto_focus_top_incidents": "Auto focus on top incidents",
+    "auto.soc_quick_actions": "SOC Quick Actions",
+    "auto.legend_critical": "Critical",
+    "auto.legend_high": "High",
+    "auto.legend_medium": "Medium",
+    "auto.legend_low": "Low",
+    "auto.marker_colors_note": "Marker colors: red=blocked, orange=high risk, yellow=medium, blue=low.",
+    "auto.select_incident_help": "Select an incident to see recommended actions.",
+    "auto.profile_photo": "Profile Photo",
+    "auto.full_name": "Full Name",
+    "auto.phone": "Phone",
+    "auto.job_title": "Job Title",
+    "auto.department_id": "Department ID",
+    "auto.manager_id": "Manager ID",
+    "auto.position_id": "Position ID",
+    "auto.role": "Role",
+    "auto.bio": "Bio",
+    "auto.save_changes": "Save Changes",
+    "auto.toggle_theme": "Toggle Theme",
+    "auto.toggle_language": "Toggle Language",
+    "auto.employees": "Employees",
+    "auto.used_days": "Used Days",
+    "auto.remaining_days": "Remaining Days",
+    "auto.low_balance": "Low Balance",
+    "auto.annual": "Annual",
+    "auto.carryover": "Carryover",
+    "auto.used": "Used",
+    "auto.remaining": "Remaining",
+    "auto.no_balances": "No balances found",
+    "auto.all_types": "All Types",
+    "auto.all": "All",
+    "auto.in_progress": "In Progress",
+    "auto.resolved": "Resolved",
+    "auto.closed": "Closed",
+    "auto.general": "General",
+    "auto.low": "Low",
+    "auto.medium": "Medium",
+    "auto.priority": "Priority",
+    "auto.default_view": "Default view",
+    "auto.bulk_actions": "Bulk Actions",
+    "auto.close_selected": "Close Selected",
+    "auto.delete_selected": "Delete Selected",
+    "auto.apply": "Apply",
+    "auto.total": "Total",
+    "auto.sla_compliance": "SLA Compliance",
+    "auto.resolved_within_targets": "Resolved within priority targets",
+    "auto.avg_close_time": "Avg. Close Time",
+    "auto.from_create_to_closed": "From create to resolved/closed",
+    "auto.top_category": "Top Category",
+    "auto.no_data": "No data",
+    "auto.subject": "Subject",
+    "auto.requester": "Requester",
+    "auto.assignee": "Assignee",
+    "auto.updated": "Updated",
+    "auto.no_tickets_selected_filters": "No tickets found for the selected filters.",
+    "auto.no_active_workload": "No active workload right now.",
     "dashboard.kpi.employees": "Employees",
     "dashboard.kpi.leaves": "Leave Requests",
     "dashboard.kpi.payroll": "Payrolls",
@@ -659,6 +775,122 @@ const dictionaries = {
     "login.direct_note": "حدّث بيانات الدخول التجريبية عند الحاجة",
     "login.helper": "استخدم حساب شركتك",
     "login.data_notice": "البيانات محفوظة لدى قسم تكنولوجيا المعلومات شركة وادي الرافدين",
+    "auto.assets.subtitle": "تتبع تسليم واسترجاع معدات الشركة.",
+    "auto.attendance.subtitle": "رؤى يومية للحضور وتتبع الانضباط الزمني.",
+    "auto.cashbox.subtitle": "سجل مصروفات يومي لعمليات الصندوق النثري.",
+    "auto.cashflow.subtitle": "تتبع حركات الداخل والخارج النقدي مع مزامنة Firebase.",
+    "auto.org.subtitle": "هيكل تنظيمي تفاعلي مع خطوط الارتباط الإداري.",
+    "auto.profile.subtitle": "إدارة حسابك وبيانات التواصل وملف العمل.",
+    "auto.reports.subtitle": "تحليلات موارد بشرية موحدة على مستوى النظام.",
+    "auto.security_center.subtitle": "رؤية تدقيق كاملة لنشاط تسجيل الدخول والإجراءات الحساسة والأحداث الأمنية.",
+    "auto.settings.subtitle": "التحكم بتفضيلات النظام وقوالب الصلاحيات وتعريفات الوصول.",
+    "auto.timeoff.subtitle": "أرصدة الإجازات السنوية واستخدامها حسب الموظف.",
+    "auto.tickets.subtitle": "إنشاء ومتابعة طلبات الموارد البشرية وتقنية المعلومات مع ملكية واضحة وحالة SLA.",
+    "auto.search_label": "بحث",
+    "auto.status_label": "الحالة",
+    "auto.all_status": "كل الحالات",
+    "auto.available": "متاح",
+    "auto.assigned": "مُخصص",
+    "auto.maintenance": "صيانة",
+    "auto.total_assets": "إجمالي الأصول",
+    "auto.total_logs": "إجمالي السجلات",
+    "auto.opening_balance": "الرصيد الافتتاحي",
+    "auto.selected_day": "اليوم المحدد",
+    "auto.current_month": "الشهر الحالي",
+    "auto.all_entries": "كل القيود",
+    "auto.cashbox_net": "صافي الصندوق",
+    "auto.total_in": "إجمالي الداخل",
+    "auto.total_out": "إجمالي الخارج",
+    "auto.net": "الصافي",
+    "auto.asset": "الأصل",
+    "auto.tag": "الوسم",
+    "auto.assigned_to": "مُسند إلى",
+    "auto.employee": "الموظف",
+    "auto.check_in": "دخول",
+    "auto.check_out": "خروج",
+    "auto.hours": "الساعات",
+    "auto.created_by": "تم الإنشاء بواسطة",
+    "auto.no_assets": "لا توجد أصول",
+    "auto.no_attendance": "لا توجد سجلات حضور",
+    "auto.no_cashflow": "لا توجد قيود داخل/خارج.",
+    "auto.no_cashbox": "لا توجد قيود مصروفات.",
+    "auto.no_org": "لا يوجد موظفون مطابقون",
+    "auto.no_credentials": "لا توجد بيانات اعتماد محفوظة.",
+    "auto.total_events": "إجمالي الأحداث",
+    "auto.failed_logins_24h": "محاولات دخول فاشلة (24 ساعة)",
+    "auto.high_severity": "شدة عالية",
+    "auto.unique_actors": "جهات فاعلة فريدة",
+    "auto.all_severity": "كل مستويات الشدة",
+    "auto.info": "معلومات",
+    "auto.warning": "تحذير",
+    "auto.critical": "حرج",
+    "auto.action": "الإجراء",
+    "auto.message": "الرسالة",
+    "auto.no_security_events": "لا توجد أحداث أمنية",
+    "auto.detected_attempts": "محاولات مكتشفة",
+    "auto.high_risk": "مخاطر عالية",
+    "auto.blocked_actors": "جهات محظورة",
+    "auto.ai_confidence": "ثقة الذكاء الاصطناعي",
+    "auto.risk_critical": "حرج (85+)",
+    "auto.risk_high": "عالٍ (70+)",
+    "auto.risk_medium": "متوسط (50+)",
+    "auto.risk_low": "منخفض (<50)",
+    "auto.auto_focus_top_incidents": "تركيز تلقائي على أعلى الحوادث",
+    "auto.soc_quick_actions": "إجراءات SOC سريعة",
+    "auto.legend_critical": "حرج",
+    "auto.legend_high": "عالٍ",
+    "auto.legend_medium": "متوسط",
+    "auto.legend_low": "منخفض",
+    "auto.marker_colors_note": "ألوان المؤشر: أحمر=محظور، برتقالي=مخاطر عالية، أصفر=متوسط، أزرق=منخفض.",
+    "auto.select_incident_help": "اختر حادثة لعرض الإجراءات المقترحة.",
+    "auto.profile_photo": "صورة الملف",
+    "auto.full_name": "الاسم الكامل",
+    "auto.phone": "الهاتف",
+    "auto.job_title": "المسمى الوظيفي",
+    "auto.department_id": "معرّف القسم",
+    "auto.manager_id": "معرّف المدير",
+    "auto.position_id": "معرّف الوظيفة",
+    "auto.role": "الدور",
+    "auto.bio": "نبذة",
+    "auto.save_changes": "حفظ التغييرات",
+    "auto.toggle_theme": "تبديل المظهر",
+    "auto.toggle_language": "تبديل اللغة",
+    "auto.employees": "الموظفون",
+    "auto.used_days": "أيام مستخدمة",
+    "auto.remaining_days": "أيام متبقية",
+    "auto.low_balance": "رصيد منخفض",
+    "auto.annual": "سنوي",
+    "auto.carryover": "ترحيل",
+    "auto.used": "مستخدم",
+    "auto.remaining": "متبقي",
+    "auto.no_balances": "لا توجد أرصدة",
+    "auto.all_types": "كل الأنواع",
+    "auto.all": "الكل",
+    "auto.in_progress": "قيد التنفيذ",
+    "auto.resolved": "تم الحل",
+    "auto.closed": "مغلق",
+    "auto.general": "عام",
+    "auto.low": "منخفض",
+    "auto.medium": "متوسط",
+    "auto.priority": "الأولوية",
+    "auto.default_view": "العرض الافتراضي",
+    "auto.bulk_actions": "إجراءات جماعية",
+    "auto.close_selected": "إغلاق المحدد",
+    "auto.delete_selected": "حذف المحدد",
+    "auto.apply": "تطبيق",
+    "auto.total": "الإجمالي",
+    "auto.sla_compliance": "الالتزام بـSLA",
+    "auto.resolved_within_targets": "تم الحل ضمن أهداف الأولوية",
+    "auto.avg_close_time": "متوسط وقت الإغلاق",
+    "auto.from_create_to_closed": "من الإنشاء إلى الحل/الإغلاق",
+    "auto.top_category": "أعلى تصنيف",
+    "auto.no_data": "لا توجد بيانات",
+    "auto.subject": "الموضوع",
+    "auto.requester": "مقدم الطلب",
+    "auto.assignee": "المسند إليه",
+    "auto.updated": "آخر تحديث",
+    "auto.no_tickets_selected_filters": "لا توجد تذاكر مطابقة للفلاتر المحددة.",
+    "auto.no_active_workload": "لا يوجد عبء عمل نشط حاليًا.",
     "dashboard.kpi.employees": "الموظفون",
     "dashboard.kpi.leaves": "طلبات الإجازة",
     "dashboard.kpi.payroll": "الرواتب",
@@ -1041,9 +1273,41 @@ const dictionaries = {
 
 let currentLang = "ar";
 let currentTheme = localStorage.getItem(STORAGE_KEYS.theme) || DEFAULT_THEME;
+let enToArMap;
+let arToEnMap;
+
+function normalizeLiteral(value) {
+  return String(value || "").replace(/\s+/g, " ").trim();
+}
+
+function ensureLiteralMaps() {
+  if (enToArMap && arToEnMap) return;
+  enToArMap = new Map();
+  arToEnMap = new Map();
+  const enDict = dictionaries.en || {};
+  const arDict = dictionaries.ar || {};
+  Object.keys(enDict).forEach((key) => {
+    const enValue = normalizeLiteral(enDict[key]);
+    const arValue = normalizeLiteral(arDict[key]);
+    if (!enValue || !arValue) return;
+    enToArMap.set(enValue, arValue);
+    arToEnMap.set(arValue, enValue);
+  });
+}
 
 export function t(key) {
   return dictionaries[currentLang][key] || key;
+}
+
+export function translateText(value = "") {
+  const raw = String(value || "");
+  const normalized = normalizeLiteral(raw);
+  if (!normalized) return raw;
+  ensureLiteralMaps();
+  if (currentLang === "ar") {
+    return enToArMap.get(normalized) || raw;
+  }
+  return arToEnMap.get(normalized) || raw;
 }
 
 export function getLanguage() {
@@ -1074,6 +1338,29 @@ export function translateDom(root = document) {
   root.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
     const key = el.getAttribute("data-i18n-placeholder");
     el.setAttribute("placeholder", t(key));
+  });
+
+  root.querySelectorAll("input[placeholder], textarea[placeholder]").forEach((el) => {
+    if (el.hasAttribute("data-i18n-placeholder")) return;
+    const current = el.getAttribute("placeholder") || "";
+    const next = translateText(current);
+    if (next !== current) el.setAttribute("placeholder", next);
+  });
+
+  root.querySelectorAll("option").forEach((el) => {
+    if (el.hasAttribute("data-i18n")) return;
+    if (el.children.length) return;
+    const current = el.textContent || "";
+    const next = translateText(current);
+    if (next !== current) el.textContent = next;
+  });
+
+  root.querySelectorAll("*").forEach((el) => {
+    if (el.hasAttribute("data-i18n")) return;
+    if (el.children.length) return;
+    const current = el.textContent || "";
+    const next = translateText(current);
+    if (next !== current) el.textContent = next;
   });
 }
 

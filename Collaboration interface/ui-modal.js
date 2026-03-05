@@ -1,7 +1,8 @@
-import { translateDom } from "../Languages/i18n.js";
+import { translateDom, translateText } from "../Languages/i18n.js";
 
 let modalRoot;
 let isBound = false;
+
 function ensureModal() {
   if (!modalRoot) {
     modalRoot = document.createElement("div");
@@ -10,7 +11,7 @@ function ensureModal() {
       <div class="modal">
         <div class="modal-header">
           <h3 id="modal-title"></h3>
-          <button class="modal-close-btn" id="modal-close" type="button" data-i18n="common.close" aria-label="Close modal">×</button>
+          <button class="modal-close-btn" id="modal-close" type="button" data-i18n="common.close" aria-label="Close modal">x</button>
         </div>
         <div class="modal-body" id="modal-body"></div>
         <div class="modal-actions" id="modal-actions"></div>
@@ -22,6 +23,7 @@ function ensureModal() {
       if (event.target === modalRoot) closeModal();
     });
   }
+
   if (!isBound) {
     document.addEventListener("keydown", (event) => {
       if (event.key === "Escape" && modalRoot?.classList.contains("open")) {
@@ -31,23 +33,26 @@ function ensureModal() {
     isBound = true;
   }
 }
+
 export function openModal({ title, content, actions = [] }) {
   ensureModal();
-  modalRoot.querySelector("#modal-title").textContent = title || "";
+  modalRoot.querySelector("#modal-title").textContent = translateText(title || "");
   const body = modalRoot.querySelector("#modal-body");
   body.innerHTML = "";
   body.scrollTop = 0;
+
   if (typeof content === "string") {
     body.innerHTML = content;
   } else if (content instanceof HTMLElement) {
     body.appendChild(content);
   }
+
   const actionsRoot = modalRoot.querySelector("#modal-actions");
   actionsRoot.innerHTML = "";
   actions.forEach((action) => {
     const button = document.createElement("button");
     button.className = action.className || "btn btn-primary";
-    button.textContent = action.label || "OK";
+    button.textContent = translateText(action.label || "OK");
     button.addEventListener("click", async () => {
       button.disabled = true;
       try {
@@ -64,10 +69,12 @@ export function openModal({ title, content, actions = [] }) {
     });
     actionsRoot.appendChild(button);
   });
+
   translateDom(modalRoot);
   modalRoot.classList.add("open");
   document.body.classList.add("modal-open");
 }
+
 export function closeModal() {
   if (modalRoot) {
     modalRoot.classList.remove("open");
