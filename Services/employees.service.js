@@ -9,7 +9,6 @@ import {
   deleteDoc,
   query,
   orderBy,
-  where,
   onSnapshot,
   limit,
   writeBatch
@@ -17,6 +16,11 @@ import {
 
 const employeesRef = collection(db, "employees");
 const DEFAULT_EMPLOYEE_LIMIT = 200;
+
+function isArchivedEmployee(item = {}) {
+  if (item?.isArchived === true) return true;
+  return String(item?.status || "").trim().toLowerCase() === "archived";
+}
 
 function normalizeListOptions(options = {}) {
   const parsedLimit = Number(options.limitCount);
@@ -32,11 +36,10 @@ function normalizeListOptions(options = {}) {
 export async function listEmployees(options = {}) {
   const { includeArchived, limitCount } = normalizeListOptions(options);
   try {
-    const constraints = [];
-    if (!includeArchived) constraints.push(where("isArchived", "==", false));
-    constraints.push(orderBy("createdAt", "desc"), limit(limitCount));
+    const constraints = [orderBy("createdAt", "desc"), limit(limitCount)];
     const snap = await getDocs(query(employeesRef, ...constraints));
-    return snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+    const rows = snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+    return includeArchived ? rows : rows.filter((item) => !isArchivedEmployee(item));
   } catch (_) {
     return [];
   }
@@ -44,15 +47,13 @@ export async function listEmployees(options = {}) {
 
 export function watchEmployees(onChange, onError, options = {}) {
   const { includeArchived, limitCount } = normalizeListOptions(options);
-  const constraints = [];
-  if (!includeArchived) constraints.push(where("isArchived", "==", false));
-  constraints.push(orderBy("createdAt", "desc"), limit(limitCount));
+  const constraints = [orderBy("createdAt", "desc"), limit(limitCount)];
   const employeesQuery = query(employeesRef, ...constraints);
   return onSnapshot(
     employeesQuery,
     (snap) => {
-      const items = snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
-      onChange(items);
+      const rows = snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+      onChange(includeArchived ? rows : rows.filter((item) => !isArchivedEmployee(item)));
     },
     onError
   );
