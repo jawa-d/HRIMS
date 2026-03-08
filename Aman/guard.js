@@ -11,6 +11,16 @@ function parseStorage(key, fallback) {
   }
 }
 
+function normalizeEmailKey(value = "") {
+  return String(value || "").trim().toLowerCase();
+}
+
+function pagesFromPermissionEntry(entry) {
+  if (Array.isArray(entry)) return entry;
+  if (entry && typeof entry === "object" && Array.isArray(entry.pages)) return entry.pages;
+  return [];
+}
+
 export function getRole() {
   return localStorage.getItem(STORAGE_KEYS.role) || "super_admin";
 }
@@ -23,7 +33,18 @@ export function getUserProfile() {
 }
 
 export function getAllowedPages(role = getRole(), profile = getUserProfile()) {
-  void profile;
+  const currentProfile = profile || {};
+  const userPermissions = parseStorage(STORAGE_KEYS.userPermissions, {});
+  const emailKey = normalizeEmailKey(currentProfile.email);
+  const uidKey = String(currentProfile.uid || "").trim();
+  const directPages = [
+    ...pagesFromPermissionEntry(userPermissions[emailKey]),
+    ...pagesFromPermissionEntry(userPermissions[uidKey])
+  ].filter(Boolean);
+  if (directPages.length) {
+    return Array.from(new Set(directPages));
+  }
+
   if (role === "super_admin") {
     return MENU_ITEMS.map((item) => item.key);
   }

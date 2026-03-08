@@ -39,6 +39,7 @@ const userSearch = document.getElementById("settings-user-search");
 const addUserBtn = document.getElementById("settings-add-user-btn");
 
 let roleVisibility = parseStorage(STORAGE_KEYS.roleVisibility, {});
+let userPermissions = parseStorage(STORAGE_KEYS.userPermissions, {});
 let users = [];
 
 if (!canManageUsers) {
@@ -60,11 +61,11 @@ function persistUsersDraft() {
 
 function persistRbacLocal() {
   localStorage.setItem(STORAGE_KEYS.roleVisibility, JSON.stringify(roleVisibility));
-  localStorage.removeItem(STORAGE_KEYS.userPermissions);
+  localStorage.setItem(STORAGE_KEYS.userPermissions, JSON.stringify(userPermissions));
 }
 
 async function syncRbacRemote() {
-  await upsertSettingsRbacConfig({ roleVisibility, userPermissions: {} });
+  await upsertSettingsRbacConfig({ roleVisibility, userPermissions });
 }
 
 let rbacSyncTimer = null;
@@ -93,6 +94,57 @@ function syncRbacRemoteSafe() {
 
 function defaultPagesForRole(roleKey) {
   return roleVisibility[roleKey] || ROLE_PERMISSIONS[roleKey] || [];
+}
+
+function normalizeEmailKey(value = "") {
+  return String(value || "").trim().toLowerCase();
+}
+
+function normalizePermissionEntry(entry) {
+  if (Array.isArray(entry)) {
+    return {
+      pages: Array.from(new Set(entry.filter(Boolean))),
+      actions: {}
+    };
+  }
+  if (entry && typeof entry === "object") {
+    const pages = Array.isArray(entry.pages) ? Array.from(new Set(entry.pages.filter(Boolean))) : [];
+    const actions = entry.actions && typeof entry.actions === "object" ? entry.actions : {};
+    return { pages, actions };
+  }
+  return { pages: [], actions: {} };
+}
+
+function readPermissionEntryForUser(item = {}) {
+  const emailKey = normalizeEmailKey(item.email);
+  const uidKey = String(item.uid || "").trim();
+  const byEmail = emailKey ? normalizePermissionEntry(userPermissions[emailKey]) : null;
+  const byUid = uidKey ? normalizePermissionEntry(userPermissions[uidKey]) : null;
+  if (byEmail && (byEmail.pages.length || Object.keys(byEmail.actions).length)) return byEmail;
+  if (byUid && (byUid.pages.length || Object.keys(byUid.actions).length)) return byUid;
+  return null;
+}
+
+function upsertPermissionEntryForUser(item = {}, entry = null) {
+  const emailKey = normalizeEmailKey(item.email);
+  const uidKey = String(item.uid || "").trim();
+  const normalized = normalizePermissionEntry(entry);
+  if (emailKey) {
+    userPermissions[emailKey] = normalized;
+  }
+  if (uidKey && userPermissions[uidKey]) {
+    delete userPermissions[uidKey];
+  }
+}
+
+function ensureUserDefaultPermissions(item = {}) {
+  const emailKey = normalizeEmailKey(item.email);
+  if (!emailKey) return;
+  if (userPermissions[emailKey]) return;
+  userPermissions[emailKey] = {
+    pages: Array.from(new Set(defaultPagesForRole(item.role))),
+    actions: {}
+  };
 }
 
 function getAssignableRoles() {
@@ -165,6 +217,8 @@ function normalizeUser(raw = {}) {
 }
 
 function userAllowedPages(item) {
+  const scoped = readPermissionEntryForUser(item);
+  if (scoped?.pages?.length) return scoped.pages;
   return defaultPagesForRole(item.role);
 }
 
@@ -239,6 +293,7 @@ function renderUsersTable() {
                         canManageTargetUser(item)
                           ? `
                           <button class="btn btn-ghost" data-action="edit" data-id="${escapeHtml(item.uid)}">Edit</button>
+                          <button class="btn btn-ghost" data-action="pages" data-id="${escapeHtml(item.uid)}">Pages</button>
                           <button class="btn btn-ghost" data-action="delete" data-id="${escapeHtml(item.uid)}" ${item.uid === user.uid ? "disabled" : ""}>Delete</button>
                         `
                           : "<span class=\"text-muted\">View only</span>"
@@ -310,6 +365,7 @@ function openUserModal(existing = null) {
 
           users = users.filter((item) => item.uid !== uid);
           users.unshift(payload);
+          ensureUserDefaultPermissions(payload);
           persistUsersDraft();
           persistRbacLocal();
           syncRbacRemoteSafe();
@@ -325,7 +381,7 @@ function openUserModal(existing = null) {
 
           if (uid === user.uid) {
             const updatedSelf = { ...user, ...payload };
-            updatedSelf.permissions = null;
+            updatedSelf.permissions = userAllowedPages(payload);
             localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(updatedSelf));
             localStorage.setItem(STORAGE_KEYS.role, payload.role);
           }
@@ -351,6 +407,45 @@ function openUserModal(existing = null) {
   });
 }
 
+function openUserPagesModal(item) {
+  if (!item || !canManageTargetUser(item)) return;
+  const currentPages = new Set(userAllowedPages(item));
+  openModal({
+    title: `Page Access - ${item.email || item.uid}`,
+    content: `
+      <div class="grid-2">
+        ${MENU_ITEMS.map((menu) => `
+          <label>
+            <input type="checkbox" data-user-page-key="${escapeHtml(menu.key)}" ${currentPages.has(menu.key) ? "checked" : ""} />
+            ${escapeHtml(menu.key)}
+          </label>
+        `).join("")}
+      </div>
+    `,
+    actions: [
+      {
+        label: "Save",
+        className: "btn btn-primary",
+        onClick: async () => {
+          const checked = Array.from(document.querySelectorAll('input[data-user-page-key]:checked'))
+            .map((input) => input.dataset.userPageKey)
+            .filter(Boolean);
+          upsertPermissionEntryForUser(item, {
+            pages: checked,
+            actions: readPermissionEntryForUser(item)?.actions || {}
+          });
+          persistRbacLocal();
+          syncRbacRemoteSafe();
+          renderUsersTable();
+          renderSidebar("settings");
+          showToast("success", "Email page permissions updated");
+        }
+      },
+      { label: "Cancel", className: "btn btn-ghost" }
+    ]
+  });
+}
+
 async function handleUserAction(action, uid) {
   const item = users.find((entry) => entry.uid === uid);
   if (!item || !canManageTargetUser(item)) return;
@@ -360,8 +455,16 @@ async function handleUserAction(action, uid) {
     return;
   }
 
+  if (action === "pages") {
+    openUserPagesModal(item);
+    return;
+  }
+
   if (action === "delete") {
     users = users.filter((entry) => entry.uid !== uid);
+    const emailKey = normalizeEmailKey(item.email);
+    if (emailKey && userPermissions[emailKey]) delete userPermissions[emailKey];
+    if (uid && userPermissions[uid]) delete userPermissions[uid];
     persistUsersDraft();
     persistRbacLocal();
     syncRbacRemoteSafe();
@@ -403,6 +506,7 @@ async function loadUsers() {
     showToast("info", "Running in local mode. Firebase sync can be enabled later.");
   }
 
+  users.forEach((item) => ensureUserDefaultPermissions(item));
   persistUsersDraft();
   persistRbacLocal();
   syncRbacRemoteSafe();
@@ -413,6 +517,7 @@ async function loadRbacConfig() {
   try {
     const remote = await getSettingsRbacConfig();
     roleVisibility = { ...roleVisibility, ...(remote.roleVisibility || {}) };
+    userPermissions = { ...userPermissions, ...(remote.userPermissions || {}) };
     persistRbacLocal();
   } catch (_) {
     showToast("info", "Using local RBAC settings. Firebase sync can be enabled later.");

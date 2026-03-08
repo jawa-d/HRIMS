@@ -27,14 +27,26 @@ function buildAuthError(code, message) {
   return error;
 }
 
+function normalizeEmailKey(value = "") {
+  return String(value || "").trim().toLowerCase();
+}
+
 function syncSessionPermissions(profile) {
   const uid = profile?.uid;
-  if (!uid) return;
+  const emailKey = normalizeEmailKey(profile?.email);
+  if (!uid && !emailKey) return;
   const current = JSON.parse(localStorage.getItem(STORAGE_KEYS.userPermissions) || "{}");
+  const keys = [uid, emailKey].filter(Boolean);
   if (Array.isArray(profile.permissions)) {
-    current[uid] = profile.permissions;
-  } else if (Object.prototype.hasOwnProperty.call(current, uid)) {
-    delete current[uid];
+    keys.forEach((key) => {
+      current[key] = profile.permissions;
+    });
+  } else {
+    keys.forEach((key) => {
+      if (Object.prototype.hasOwnProperty.call(current, key)) {
+        delete current[key];
+      }
+    });
   }
   localStorage.setItem(STORAGE_KEYS.userPermissions, JSON.stringify(current));
 }
@@ -53,7 +65,11 @@ async function syncRoleVisibilityFromRemote() {
     const roleVisibility = remote?.roleVisibility && typeof remote.roleVisibility === "object"
       ? remote.roleVisibility
       : {};
+    const userPermissions = remote?.userPermissions && typeof remote.userPermissions === "object"
+      ? remote.userPermissions
+      : {};
     localStorage.setItem(STORAGE_KEYS.roleVisibility, JSON.stringify(roleVisibility));
+    localStorage.setItem(STORAGE_KEYS.userPermissions, JSON.stringify(userPermissions));
   } catch (_) {
     // Keep local defaults when remote config cannot be loaded.
   }
