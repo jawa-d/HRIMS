@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HRMS | Official Letters</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../HRMS%20CSS/tokens.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/global.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/components.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/navbar.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/sidebar.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/modal.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/toast.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/official-books.css" />
+</head>
+<body data-page="official_books">
+  <div id="app" class="app-shell">
+    <div id="sidebar-root"></div>
+    <div class="main-content">
+      <div id="navbar-root"></div>
+      <main class="page official-books-page">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title">إصدار الكتب الرسمية</h1>
+            <p class="text-muted">قالب رسمي جاهز لكتابة عدة كتب إدارية مع شعار الشركة وتوقيع المدير المفوض.</p>
+          </div>
+          <div class="official-books-actions">
+            <button class="btn btn-primary" id="ob-print-btn">
+              <i data-lucide="printer"></i>
+              طباعة الكتاب
+            </button>
+            <button class="btn btn-ghost" id="ob-new-btn">
+              <i data-lucide="file-plus-2"></i>
+              كتاب جديد
+            </button>
+          </div>
+        </div>
+
+        <section class="card ob-controls">
+          <div class="grid-4">
+            <label>نوع الكتاب
+              <select class="select" id="ob-template-select">
+                <option value="general">كتاب إداري عام</option>
+                <option value="assignment">كتاب إحالة</option>
+                <option value="warning">إنذار إداري</option>
+                <option value="memo">مذكرة داخلية</option>
+              </select>
+            </label>
+            <label>رقم الكتاب
+              <input class="input" id="ob-letter-no" />
+            </label>
+            <label>التاريخ
+              <input class="input" id="ob-letter-date" type="date" />
+            </label>
+            <label>الجهة المرسل إليها
+              <input class="input" id="ob-recipient" placeholder="مثال: مدير قسم الموارد البشرية" />
+            </label>
+          </div>
+          <div class="grid-2">
+            <label>الموضوع
+              <input class="input" id="ob-subject" placeholder="موضوع الكتاب الرسمي" />
+            </label>
+            <label>اسم المدير المفوض
+              <input class="input" id="ob-manager-name" placeholder="الاسم الكامل" />
+            </label>
+          </div>
+          <div>
+            <label>نص الكتاب
+              <textarea class="textarea" id="ob-body" rows="8" placeholder="اكتب نص الكتاب هنا بصيغة رسمية..."></textarea>
+            </label>
+          </div>
+          <div class="grid-2">
+            <label>الخاتمة
+              <input class="input" id="ob-closing" />
+            </label>
+            <label>نسخة إلى (اختياري)
+              <input class="input" id="ob-cc" placeholder="مثال: قسم الحسابات / قسم الأرشيف" />
+            </label>
+          </div>
+        </section>
+
+        <section class="ob-print-area" id="ob-print-area">
+          <article class="ob-letter-sheet">
+            <img class="ob-watermark" id="ob-watermark" src="../HRMS%20Html/assets/logo.jpg" alt="" aria-hidden="true" />
+            <header class="ob-letter-head">
+              <div class="ob-brand">
+                <img id="ob-logo" src="../HRMS%20Html/assets/logo.jpg" alt="Company Logo" />
+                <div>
+                  <h2 id="ob-company-name">شركة وادي الرافدين</h2>
+                  <p id="ob-company-subtitle">المكتب الإداري - الشؤون الإدارية</p>
+                </div>
+              </div>
+              <div class="ob-meta">
+                <div><strong>رقم:</strong> <span id="ob-preview-no">-</span></div>
+                <div><strong>التاريخ:</strong> <span id="ob-preview-date">-</span></div>
+              </div>
+            </header>
+
+            <section class="ob-letter-body">
+              <p class="ob-recipient">إلى / <span id="ob-preview-recipient">-</span></p>
+              <p class="ob-subject">الموضوع / <span id="ob-preview-subject">-</span></p>
+              <p class="ob-greeting">تحية طيبة...</p>
+              <div class="ob-content" id="ob-preview-body">-</div>
+              <p class="ob-closing" id="ob-preview-closing">وتفضلوا بقبول فائق الاحترام والتقدير.</p>
+              <p class="ob-cc" id="ob-preview-cc-wrap"><strong>نسخة إلى:</strong> <span id="ob-preview-cc">-</span></p>
+            </section>
+
+            <footer class="ob-letter-foot">
+              <div class="ob-sign-box">
+                <div class="ob-sign-title">توقيع المدير المفوض</div>
+                <div class="ob-sign-line" id="ob-preview-manager">-</div>
+              </div>
+            </footer>
+          </article>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script type="module" src="../Page%20Controllers/official-books.page.js"></script>
+</body>
+</html>

@@ -1,0 +1,211 @@
+.official-books-page {
+  display: grid;
+  gap: 18px;
+}
+
+.official-books-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.ob-controls .grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.ob-controls .grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.ob-controls .textarea {
+  width: 100%;
+  margin-top: 12px;
+}
+
+.ob-print-area {
+  display: flex;
+  justify-content: center;
+}
+
+.ob-letter-sheet {
+  position: relative;
+  width: min(100%, 1050px);
+  background: #ffffff;
+  border: 1px solid #d7e0ea;
+  border-radius: 12px;
+  padding: 26px;
+  color: #0f172a;
+  box-shadow: 0 10px 30px rgba(2, 8, 23, 0.07);
+  overflow: hidden;
+}
+
+.ob-watermark {
+  position: absolute;
+  inset-inline-start: 50%;
+  top: 52%;
+  width: min(58%, 560px);
+  transform: translate(-50%, -50%);
+  opacity: 0.075;
+  pointer-events: none;
+  user-select: none;
+  z-index: 0;
+}
+
+.ob-letter-head,
+.ob-letter-body,
+.ob-letter-foot {
+  position: relative;
+  z-index: 1;
+}
+
+.ob-letter-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  border-bottom: 2px solid #0f766e;
+  padding-bottom: 12px;
+}
+
+.ob-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ob-brand img {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+}
+
+.ob-brand h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.ob-brand p {
+  margin: 4px 0 0;
+  color: #475569;
+}
+
+.ob-meta {
+  text-align: right;
+  font-size: 14px;
+  color: #334155;
+  line-height: 1.9;
+}
+
+.ob-letter-body {
+  margin-top: 16px;
+  font-size: 17px;
+  line-height: 1.95;
+}
+
+.ob-recipient,
+.ob-subject {
+  margin: 0 0 12px;
+  font-weight: 700;
+}
+
+.ob-greeting {
+  margin: 14px 0;
+}
+
+.ob-content {
+  min-height: 220px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.ob-closing {
+  margin: 16px 0 8px;
+  font-weight: 600;
+}
+
+.ob-cc {
+  margin: 10px 0 0;
+  color: #1e293b;
+}
+
+.ob-letter-foot {
+  margin-top: 32px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.ob-sign-box {
+  width: 320px;
+  text-align: center;
+}
+
+.ob-sign-title {
+  margin-bottom: 36px;
+  font-weight: 700;
+}
+
+.ob-sign-line {
+  border-top: 1px solid #0f172a;
+  padding-top: 6px;
+  font-weight: 700;
+}
+
+@media (max-width: 1100px) {
+  .ob-controls .grid-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .ob-controls .grid-4,
+  .ob-controls .grid-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .ob-letter-head {
+    flex-direction: column;
+  }
+
+  .ob-meta {
+    text-align: left;
+  }
+
+  .ob-letter-sheet {
+    padding: 16px;
+  }
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  #ob-print-area,
+  #ob-print-area * {
+    visibility: visible;
+  }
+
+  #ob-print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  .ob-letter-sheet {
+    width: 100%;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 10mm;
+  }
+}
