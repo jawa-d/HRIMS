@@ -7,6 +7,7 @@ import { trackUxEvent } from "../Services/telemetry.service.js";
 import { APP_NAME } from "../app.config.js";
 import {
   createBarcodeExport,
+  createBarcodeInlineFile,
   listBarcodeExports,
   uploadBarcodeAttachment
 } from "../Services/barcode-export.service.js";
@@ -50,6 +51,8 @@ const historyEmpty = document.getElementById("barcode-history-empty");
 let historyRows = [];
 let currentLogoPreview = sheetLogo?.src || "";
 let qrLib = null;
+const INLINE_FILE_MAX_BYTES = 550 * 1024;
+const INLINE_SOURCE_FILE_MAX_BYTES = 4 * 1024 * 1024;
 
 function todayKey() {
   return new Date().toISOString().slice(0, 10);
@@ -104,6 +107,11 @@ function drawQrPlaceholder(message = "Upload attachment then click Generate Shee
   ctx.fillText(message, qrCanvas.width / 2, qrCanvas.height / 2);
 }
 
+function updateGenerateButtonState() {
+  if (!generateBtn) return;
+  generateBtn.disabled = !canManage;
+}
+
 function readFileAsDataUrl(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -111,6 +119,60 @@ function readFileAsDataUrl(file) {
     reader.onerror = () => reject(new Error("Failed to read local file."));
     reader.readAsDataURL(file);
   });
+}
+
+function dataUrlByteSize(dataUrl = "") {
+  const base64 = String(dataUrl || "").split(",")[1] || "";
+  if (!base64) return 0;
+  const padding = base64.endsWith("==") ? 2 : (base64.endsWith("=") ? 1 : 0);
+  return Math.floor((base64.length * 3) / 4) - padding;
+}
+
+function loadImageFromDataUrl(dataUrl) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error("Failed to parse image data."));
+    img.src = dataUrl;
+  });
+}
+
+async function compressImageForInline(file, maxBytes = INLINE_FILE_MAX_BYTES) {
+  const originalDataUrl = await readFileAsDataUrl(file);
+  const img = await loadImageFromDataUrl(originalDataUrl);
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+  const ratio = Math.min(1, 1280 / Math.max(img.width, img.height));
+  canvas.width = Math.max(1, Math.round(img.width * ratio));
+  canvas.height = Math.max(1, Math.round(img.height * ratio));
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+  let quality = 0.88;
+  let output = canvas.toDataURL("image/jpeg", quality);
+  while (dataUrlByteSize(output) > maxBytes && quality > 0.4) {
+    quality -= 0.08;
+    output = canvas.toDataURL("image/jpeg", quality);
+  }
+  return output;
+}
+
+async function buildInlineDataUrl(file) {
+  if (file.size <= INLINE_FILE_MAX_BYTES) {
+    return readFileAsDataUrl(file);
+  }
+  if (file.size > INLINE_SOURCE_FILE_MAX_BYTES) {
+    throw new Error("File is too large for fallback mode. Please use file up to 4MB or fix Firebase Storage CORS.");
+  }
+  const isImage = String(file.type || "").startsWith("image/");
+  if (!isImage) {
+    // Non-images are supported via chunked inline storage.
+    return readFileAsDataUrl(file);
+  }
+  const compressed = await compressImageForInline(file, INLINE_FILE_MAX_BYTES);
+  if (dataUrlByteSize(compressed) > INLINE_FILE_MAX_BYTES) {
+    throw new Error("Image is too large even after compression. Please use a smaller image.");
+  }
+  return compressed;
 }
 
 function renderSheet(row = {}) {
@@ -248,16 +310,35 @@ async function generateSheet() {
 
   generateBtn.disabled = true;
   try {
-    const uploaded = await uploadBarcodeAttachment(file, user?.uid || "unknown");
+    let attachmentUrl = "";
+    let attachmentName = file.name || "attachment";
+    try {
+      const uploaded = await uploadBarcodeAttachment(file, user?.uid || "unknown");
+      attachmentUrl = uploaded.url;
+      attachmentName = uploaded.name || attachmentName;
+    } catch (uploadError) {
+      // Fallback when Firebase Storage rules/bucket blocks upload.
+      const dataUrl = await buildInlineDataUrl(file);
+      const inlineId = await createBarcodeInlineFile({
+        fileName: file.name || "attachment",
+        mimeType: file.type || "application/octet-stream",
+        dataUrl,
+        createdByUid: user?.uid || "",
+        createdByEmail: user?.email || ""
+      });
+      attachmentUrl = new URL(`barcode-file-view.html?id=${encodeURIComponent(inlineId)}`, window.location.href).href;
+      showToast("info", "Storage upload blocked (CORS). Used secure inline fallback.");
+    }
+
     const logoUrl = await readCompanyLogoUrl();
     const payload = {
       companyName,
       companyLogoUrl: logoUrl,
       issueNo,
       issueDate,
-      qrPayload: uploaded.url,
-      attachmentUrl: uploaded.url,
-      attachmentName: uploaded.name || file.name || "attachment",
+      qrPayload: attachmentUrl,
+      attachmentUrl,
+      attachmentName,
       createdByUid: user?.uid || "",
       createdByEmail: user?.email || "",
       createdByName: user?.name || user?.email || user?.uid || ""
@@ -274,7 +355,7 @@ async function generateSheet() {
     await loadHistory();
   } catch (error) {
     console.error("Barcode generation failed:", error);
-    showToast("error", "Failed to generate barcode sheet.");
+    showToast("error", error?.message || "Failed to generate barcode sheet.");
   } finally {
     generateBtn.disabled = false;
   }
@@ -305,6 +386,14 @@ if (!canManage) {
   logoInput.disabled = true;
 }
 
+attachmentInput?.addEventListener("change", () => {
+  if (attachmentInput?.files?.[0]) {
+    drawQrPlaceholder("Ready. Click Generate Sheet");
+  } else {
+    drawQrPlaceholder("Upload file first");
+  }
+});
+
 printBtn?.addEventListener("click", () => {
   window.print();
 });
@@ -326,6 +415,7 @@ generateBtn?.addEventListener("click", () => {
 
 (async () => {
   initDefaults();
+  updateGenerateButtonState();
   await loadHistory();
 })();
 

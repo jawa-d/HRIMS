@@ -2,10 +2,13 @@ import { db, storage, ts } from "../Aman/firebase.js";
 import {
   addDoc,
   collection,
+  doc,
+  getDoc,
   getDocs,
   limit,
   orderBy,
-  query
+  query,
+  where
 } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 import {
   getDownloadURL,
@@ -15,7 +18,10 @@ import {
 } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-storage.js";
 
 const barcodeExportsRef = collection(db, "barcode_exports");
+const barcodeInlineFilesRef = collection(db, "barcode_inline_files");
+const barcodeInlineFileChunksRef = collection(db, "barcode_inline_file_chunks");
 const DEFAULT_LIMIT = 120;
+const INLINE_CHUNK_SIZE = 700000;
 
 function safeString(value = "") {
   return String(value || "").trim();
@@ -94,4 +100,105 @@ export async function listBarcodeExports(options = {}) {
   } catch (_) {
     return [];
   }
+}
+
+export async function createBarcodeInlineFile(payload = {}) {
+  const fileName = safeString(payload.fileName);
+  const mimeType = safeString(payload.mimeType);
+  const dataUrl = safeString(payload.dataUrl);
+  const createdByUid = safeString(payload.createdByUid);
+  const createdByEmail = safeString(payload.createdByEmail);
+
+  if (!dataUrl) {
+    throw new Error("Inline file payload is empty.");
+  }
+
+  // Small payload: keep single-document mode for faster reads.
+  if (dataUrl.length <= INLINE_CHUNK_SIZE) {
+    const data = {
+      fileName,
+      mimeType,
+      dataUrl,
+      inlineMode: "single",
+      chunkCount: 1,
+      isPublic: true,
+      createdByUid,
+      createdByEmail,
+      createdAtEpoch: Date.now(),
+      createdAt: ts()
+    };
+    const ref = await addDoc(barcodeInlineFilesRef, data);
+    return ref.id;
+  }
+
+  // Large payload: store metadata + chunk documents.
+  const chunks = [];
+  for (let i = 0; i < dataUrl.length; i += INLINE_CHUNK_SIZE) {
+    chunks.push(dataUrl.slice(i, i + INLINE_CHUNK_SIZE));
+  }
+
+  const metaRef = await addDoc(barcodeInlineFilesRef, {
+    fileName,
+    mimeType,
+    dataUrl: "",
+    inlineMode: "chunked",
+    chunkCount: chunks.length,
+    isPublic: true,
+    createdByUid,
+    createdByEmail,
+    createdAtEpoch: Date.now(),
+    createdAt: ts()
+  });
+
+  await Promise.all(
+    chunks.map((chunk, index) =>
+      addDoc(barcodeInlineFileChunksRef, {
+        fileId: metaRef.id,
+        index,
+        chunk,
+        createdAtEpoch: Date.now(),
+        createdAt: ts()
+      })
+    )
+  );
+
+  return metaRef.id;
+}
+
+export async function getBarcodeInlineFileDataUrl(fileId) {
+  const id = safeString(fileId);
+  if (!id) return "";
+  const metaSnap = await getDoc(doc(db, "barcode_inline_files", id));
+  if (!metaSnap.exists()) return "";
+  const meta = metaSnap.data() || {};
+
+  if (safeString(meta.inlineMode) !== "chunked") {
+    return safeString(meta.dataUrl);
+  }
+
+  const chunkSnap = await getDocs(
+    query(
+      barcodeInlineFileChunksRef,
+      where("fileId", "==", id),
+      orderBy("index", "asc"),
+      limit(Math.max(1, Number(meta.chunkCount || 1)))
+    )
+  );
+  if (chunkSnap.empty) return "";
+  return chunkSnap.docs.map((docSnap) => safeString(docSnap.data()?.chunk)).join("");
+}
+
+export async function createBarcodeInlineFileLegacy(payload = {}) {
+  const data = {
+    fileName: safeString(payload.fileName),
+    mimeType: safeString(payload.mimeType),
+    dataUrl: safeString(payload.dataUrl),
+    isPublic: true,
+    createdByUid: safeString(payload.createdByUid),
+    createdByEmail: safeString(payload.createdByEmail),
+    createdAtEpoch: Date.now(),
+    createdAt: ts()
+  };
+  const ref = await addDoc(barcodeInlineFilesRef, data);
+  return ref.id;
 }

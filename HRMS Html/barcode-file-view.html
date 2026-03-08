@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Barcode File Viewer</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 24px; color: #0f172a; }
+    .card { max-width: 720px; margin: 0 auto; border: 1px solid #cbd5e1; border-radius: 12px; padding: 18px; }
+    a { color: #0f766e; font-weight: 700; text-decoration: none; }
+    .muted { color: #64748b; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Loading Attachment...</h2>
+    <p class="muted" id="status-text">Please wait.</p>
+    <p><a id="open-link" href="#" target="_blank" rel="noopener noreferrer">Open File</a></p>
+  </div>
+
+  <script type="module">
+    import { getBarcodeInlineFileDataUrl } from "../Services/barcode-export.service.js";
+
+    const statusText = document.getElementById("status-text");
+    const openLink = document.getElementById("open-link");
+    const id = new URLSearchParams(window.location.search).get("id");
+
+    if (!id) {
+      statusText.textContent = "Missing file id.";
+      openLink.style.display = "none";
+    } else {
+      try {
+        const url = await getBarcodeInlineFileDataUrl(id);
+        if (!url) {
+          statusText.textContent = "File not found.";
+          openLink.style.display = "none";
+        } else {
+          openLink.href = url;
+          statusText.textContent = "File is ready. Opening now...";
+          window.location.href = url;
+        }
+      } catch (error) {
+        console.error(error);
+        statusText.textContent = "Unable to load file.";
+        openLink.style.display = "none";
+      }
+    }
+  </script>
+</body>
+</html>

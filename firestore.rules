@@ -143,6 +143,16 @@ service cloud.firestore {
       allow write: if isManagerOrAbove();
     }
 
+    match /barcode_inline_files/{id} {
+      allow read: if isSignedIn() || (resource.data.isPublic == true);
+      allow write: if isManagerOrAbove();
+    }
+
+    match /barcode_inline_file_chunks/{id} {
+      allow read: if isSignedIn();
+      allow write: if isManagerOrAbove();
+    }
+
     match /excel_sheet_inputs/{id} {
       allow read: if isSignedIn();
       allow write: if isManagerOrAbove();
