@@ -15,10 +15,23 @@ function normalizeEmailKey(value = "") {
   return String(value || "").trim().toLowerCase();
 }
 
-function pagesFromPermissionEntry(entry) {
-  if (Array.isArray(entry)) return entry;
-  if (entry && typeof entry === "object" && Array.isArray(entry.pages)) return entry.pages;
-  return [];
+function normalizePermissionEntry(entry) {
+  if (Array.isArray(entry)) {
+    return {
+      pages: entry,
+      strict: false
+    };
+  }
+  if (entry && typeof entry === "object") {
+    return {
+      pages: Array.isArray(entry.pages) ? entry.pages : [],
+      strict: Boolean(entry.strict)
+    };
+  }
+  return {
+    pages: [],
+    strict: false
+  };
 }
 
 export function getRole() {
@@ -37,20 +50,22 @@ export function getAllowedPages(role = getRole(), profile = getUserProfile()) {
   const userPermissions = parseStorage(STORAGE_KEYS.userPermissions, {});
   const emailKey = normalizeEmailKey(currentProfile.email);
   const uidKey = String(currentProfile.uid || "").trim();
-  const directPages = [
-    ...pagesFromPermissionEntry(userPermissions[emailKey]),
-    ...pagesFromPermissionEntry(userPermissions[uidKey])
-  ].filter(Boolean);
-  if (directPages.length) {
-    return Array.from(new Set(directPages));
+  const roleVisibility = parseStorage(STORAGE_KEYS.roleVisibility, {});
+  const roleBase = roleVisibility?.[role] || ROLE_PERMISSIONS[role] || [];
+  const emailScoped = normalizePermissionEntry(userPermissions[emailKey]);
+  const uidScoped = normalizePermissionEntry(userPermissions[uidKey]);
+  const scopedPages = [...emailScoped.pages, ...uidScoped.pages].filter(Boolean);
+  const scopedStrict = emailScoped.strict || uidScoped.strict;
+
+  if (scopedPages.length) {
+    if (scopedStrict) return Array.from(new Set(scopedPages));
+    return Array.from(new Set([...roleBase, ...scopedPages]));
   }
 
   if (role === "super_admin") {
     return MENU_ITEMS.map((item) => item.key);
   }
 
-  const roleVisibility = parseStorage(STORAGE_KEYS.roleVisibility, {});
-  const roleBase = roleVisibility?.[role] || ROLE_PERMISSIONS[role] || [];
   return Array.from(new Set(roleBase));
 }
 

@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HRMS | Barcode Export</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../HRMS%20CSS/tokens.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/global.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/components.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/navbar.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/sidebar.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/modal.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/toast.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/barcode-export.css" />
+</head>
+<body data-page="barcode_export">
+  <div id="app" class="app-shell">
+    <div id="sidebar-root"></div>
+    <div class="main-content">
+      <div id="navbar-root"></div>
+      <main class="page barcode-page">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title">Barcode Export Sheet</h1>
+            <p class="text-muted">Generate a professional A4 outgoing sheet with company branding and centered QR barcode.</p>
+          </div>
+          <div class="barcode-head-actions">
+            <button class="btn btn-primary" id="barcode-generate-btn">
+              <i data-lucide="sparkles"></i>
+              Generate Sheet
+            </button>
+            <button class="btn btn-ghost" id="barcode-print-btn">
+              <i data-lucide="printer"></i>
+              Print A4
+            </button>
+          </div>
+        </div>
+
+        <section class="card barcode-controls">
+          <div class="grid-4">
+            <label>Company Name
+              <input class="input" id="barcode-company-name" />
+            </label>
+            <label>Issue No (صادر)
+              <input class="input" id="barcode-issue-no" />
+            </label>
+            <label>Issue Date
+              <input class="input" id="barcode-issue-date" type="date" />
+            </label>
+            <label>Attachment (File / Image)
+              <input class="input" id="barcode-attachment" type="file" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt" />
+            </label>
+          </div>
+          <div class="grid-2">
+            <label>Company Logo (Optional)
+              <input class="input" id="barcode-logo" type="file" accept="image/*" />
+            </label>
+            <div class="barcode-controls-note text-muted">
+              The QR payload will contain a secure file URL. Scanning the code opens the uploaded attachment directly.
+            </div>
+          </div>
+        </section>
+
+        <section class="a4-wrap" id="barcode-a4-wrap">
+          <article class="a4-sheet" id="barcode-a4-sheet">
+            <header class="sheet-head">
+              <div class="sheet-brand">
+                <img id="sheet-logo" src="../HRMS%20Html/assets/logo.jpg" alt="Company Logo" />
+                <div>
+                  <h2 id="sheet-company-name">-</h2>
+                  <p class="text-muted">Outgoing Barcode Document</p>
+                </div>
+              </div>
+              <div class="sheet-meta">
+                <div><strong>Issue No:</strong> <span id="sheet-issue-no">-</span></div>
+                <div><strong>Issue Date:</strong> <span id="sheet-issue-date">-</span></div>
+                <div><strong>Created:</strong> <span id="sheet-created-at">-</span></div>
+              </div>
+            </header>
+
+            <section class="sheet-center">
+              <div class="barcode-frame">
+                <canvas id="sheet-qr-canvas" width="320" height="320"></canvas>
+              </div>
+              <p class="text-muted">Scan the barcode to open the attached file.</p>
+            </section>
+
+            <footer class="sheet-foot">
+              <div>
+                <strong>Attachment:</strong>
+                <a id="sheet-attachment-link" href="#" target="_blank" rel="noopener noreferrer">-</a>
+              </div>
+              <div><strong>Prepared by:</strong> <span id="sheet-prepared-by">-</span></div>
+            </footer>
+          </article>
+        </section>
+
+        <section class="card barcode-history">
+          <div class="section-head">
+            <h3 class="section-title"><i data-lucide="history"></i> Recent Barcode Sheets</h3>
+          </div>
+          <div class="table-scroll">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Issue No</th>
+                  <th>Issue Date</th>
+                  <th>Company</th>
+                  <th>Attachment</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="barcode-history-body"></tbody>
+            </table>
+          </div>
+          <div id="barcode-history-empty" class="empty-state hidden">No barcode sheets generated yet.</div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
+  <script type="module" src="../Page%20Controllers/barcode-export.page.js"></script>
+</body>
+</html>

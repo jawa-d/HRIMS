@@ -138,6 +138,11 @@ service cloud.firestore {
       allow write: if hasRole(["super_admin", "hr_admin"]);
     }
 
+    match /barcode_exports/{id} {
+      allow read: if isManagerOrAbove();
+      allow write: if isManagerOrAbove();
+    }
+
     match /excel_sheet_inputs/{id} {
       allow read: if isSignedIn();
       allow write: if isManagerOrAbove();
