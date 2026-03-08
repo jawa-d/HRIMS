@@ -696,7 +696,7 @@ function exportToPdf() {
 
   const printable = window.open("", "_blank");
   if (!printable) return;
-  const logoUrl = `${window.location.origin}/assets/logo.jpg`;
+  const logoUrl = new URL("../HRMS%20Html/assets/logo.jpg", window.location.href).href;
   const printedAt = new Date().toLocaleString();
 
   printable.document.write(`

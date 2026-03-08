@@ -86,7 +86,15 @@ function norm(value = "") {
 }
 
 function todayKey() {
-  return new Date().toISOString().slice(0, 10);
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function currentMonthKey() {
+  return todayKey().slice(0, 7);
 }
 
 function obligationKindLabel(kind = "") {
@@ -749,7 +757,7 @@ function exportPdf(rows, fileName, title, headers) {
   const doc = new jsPdfLib({ orientation: "landscape" });
   doc.setFontSize(13);
   doc.text(title, 14, 14);
-  doc.text(`${t("accounting.export.period")}: ${new Date().toISOString().slice(0, 7)}`, 14, 20);
+  doc.text(`${t("accounting.export.period")}: ${currentMonthKey()}`, 14, 20);
   const body = rows.map((row) => headers.map((header) => String(row[header] ?? "")));
   if (typeof doc.autoTable === "function") {
     doc.autoTable({
@@ -841,7 +849,7 @@ if (oblStatusFilter && !oblStatusFilter.dataset.workflowExtended) {
   });
 }
 
-closeMonthInput.value = new Date().toISOString().slice(0, 7);
+closeMonthInput.value = currentMonthKey();
 closeYearInput.value = String(new Date().getFullYear());
 
 (async () => {

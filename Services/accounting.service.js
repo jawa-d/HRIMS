@@ -30,6 +30,18 @@ const accountingClosuresRef = doc(db, "app_config", "accounting_closures");
 const accountingSequenceRef = doc(db, "app_config", "accounting_sequence");
 const DEFAULT_ACCOUNTING_LIMIT = 300;
 
+function localDateKey() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function localMonthKey() {
+  return localDateKey().slice(0, 7);
+}
+
 function toMillis(value) {
   if (!value) return 0;
   if (typeof value.toMillis === "function") return value.toMillis();
@@ -94,7 +106,7 @@ function isDateClosed(dateValue = "", closures = { months: {}, years: {} }) {
 }
 
 async function nextJournalNumber(dateValue = "") {
-  const month = monthFromDate(dateValue) || new Date().toISOString().slice(0, 7);
+  const month = monthFromDate(dateValue) || localMonthKey();
   const monthToken = month.replace("-", "");
   return runTransaction(db, async (tx) => {
     const snap = await tx.get(accountingSequenceRef);
@@ -106,7 +118,7 @@ async function nextJournalNumber(dateValue = "") {
 }
 
 function nextJournalNumberInTx(tx, dateValue = "") {
-  const month = monthFromDate(dateValue) || new Date().toISOString().slice(0, 7);
+  const month = monthFromDate(dateValue) || localMonthKey();
   const monthToken = month.replace("-", "");
   return tx.get(accountingSequenceRef).then((snap) => {
     const current = Number(snap.exists() ? snap.data()?.lastNumber || 0 : 0);
@@ -690,7 +702,7 @@ export async function approveAdvanceObligation(payload = {}) {
       obligationKind: "advance",
       operation: "approve",
       amount: safeNumber(obligation.balance),
-      date: new Date().toISOString().slice(0, 10),
+      date: localDateKey(),
       notes: String(payload.notes || "").trim(),
       receiptNo: "",
       externalReceiptNo: "",
@@ -733,7 +745,7 @@ export async function rejectAdvanceObligation(payload = {}) {
       obligationKind: "advance",
       operation: "reject",
       amount: safeNumber(obligation.balance),
-      date: new Date().toISOString().slice(0, 10),
+      date: localDateKey(),
       notes: String(payload.notes || "").trim(),
       receiptNo: "",
       externalReceiptNo: "",
