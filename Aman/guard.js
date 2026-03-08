@@ -51,11 +51,22 @@ export function getAllowedPages(role = getRole(), profile = getUserProfile()) {
   const emailKey = normalizeEmailKey(currentProfile.email);
   const uidKey = String(currentProfile.uid || "").trim();
   const roleVisibility = parseStorage(STORAGE_KEYS.roleVisibility, {});
-  const roleBase = roleVisibility?.[role] || ROLE_PERMISSIONS[role] || [];
+  const defaultRolePages = ROLE_PERMISSIONS[role] || [];
+  const roleBaseRaw = roleVisibility?.[role];
+  const roleBase = Array.isArray(roleBaseRaw) ? [...roleBaseRaw] : [...defaultRolePages];
   const emailScoped = normalizePermissionEntry(userPermissions[emailKey]);
   const uidScoped = normalizePermissionEntry(userPermissions[uidKey]);
   const scopedPages = [...emailScoped.pages, ...uidScoped.pages].filter(Boolean);
   const scopedStrict = emailScoped.strict || uidScoped.strict;
+
+  // Backward-compatibility: older saved role-visibility configs may miss newly added pages.
+  // Ensure key finance additions remain visible for roles that have them by default.
+  const compatibilityKeys = ["official_books", "insurance_parties", "insurance_docs"];
+  compatibilityKeys.forEach((key) => {
+    if (defaultRolePages.includes(key) && !roleBase.includes(key)) {
+      roleBase.push(key);
+    }
+  });
 
   if (scopedPages.length) {
     if (scopedStrict) return Array.from(new Set(scopedPages));

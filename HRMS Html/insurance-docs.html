@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HRMS | Insurance Documents</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../HRMS%20CSS/tokens.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/global.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/components.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/navbar.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/sidebar.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/modal.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/toast.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/insurance-docs.css" />
+</head>
+<body data-page="insurance_docs">
+  <div id="app" class="app-shell">
+    <div id="sidebar-root"></div>
+    <div class="main-content">
+      <div id="navbar-root"></div>
+      <main class="page insurance-page">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title">نظام حفظ وثائق التأمين</h1>
+            <p class="text-muted">إدارة احترافية لوثائق التأمين مع بحث شامل وطباعة وحقول متغيرة حسب النوع.</p>
+          </div>
+          <div class="insurance-header-actions">
+            <button class="btn btn-primary" id="insurance-save-btn">
+              <i data-lucide="save"></i>
+              حفظ الوثيقة
+            </button>
+            <button class="btn btn-ghost" id="insurance-export-excel-btn">
+              <i data-lucide="file-spreadsheet"></i>
+              تصدير Excel
+            </button>
+            <button class="btn btn-ghost" id="insurance-export-pdf-btn">
+              <i data-lucide="file-text"></i>
+              تصدير PDF
+            </button>
+            <button class="btn btn-ghost" id="insurance-new-btn">
+              <i data-lucide="file-plus-2"></i>
+              وثيقة جديدة
+            </button>
+            <button class="btn btn-outline" id="insurance-print-list-btn">
+              <i data-lucide="printer"></i>
+              طباعة النتائج
+            </button>
+          </div>
+        </div>
+
+        <section class="card insurance-form-card">
+          <div class="insurance-grid insurance-grid-4">
+            <label>نوع التأمين
+              <select class="select" id="insurance-type"></select>
+            </label>
+            <label>رقم الوثيقة
+              <input class="input" id="insurance-policy-no" />
+            </label>
+            <label>اسم المؤمن / الشركة
+              <select class="select" id="insurance-insured-party">
+                <option value="">اختر شركة/عميل</option>
+              </select>
+            </label>
+            <label>مبلغ التأمين
+              <input class="input" id="insurance-amount" type="number" min="0" step="0.01" />
+            </label>
+          </div>
+
+          <div class="insurance-grid insurance-grid-5">
+            <label>فترة التأمين من
+              <input class="input" id="insurance-start-date" type="date" />
+            </label>
+            <label>فترة التأمين إلى
+              <input class="input" id="insurance-end-date" type="date" />
+            </label>
+            <label>قسط التأمين
+              <input class="input" id="insurance-premium" type="number" min="0" step="0.01" />
+            </label>
+            <label>نسبة الخطر (%)
+              <input class="input" id="insurance-risk-rate" type="number" min="0" step="0.01" />
+            </label>
+            <label>العمولة
+              <input class="input" id="insurance-commission" type="number" min="0" step="0.01" />
+            </label>
+          </div>
+
+          <div class="insurance-grid insurance-grid-3">
+            <label>رسم الطابع
+              <input class="input" id="insurance-stamp-fee" type="number" min="0" step="0.01" />
+            </label>
+            <label>تحميل الوثيقة (اختياري)
+              <input class="input" id="insurance-file" type="file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx,.txt" />
+            </label>
+            <label>ملاحظات عامة
+              <input class="input" id="insurance-notes" />
+            </label>
+          </div>
+          <div class="insurance-inline-actions">
+            <a class="btn btn-outline" href="insurance-parties.html">
+              <i data-lucide="building-2"></i>
+              تعريف شركة/عميل جديد
+            </a>
+          </div>
+
+          <div class="insurance-extra-wrap">
+            <h3 class="section-title"><i data-lucide="list-checks"></i> تفاصيل إضافية حسب نوع التأمين</h3>
+            <div class="insurance-grid insurance-grid-3" id="insurance-extra-fields"></div>
+          </div>
+        </section>
+
+        <section class="insurance-summary grid-4">
+          <div class="card summary-card">
+            <div class="text-muted">إجمالي الوثائق</div>
+            <div class="summary-value" id="insurance-total-count">0</div>
+          </div>
+          <div class="card summary-card">
+            <div class="text-muted">إجمالي مبلغ التأمين</div>
+            <div class="summary-value" id="insurance-total-amount">0</div>
+          </div>
+          <div class="card summary-card">
+            <div class="text-muted">إجمالي القسط</div>
+            <div class="summary-value" id="insurance-total-premium">0</div>
+          </div>
+          <div class="card summary-card">
+            <div class="text-muted">نتائج البحث الحالية</div>
+            <div class="summary-value" id="insurance-filtered-count">0</div>
+          </div>
+          <div class="card summary-card">
+            <div class="text-muted">إجمالي العمولات</div>
+            <div class="summary-value" id="insurance-total-commission">0</div>
+          </div>
+          <div class="card summary-card">
+            <div class="text-muted">إجمالي رسم الطابع</div>
+            <div class="summary-value" id="insurance-total-stamp">0</div>
+          </div>
+          <div class="card summary-card">
+            <div class="text-muted">متوسط نسبة الخطر</div>
+            <div class="summary-value" id="insurance-avg-risk">0%</div>
+          </div>
+          <div class="card summary-card">
+            <div class="text-muted">وثائق تنتهي خلال 30 يوم</div>
+            <div class="summary-value" id="insurance-expiring-soon">0</div>
+          </div>
+        </section>
+
+        <section class="card insurance-list-card">
+          <div class="insurance-list-head">
+            <div class="insurance-search-wrap">
+              <label class="text-muted" for="insurance-search">بحث احترافي</label>
+              <input class="input" id="insurance-search" placeholder="ابحث برقم الوثيقة، الاسم، النوع، المبلغ، الفترات، التفاصيل..." />
+            </div>
+            <div class="insurance-filter-wrap">
+              <label class="text-muted" for="insurance-type-filter">فلتر النوع</label>
+              <select class="select" id="insurance-type-filter">
+                <option value="">كل الأنواع</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="table-scroll">
+            <table class="table insurance-table">
+              <thead>
+                <tr>
+                  <th>نوع التأمين</th>
+                  <th>رقم الوثيقة</th>
+                  <th>المؤمن/الشركة</th>
+                  <th>مبلغ التأمين</th>
+                  <th>القسط</th>
+                  <th>الفترة</th>
+                  <th>الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="insurance-body"></tbody>
+            </table>
+          </div>
+          <div id="insurance-empty" class="empty-state hidden">لا توجد وثائق مطابقة.</div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+  <script type="module" src="../Page%20Controllers/insurance-docs.page.js"></script>
+</body>
+</html>

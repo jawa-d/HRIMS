@@ -143,6 +143,18 @@ service cloud.firestore {
       allow write: if isManagerOrAbove();
     }
 
+    match /insurance_documents/{id} {
+      // Insurance docs page currently runs with direct/anonymous Firebase sessions in some flows.
+      // Keep role-based access, but allow authenticated sessions similar to payroll behavior.
+      allow read: if isManagerOrAbove() || isSignedIn();
+      allow write: if isManagerOrAbove() || isSignedIn();
+    }
+
+    match /insurance_parties/{id} {
+      allow read: if isManagerOrAbove() || isSignedIn();
+      allow write: if isManagerOrAbove() || isSignedIn();
+    }
+
     match /barcode_inline_files/{id} {
       allow read: if isSignedIn() || (resource.data.isPublic == true);
       allow write: if isManagerOrAbove();

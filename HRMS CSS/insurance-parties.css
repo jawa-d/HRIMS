@@ -1,0 +1,91 @@
+.insurance-parties-page {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.parties-form-card {
+  display: grid;
+  gap: 12px;
+  border: 1px solid color-mix(in srgb, #0ea5e9 25%, var(--border));
+  background: linear-gradient(180deg, #fff, color-mix(in srgb, #f0f9ff 32%, #fff));
+}
+
+.parties-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.parties-grid-4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.parties-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.parties-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.parties-summary .summary-card {
+  border-radius: 14px;
+}
+
+.parties-list-head {
+  display: grid;
+  grid-template-columns: 1fr 220px;
+  gap: 12px;
+  align-items: end;
+  margin-bottom: 12px;
+}
+
+.summary-value {
+  font-size: 1.45rem;
+  font-weight: 800;
+  margin-top: 6px;
+}
+
+.party-chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-weight: 700;
+  font-size: 12px;
+  border: 1px solid transparent;
+}
+
+.party-chip.company {
+  background: color-mix(in srgb, #0ea5e9 20%, #fff);
+  border-color: color-mix(in srgb, #0ea5e9 28%, #bfdbfe);
+  color: #0c4a6e;
+}
+
+.party-chip.client {
+  background: color-mix(in srgb, #10b981 20%, #fff);
+  border-color: color-mix(in srgb, #10b981 28%, #bbf7d0);
+  color: #065f46;
+}
+
+@media (max-width: 1120px) {
+  .parties-grid-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .parties-grid-4,
+  .parties-summary,
+  .parties-list-head {
+    grid-template-columns: 1fr;
+  }
+
+  .parties-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HRMS | Insurance Parties</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../HRMS%20CSS/tokens.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/global.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/components.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/navbar.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/sidebar.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/toast.css" />
+  <link rel="stylesheet" href="../HRMS%20CSS/insurance-parties.css" />
+</head>
+<body data-page="insurance_parties">
+  <div id="app" class="app-shell">
+    <div id="sidebar-root"></div>
+    <div class="main-content">
+      <div id="navbar-root"></div>
+      <main class="page insurance-parties-page">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title">تعريف الشركات والعملاء</h1>
+            <p class="text-muted">قاعدة بيانات الجهات المؤمَّنة لربطها مباشرة مع وثائق التأمين.</p>
+          </div>
+        </div>
+
+        <section class="card parties-form-card">
+          <div class="parties-grid parties-grid-4">
+            <label>نوع الجهة
+              <select class="select" id="party-type">
+                <option value="company">شركة</option>
+                <option value="client">عميل</option>
+              </select>
+            </label>
+            <label>اسم الجهة
+              <input class="input" id="party-name" />
+            </label>
+            <label>رقم الهاتف
+              <input class="input" id="party-phone" />
+            </label>
+            <label>البريد الإلكتروني
+              <input class="input" id="party-email" />
+            </label>
+          </div>
+          <div class="parties-grid parties-grid-4">
+            <label>رقم هوية/سجل (اختياري)
+              <input class="input" id="party-ref-no" />
+            </label>
+            <label>المحافظة
+              <input class="input" id="party-city" />
+            </label>
+            <label>عنوان الجهة
+              <input class="input" id="party-address" />
+            </label>
+            <label>ملاحظات
+              <input class="input" id="party-notes" />
+            </label>
+          </div>
+          <div class="parties-actions">
+            <button class="btn btn-primary" id="party-save-btn"><i data-lucide="save"></i> حفظ الجهة</button>
+            <button class="btn btn-ghost" id="party-reset-btn"><i data-lucide="rotate-ccw"></i> جديد</button>
+            <a class="btn btn-outline" href="insurance-docs.html"><i data-lucide="shield-check"></i> العودة إلى وثائق التأمين</a>
+          </div>
+        </section>
+
+        <section class="parties-summary grid-3">
+          <div class="card summary-card">
+            <div class="text-muted">إجمالي الجهات</div>
+            <div class="summary-value" id="parties-total">0</div>
+          </div>
+          <div class="card summary-card">
+            <div class="text-muted">عدد الشركات</div>
+            <div class="summary-value" id="parties-companies">0</div>
+          </div>
+          <div class="card summary-card">
+            <div class="text-muted">عدد العملاء</div>
+            <div class="summary-value" id="parties-clients">0</div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="parties-list-head">
+            <div>
+              <label class="text-muted" for="parties-search">بحث</label>
+              <input class="input" id="parties-search" placeholder="بحث بالاسم، الهاتف، البريد، العنوان..." />
+            </div>
+            <div>
+              <label class="text-muted" for="parties-type-filter">النوع</label>
+              <select class="select" id="parties-type-filter">
+                <option value="">الكل</option>
+                <option value="company">شركة</option>
+                <option value="client">عميل</option>
+              </select>
+            </div>
+          </div>
+          <div class="table-scroll">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>النوع</th>
+                  <th>الاسم</th>
+                  <th>الهاتف</th>
+                  <th>البريد</th>
+                  <th>المرجع</th>
+                  <th>المحافظة</th>
+                  <th>الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="parties-body"></tbody>
+            </table>
+          </div>
+          <div id="parties-empty" class="empty-state hidden">لا توجد بيانات مطابقة.</div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script type="module" src="../Page%20Controllers/insurance-parties.page.js"></script>
+</body>
+</html>
