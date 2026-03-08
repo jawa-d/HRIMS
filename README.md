@@ -53,3 +53,20 @@ Option B (VS Code Live Server):
 4. Wait for workflow `Deploy to GitHub Pages` to finish.
 5. Your domain will be:
    `https://jawa-d.github.io/HRIMS/`
+
+## Firebase Storage CORS (Required for Barcode Export Uploads)
+If file uploads fail with CORS preflight errors, apply the bucket CORS config once:
+
+1. Install Google Cloud SDK (`gcloud` + `gsutil`).
+2. Login:
+```powershell
+gcloud auth login
+```
+3. Apply CORS to your bucket:
+```powershell
+gsutil cors set scripts/storage-cors.json gs://hr-ab-a7348.firebasestorage.app
+```
+4. Verify:
+```powershell
+gsutil cors get gs://hr-ab-a7348.firebasestorage.app
+```

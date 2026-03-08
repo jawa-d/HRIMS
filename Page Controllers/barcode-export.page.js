@@ -5,12 +5,6 @@ import { renderSidebar } from "../Collaboration interface/ui-sidebar.js";
 import { showToast } from "../Collaboration interface/ui-toast.js";
 import { trackUxEvent } from "../Services/telemetry.service.js";
 import { APP_NAME } from "../app.config.js";
-import {
-  createBarcodeExport,
-  createBarcodeInlineFile,
-  listBarcodeExports,
-  uploadBarcodeAttachment
-} from "../Services/barcode-export.service.js";
 
 if (!enforceAuth("barcode_export")) {
   throw new Error("Unauthorized");
@@ -48,11 +42,8 @@ const qrCanvas = document.getElementById("sheet-qr-canvas");
 const historyBody = document.getElementById("barcode-history-body");
 const historyEmpty = document.getElementById("barcode-history-empty");
 
-let historyRows = [];
 let currentLogoPreview = sheetLogo?.src || "";
 let qrLib = null;
-const INLINE_FILE_MAX_BYTES = 550 * 1024;
-const INLINE_SOURCE_FILE_MAX_BYTES = 4 * 1024 * 1024;
 
 function todayKey() {
   return new Date().toISOString().slice(0, 10);
@@ -121,58 +112,27 @@ function readFileAsDataUrl(file) {
   });
 }
 
-function dataUrlByteSize(dataUrl = "") {
-  const base64 = String(dataUrl || "").split(",")[1] || "";
-  if (!base64) return 0;
-  const padding = base64.endsWith("==") ? 2 : (base64.endsWith("=") ? 1 : 0);
-  return Math.floor((base64.length * 3) / 4) - padding;
-}
-
-function loadImageFromDataUrl(dataUrl) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error("Failed to parse image data."));
-    img.src = dataUrl;
+async function uploadAttachmentViaServer(file) {
+  const dataUrl = await readFileAsDataUrl(file);
+  const response = await fetch("/api/public-upload", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      fileName: file.name || "attachment",
+      mimeType: file.type || "",
+      dataUrl
+    })
   });
-}
-
-async function compressImageForInline(file, maxBytes = INLINE_FILE_MAX_BYTES) {
-  const originalDataUrl = await readFileAsDataUrl(file);
-  const img = await loadImageFromDataUrl(originalDataUrl);
-  const canvas = document.createElement("canvas");
-  const ctx = canvas.getContext("2d");
-  const ratio = Math.min(1, 1280 / Math.max(img.width, img.height));
-  canvas.width = Math.max(1, Math.round(img.width * ratio));
-  canvas.height = Math.max(1, Math.round(img.height * ratio));
-  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-  let quality = 0.88;
-  let output = canvas.toDataURL("image/jpeg", quality);
-  while (dataUrlByteSize(output) > maxBytes && quality > 0.4) {
-    quality -= 0.08;
-    output = canvas.toDataURL("image/jpeg", quality);
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok || !result?.ok || !result?.data?.url) {
+    throw new Error(result?.error || "Server upload failed");
   }
-  return output;
-}
-
-async function buildInlineDataUrl(file) {
-  if (file.size <= INLINE_FILE_MAX_BYTES) {
-    return readFileAsDataUrl(file);
-  }
-  if (file.size > INLINE_SOURCE_FILE_MAX_BYTES) {
-    throw new Error("File is too large for fallback mode. Please use file up to 4MB or fix Firebase Storage CORS.");
-  }
-  const isImage = String(file.type || "").startsWith("image/");
-  if (!isImage) {
-    // Non-images are supported via chunked inline storage.
-    return readFileAsDataUrl(file);
-  }
-  const compressed = await compressImageForInline(file, INLINE_FILE_MAX_BYTES);
-  if (dataUrlByteSize(compressed) > INLINE_FILE_MAX_BYTES) {
-    throw new Error("Image is too large even after compression. Please use a smaller image.");
-  }
-  return compressed;
+  return {
+    url: String(result.data.url || "").trim(),
+    name: String(result.data.fileName || file.name || "attachment").trim()
+  };
 }
 
 function renderSheet(row = {}) {
@@ -247,49 +207,12 @@ async function renderQr(payload) {
   });
 }
 
-function renderHistory() {
-  historyBody.innerHTML = historyRows
-    .map((item) => `
-      <tr>
-        <td>${item.issueNo || "-"}</td>
-        <td>${humanDate(item.issueDate)}</td>
-        <td>${item.companyName || "-"}</td>
-        <td>${item.attachmentUrl ? `<a href="${item.attachmentUrl}" target="_blank" rel="noopener noreferrer">${item.attachmentName || "Open"}</a>` : "-"}</td>
-        <td>
-          <button class="btn btn-ghost" data-action="view" data-id="${item.id}">Load</button>
-        </td>
-      </tr>
-    `)
-    .join("");
-
-  historyEmpty.classList.toggle("hidden", historyRows.length > 0);
-  historyBody.querySelectorAll("button[data-action='view']").forEach((button) => {
-    button.addEventListener("click", async () => {
-      const row = historyRows.find((entry) => entry.id === button.dataset.id);
-      if (!row) return;
-      renderSheet(row);
-      await renderQr(row.qrPayload || row.attachmentUrl || "");
-      showToast("success", "Barcode sheet loaded");
-    });
-  });
-}
-
-async function loadHistory() {
-  historyRows = await listBarcodeExports({ limitCount: 80 });
-  renderHistory();
-}
-
 async function readCompanyLogoUrl() {
   const logoFile = logoInput?.files?.[0] || null;
   if (!logoFile) return currentLogoPreview || absoluteAssetUrl("../HRMS%20Html/assets/logo.jpg");
   const localPreview = await readFileAsDataUrl(logoFile);
   currentLogoPreview = localPreview;
-  try {
-    const uploaded = await uploadBarcodeAttachment(logoFile, user?.uid || "unknown");
-    return uploaded.url || localPreview;
-  } catch (_) {
-    return localPreview;
-  }
+  return localPreview;
 }
 
 async function generateSheet() {
@@ -310,25 +233,10 @@ async function generateSheet() {
 
   generateBtn.disabled = true;
   try {
-    let attachmentUrl = "";
-    let attachmentName = file.name || "attachment";
-    try {
-      const uploaded = await uploadBarcodeAttachment(file, user?.uid || "unknown");
-      attachmentUrl = uploaded.url;
-      attachmentName = uploaded.name || attachmentName;
-    } catch (uploadError) {
-      // Fallback when Firebase Storage rules/bucket blocks upload.
-      const dataUrl = await buildInlineDataUrl(file);
-      const inlineId = await createBarcodeInlineFile({
-        fileName: file.name || "attachment",
-        mimeType: file.type || "application/octet-stream",
-        dataUrl,
-        createdByUid: user?.uid || "",
-        createdByEmail: user?.email || ""
-      });
-      attachmentUrl = new URL(`barcode-file-view.html?id=${encodeURIComponent(inlineId)}`, window.location.href).href;
-      showToast("info", "Storage upload blocked (CORS). Used secure inline fallback.");
-    }
+    const uploaded = await uploadAttachmentViaServer(file);
+    const attachmentUrl = uploaded.url;
+    const attachmentName = uploaded.name;
+    const qrPayload = attachmentUrl;
 
     const logoUrl = await readCompanyLogoUrl();
     const payload = {
@@ -336,23 +244,22 @@ async function generateSheet() {
       companyLogoUrl: logoUrl,
       issueNo,
       issueDate,
-      qrPayload: attachmentUrl,
+      qrPayload,
       attachmentUrl,
       attachmentName,
       createdByUid: user?.uid || "",
       createdByEmail: user?.email || "",
       createdByName: user?.name || user?.email || user?.uid || ""
     };
-    const id = await createBarcodeExport(payload);
+
     const displayRow = {
-      id,
+      id: "",
       ...payload,
       createdAtLabel: new Date().toLocaleString()
     };
     renderSheet(displayRow);
     await renderQr(payload.qrPayload);
-    showToast("success", "Barcode export sheet generated.");
-    await loadHistory();
+    showToast("success", "Barcode generated with public file link.");
   } catch (error) {
     console.error("Barcode generation failed:", error);
     showToast("error", error?.message || "Failed to generate barcode sheet.");
@@ -416,7 +323,8 @@ generateBtn?.addEventListener("click", () => {
 (async () => {
   initDefaults();
   updateGenerateButtonState();
-  await loadHistory();
+  if (historyBody) historyBody.innerHTML = "";
+  historyEmpty?.classList.remove("hidden");
 })();
 
 trackUxEvent({ event: "page_open", module: "barcode_export" });

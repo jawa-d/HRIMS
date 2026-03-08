@@ -18,6 +18,7 @@ function loadDotEnv(filePath) {
 
 const base = __dirname;
 const htmlRoot = path.join(base, "HRMS Html");
+const publicUploadsRoot = path.join(base, "public-uploads");
 loadDotEnv(path.join(base, ".env"));
 const port = Number(process.env.PORT || 3000);
 const DEFAULT_LOGO_PATH = path.join(htmlRoot, "assets", "logo.jpg");
@@ -32,7 +33,14 @@ const mime = {
   ".json": "application/json",
   ".png": "image/png",
   ".jpg": "image/jpeg",
-  ".svg": "image/svg+xml"
+  ".jpeg": "image/jpeg",
+  ".svg": "image/svg+xml",
+  ".pdf": "application/pdf",
+  ".txt": "text/plain",
+  ".doc": "application/msword",
+  ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  ".xls": "application/vnd.ms-excel",
+  ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 };
 
 function sendJson(res, status, payload) {
@@ -58,6 +66,42 @@ function readJsonBody(req) {
     });
     req.on("error", (error) => reject(error));
   });
+}
+
+function ensureDirectory(dirPath) {
+  if (!fs.existsSync(dirPath)) {
+    fs.mkdirSync(dirPath, { recursive: true });
+  }
+}
+
+function safeFileToken(input = "") {
+  const cleaned = String(input || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+  return cleaned || `file-${Date.now()}`;
+}
+
+function extensionFromFileName(fileName = "") {
+  const ext = path.extname(String(fileName || "")).toLowerCase();
+  if (!ext) return "";
+  return ext.replace(/[^a-z0-9.]/g, "");
+}
+
+function parseDataUrl(dataUrl = "") {
+  const value = String(dataUrl || "").trim();
+  const match = value.match(/^data:([^;]+);base64,(.+)$/);
+  if (!match) return null;
+  return {
+    mimeType: match[1],
+    base64: match[2]
+  };
+}
+
+function detectMimeFromExt(ext = "") {
+  return mime[ext] || "application/octet-stream";
 }
 
 function normalizePhoneNumber(phone = "") {
@@ -183,6 +227,55 @@ async function sendWhatsAppMessage(payload) {
 }
 
 const server = http.createServer(async (req, res) => {
+  if (req.method === "POST" && req.url === "/api/public-upload") {
+    try {
+      const payload = await readJsonBody(req);
+      const parsed = parseDataUrl(payload?.dataUrl);
+      if (!parsed) {
+        return sendJson(res, 400, { ok: false, error: "Invalid dataUrl payload" });
+      }
+
+      const rawName = String(payload?.fileName || "attachment").trim();
+      const ext = extensionFromFileName(rawName) || ".bin";
+      const mimeType = String(payload?.mimeType || parsed.mimeType || detectMimeFromExt(ext)).trim();
+      const bytes = Buffer.from(parsed.base64, "base64");
+      if (!bytes.length) {
+        return sendJson(res, 400, { ok: false, error: "Decoded file is empty" });
+      }
+      if (bytes.length > 12 * 1024 * 1024) {
+        return sendJson(res, 413, { ok: false, error: "File too large (max 12MB)" });
+      }
+
+      ensureDirectory(publicUploadsRoot);
+      const now = new Date();
+      const folder = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+      const targetDir = path.join(publicUploadsRoot, folder);
+      ensureDirectory(targetDir);
+
+      const baseName = safeFileToken(path.basename(rawName, ext));
+      const storedName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${baseName}${ext}`;
+      const storedPath = path.join(targetDir, storedName);
+      fs.writeFileSync(storedPath, bytes);
+
+      const proto = String(req.headers["x-forwarded-proto"] || "http").split(",")[0].trim() || "http";
+      const host = String(req.headers["x-forwarded-host"] || req.headers.host || `localhost:${port}`).split(",")[0].trim();
+      const publicPath = `/public-uploads/${folder}/${storedName}`;
+      const publicUrl = `${proto}://${host}${publicPath}`;
+
+      return sendJson(res, 200, {
+        ok: true,
+        data: {
+          url: publicUrl,
+          path: publicPath,
+          fileName: rawName,
+          mimeType
+        }
+      });
+    } catch (error) {
+      return sendJson(res, 500, { ok: false, error: error?.message || "Upload failed" });
+    }
+  }
+
   if (req.method === "POST" && req.url === "/api/whatsapp/send-image") {
     try {
       const payload = await readJsonBody(req);
