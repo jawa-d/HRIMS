@@ -56,6 +56,9 @@ let payrollEntries = [];
 let monthEntries = [];
 let employees = [];
 let currentMonth = "";
+let draggingRow = null;
+
+const PAYROLL_ROW_ORDER_STORAGE_PREFIX = "hrms:payroll-row-order:";
 
 const formatter = new Intl.NumberFormat(undefined, {
   minimumFractionDigits: 2,
@@ -117,6 +120,72 @@ function payrollAccent(emp = {}) {
 
 function employeePrimaryId(emp = {}) {
   return String(emp.id || emp.uid || emp.empId || emp.email || "").trim();
+}
+
+function getRowOrderStorageKey(month) {
+  return `${PAYROLL_ROW_ORDER_STORAGE_PREFIX}${month}`;
+}
+
+function readRowOrder(month) {
+  const key = getRowOrderStorageKey(month);
+  const raw = window.localStorage.getItem(key);
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map((item) => String(item || "").trim()).filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+function writeRowOrder(month, ids = []) {
+  const key = getRowOrderStorageKey(month);
+  const normalized = Array.from(new Set(ids.map((item) => String(item || "").trim()).filter(Boolean)));
+  window.localStorage.setItem(key, JSON.stringify(normalized));
+}
+
+function applyStoredOrder(employeeList = [], month = currentMonth) {
+  const order = readRowOrder(month);
+  if (!order.length) return employeeList;
+
+  const orderIndex = new Map(order.map((id, index) => [id, index]));
+  return employeeList
+    .map((emp, index) => ({ emp, index }))
+    .sort((a, b) => {
+      const aid = employeePrimaryId(a.emp);
+      const bid = employeePrimaryId(b.emp);
+      const aRank = orderIndex.has(aid) ? orderIndex.get(aid) : Number.POSITIVE_INFINITY;
+      const bRank = orderIndex.has(bid) ? orderIndex.get(bid) : Number.POSITIVE_INFINITY;
+      if (aRank !== bRank) return aRank - bRank;
+      return a.index - b.index;
+    })
+    .map((item) => item.emp);
+}
+
+function persistCurrentRowOrder() {
+  const currentRows = Array.from(tbody.querySelectorAll("tr"));
+  const orderedVisibleIds = currentRows
+    .map((row) => String(row.dataset.employeeId || "").trim())
+    .filter(Boolean);
+
+  const previousOrder = readRowOrder(currentMonth);
+  const scopedIds = getScopedEmployees()
+    .map((emp) => employeePrimaryId(emp))
+    .filter(Boolean);
+
+  const nextOrder = [];
+  orderedVisibleIds.forEach((id) => {
+    if (!nextOrder.includes(id)) nextOrder.push(id);
+  });
+  previousOrder.forEach((id) => {
+    if (!nextOrder.includes(id)) nextOrder.push(id);
+  });
+  scopedIds.forEach((id) => {
+    if (!nextOrder.includes(id)) nextOrder.push(id);
+  });
+
+  writeRowOrder(currentMonth, nextOrder);
 }
 
 function buildMonthOptions() {
@@ -273,7 +342,10 @@ function attachRowEvents() {
 function renderPayroll() {
   monthEntries = payrollEntries.filter((entry) => entry.month === currentMonth);
   const removedSet = removedEmployeeIds(monthEntries);
-  const visibleEmployees = getVisibleEmployees().filter((emp) => !removedSet.has(String(emp.id)) && !removedSet.has(String(emp.empId || "")));
+  const visibleEmployees = applyStoredOrder(
+    getVisibleEmployees().filter((emp) => !removedSet.has(String(emp.id)) && !removedSet.has(String(emp.empId || ""))),
+    currentMonth
+  );
   const scopedVisibleCount = getScopedEmployees().filter((emp) => !removedSet.has(String(emp.id)) && !removedSet.has(String(emp.empId || ""))).length;
 
   tbody.innerHTML = visibleEmployees
@@ -316,7 +388,74 @@ function renderPayroll() {
   renderMonthStatus(scopedVisibleCount);
   attachRowEvents();
   attachActionEvents();
+  attachRowReorderEvents();
   updateTotals();
+}
+
+function attachRowReorderEvents() {
+  const rows = Array.from(tbody.querySelectorAll(".payroll-row"));
+  rows.forEach((row) => {
+    row.removeAttribute("draggable");
+    row.classList.remove("is-draggable");
+    row.classList.remove("is-dragging");
+    row.classList.remove("drag-target");
+  });
+  if (!canManage || rows.length < 2) return;
+
+  rows.forEach((row) => {
+    row.setAttribute("draggable", "true");
+    row.classList.add("is-draggable");
+
+    row.addEventListener("dragstart", (event) => {
+      const target = event.target;
+      if (target instanceof Element && target.closest("input,button,select,textarea,a,label")) {
+        event.preventDefault();
+        return;
+      }
+      draggingRow = row;
+      row.classList.add("is-dragging");
+      if (event.dataTransfer) {
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", row.dataset.employeeId || "");
+      }
+    });
+
+    row.addEventListener("dragenter", (event) => {
+      event.preventDefault();
+      if (!draggingRow || row === draggingRow) return;
+      row.classList.add("drag-target");
+    });
+
+    row.addEventListener("dragleave", () => {
+      row.classList.remove("drag-target");
+    });
+
+    row.addEventListener("dragover", (event) => {
+      event.preventDefault();
+      if (!draggingRow || row === draggingRow) return;
+      const rect = row.getBoundingClientRect();
+      const before = event.clientY < rect.top + rect.height / 2;
+      if (before) {
+        tbody.insertBefore(draggingRow, row);
+      } else {
+        tbody.insertBefore(draggingRow, row.nextSibling);
+      }
+    });
+
+    row.addEventListener("drop", (event) => {
+      event.preventDefault();
+      row.classList.remove("drag-target");
+    });
+
+    row.addEventListener("dragend", () => {
+      rows.forEach((item) => item.classList.remove("drag-target"));
+      if (!draggingRow) return;
+      draggingRow.classList.remove("is-dragging");
+      draggingRow = null;
+      persistCurrentRowOrder();
+      updateTotals();
+    });
+  });
 }
 
 function attachActionEvents() {

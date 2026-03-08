@@ -34,7 +34,8 @@ service cloud.firestore {
     }
 
     match /users/{uid} {
-      allow read: if isOwner(uid) || isManagerOrAbove();
+      // Direct email-login mode relies on querying users by email from the client.
+      allow read: if isSignedIn() || isOwner(uid) || isManagerOrAbove();
       allow create: if isAdmin() && request.resource.data.uid == uid;
       allow update: if isAdmin() || (isOwner(uid) && immutableFieldsUnchanged(["role", "status", "permissions"]));
       allow delete: if isAdmin();

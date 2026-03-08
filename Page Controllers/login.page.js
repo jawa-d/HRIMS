@@ -50,7 +50,6 @@ if (form) {
     event.preventDefault();
 
     const email = emailInput.value.trim();
-
     if (!email) {
       showToast("error", "Please enter email.");
       return;
