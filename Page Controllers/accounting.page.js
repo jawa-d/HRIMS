@@ -526,8 +526,8 @@ function exportFinanceExcel() {
   }));
   const obligationsRows = obligations.map((item) => ({
     Kind: item.kind || "",
-    Party: item.party || "",
-    Reference: item.referenceNo || "",
+    Party: item.partyName || "",
+    Reference: item.partyRef || "",
     Balance: safeNumber(item.balance),
     Status: item.status || "",
     DueDate: item.dueDate || "",
