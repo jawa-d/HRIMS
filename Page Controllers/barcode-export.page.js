@@ -49,6 +49,7 @@ const historyEmpty = document.getElementById("barcode-history-empty");
 
 let historyRows = [];
 let currentLogoPreview = sheetLogo?.src || "";
+let qrLib = null;
 
 function todayKey() {
   return new Date().toISOString().slice(0, 10);
@@ -89,6 +90,20 @@ function absoluteAssetUrl(path) {
   }
 }
 
+function drawQrPlaceholder(message = "Upload attachment then click Generate Sheet") {
+  const ctx = qrCanvas.getContext("2d");
+  ctx.clearRect(0, 0, qrCanvas.width, qrCanvas.height);
+  ctx.fillStyle = "#f8fafc";
+  ctx.fillRect(0, 0, qrCanvas.width, qrCanvas.height);
+  ctx.strokeStyle = "#d1d5db";
+  ctx.strokeRect(1, 1, qrCanvas.width - 2, qrCanvas.height - 2);
+  ctx.fillStyle = "#475569";
+  ctx.font = "14px Arial";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(message, qrCanvas.width / 2, qrCanvas.height / 2);
+}
+
 function readFileAsDataUrl(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -120,15 +135,47 @@ function renderSheet(row = {}) {
 
 async function renderQr(payload) {
   const content = String(payload || "").trim();
-  if (!window.QRCode?.toCanvas || !content) {
-    const ctx = qrCanvas.getContext("2d");
-    ctx.clearRect(0, 0, qrCanvas.width, qrCanvas.height);
-    ctx.fillStyle = "#0f172a";
-    ctx.font = "14px Arial";
-    ctx.fillText("QR payload unavailable", 24, qrCanvas.height / 2);
+  if (!content) {
+    drawQrPlaceholder("Upload file first");
     return;
   }
-  await window.QRCode.toCanvas(qrCanvas, content, {
+
+  // Primary source: global CDN script. Fallback: dynamic ESM import.
+  if (!qrLib) {
+    qrLib = window.QRCode?.toCanvas ? window.QRCode : null;
+    if (!qrLib) {
+      try {
+        const mod = await import("https://cdn.jsdelivr.net/npm/qrcode@1.5.4/+esm");
+        qrLib = mod?.default || mod?.QRCode || mod || null;
+      } catch (_) {
+        qrLib = null;
+      }
+    }
+  }
+
+  if (!qrLib?.toCanvas) {
+    // Fallback via remote QR image generation when JS QR library is blocked.
+    const apiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=${encodeURIComponent(content)}`;
+    await new Promise((resolve) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => {
+        const ctx = qrCanvas.getContext("2d");
+        ctx.clearRect(0, 0, qrCanvas.width, qrCanvas.height);
+        ctx.drawImage(img, 0, 0, qrCanvas.width, qrCanvas.height);
+        resolve();
+      };
+      img.onerror = () => {
+        drawQrPlaceholder("QR generation failed");
+        showToast("error", "QR generation failed. Check internet access and try again.");
+        resolve();
+      };
+      img.src = apiUrl;
+    });
+    return;
+  }
+
+  await qrLib.toCanvas(qrCanvas, content, {
     width: 320,
     margin: 1,
     color: {
@@ -249,7 +296,7 @@ function initDefaults() {
     createdAtLabel: new Date().toLocaleString(),
     companyLogoUrl: currentLogoPreview
   });
-  void renderQr("https://example.com/attachment");
+  void renderQr("");
 }
 
 if (!canManage) {
