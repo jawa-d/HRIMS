@@ -81,7 +81,7 @@
 .employee360-row .badge.status-present,
 .employee360-row .badge.status-approved,
 .employee360-row .badge.status-published {
-  background: color-mix(in srgb, #10b981 18%, var(--surface));
+  background: color-mix(in srgb, var(--brand-400) 18%, var(--surface));
   color: #047857;
 }
 
@@ -89,14 +89,14 @@
 .employee360-row .badge.status-pending,
 .employee360-row .badge.status-manager_review,
 .employee360-row .badge.status-hr_review {
-  background: color-mix(in srgb, #f59e0b 20%, var(--surface));
+  background: color-mix(in srgb, var(--gold-500) 20%, var(--surface));
   color: #92400e;
 }
 
 .employee360-row .badge.status-absent,
 .employee360-row .badge.status-rejected,
 .employee360-row .badge.status-inactive {
-  background: color-mix(in srgb, #ef4444 17%, var(--surface));
+  background: color-mix(in srgb, var(--gold-700) 17%, var(--surface));
   color: #b91c1c;
 }
 

@@ -53,7 +53,7 @@
 }
 
 .notif-priority-low {
-  background: rgba(59, 130, 246, 0.16);
+  background: color-mix(in srgb, var(--brand-500) 16%, transparent);
   color: #1d4ed8;
 }
 
@@ -63,12 +63,12 @@
 }
 
 .notif-type-system {
-  background: rgba(15, 118, 110, 0.16);
-  color: #0f766e;
+  background: color-mix(in srgb, var(--brand-700) 16%, transparent);
+  color: var(--brand-700);
 }
 
 .notif-type-leave {
-  background: rgba(16, 185, 129, 0.16);
+  background: color-mix(in srgb, var(--brand-400) 16%, transparent);
   color: #047857;
 }
 

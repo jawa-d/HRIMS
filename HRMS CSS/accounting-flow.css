@@ -33,15 +33,15 @@
 }
 
 .summary-in {
-  border-color: color-mix(in srgb, #10b981 38%, var(--border));
+  border-color: color-mix(in srgb, var(--brand-400) 38%, var(--border));
 }
 
 .summary-out {
-  border-color: color-mix(in srgb, #f59e0b 38%, var(--border));
+  border-color: color-mix(in srgb, var(--gold-500) 38%, var(--border));
 }
 
 .summary-net {
-  border-color: color-mix(in srgb, #6366f1 38%, var(--border));
+  border-color: color-mix(in srgb, var(--ink-900) 38%, var(--border));
 }
 
 .table-scroll {

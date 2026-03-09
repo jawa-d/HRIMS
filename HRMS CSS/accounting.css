@@ -10,7 +10,7 @@
 
 .finance-exec-card {
   margin-bottom: var(--space-5);
-  border: 1px solid color-mix(in srgb, #0284c7 28%, var(--border));
+  border: 1px solid color-mix(in srgb, var(--brand-700) 28%, var(--border));
   background:
     radial-gradient(circle at 12% 15%, color-mix(in srgb, #38bdf8 14%, transparent), transparent 40%),
     linear-gradient(140deg, color-mix(in srgb, #ecfeff 55%, var(--surface)), var(--surface-strong));
@@ -25,7 +25,7 @@
 .finance-health-box,
 .finance-bars-box,
 .finance-reco-box {
-  border: 1px solid color-mix(in srgb, #0ea5e9 24%, var(--border));
+  border: 1px solid color-mix(in srgb, var(--brand-500) 24%, var(--border));
   border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--surface) 92%, #f8fafc);
   padding: var(--space-3);
@@ -36,7 +36,7 @@
   line-height: 1;
   margin: var(--space-2) 0;
   font-weight: 800;
-  color: #0c4a6e;
+  color: var(--ink-900);
 }
 
 .finance-health-pill {
@@ -68,7 +68,7 @@
 .finance-health-pill.risk {
   background: #fee2e2;
   border-color: #fca5a5;
-  color: #991b1b;
+  color: var(--gold-700);
 }
 
 .finance-bar-line + .finance-bar-line {
@@ -98,15 +98,15 @@
 }
 
 .finance-bar-fill.in {
-  background: linear-gradient(90deg, #22c55e, #10b981);
+  background: linear-gradient(90deg, var(--brand-400), var(--brand-400));
 }
 
 .finance-bar-fill.out {
-  background: linear-gradient(90deg, #f59e0b, #f97316);
+  background: linear-gradient(90deg, var(--gold-500), var(--gold-700));
 }
 
 .finance-bar-fill.expense {
-  background: linear-gradient(90deg, #f43f5e, #ef4444);
+  background: linear-gradient(90deg, var(--gold-700), var(--gold-700));
 }
 
 .finance-reco-list {
@@ -141,7 +141,7 @@
   height: 100%;
   width: 0;
   border-radius: inherit;
-  background: linear-gradient(90deg, #0ea5e9, #06b6d4, #10b981);
+  background: linear-gradient(90deg, var(--brand-500), var(--brand-400), var(--brand-400));
   transition: width 260ms ease;
 }
 
@@ -180,7 +180,7 @@
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--ink-900);
   background: color-mix(in srgb, #38bdf8 35%, white);
 }
 
@@ -206,7 +206,7 @@
 }
 
 .finance-step.is-done {
-  border-color: color-mix(in srgb, #22c55e 45%, var(--border));
+  border-color: color-mix(in srgb, var(--brand-400) 45%, var(--border));
   background: linear-gradient(160deg, color-mix(in srgb, #dcfce7 78%, var(--surface)), var(--surface-strong));
 }
 
@@ -217,11 +217,11 @@
 }
 
 .finance-step.is-pending {
-  border-color: color-mix(in srgb, #f59e0b 40%, var(--border));
+  border-color: color-mix(in srgb, var(--gold-500) 40%, var(--border));
 }
 
 .finance-step.is-pending .finance-step-status {
-  border-color: color-mix(in srgb, #f59e0b 35%, var(--border));
+  border-color: color-mix(in srgb, var(--gold-500) 35%, var(--border));
   background: #fef3c7;
   color: #92400e;
 }
@@ -278,8 +278,8 @@
 }
 
 .summary-in {
-  border-color: color-mix(in srgb, #10b981 38%, var(--border));
-  background: linear-gradient(160deg, color-mix(in srgb, #10b981 12%, var(--surface)), var(--surface-strong));
+  border-color: color-mix(in srgb, var(--brand-400) 38%, var(--border));
+  background: linear-gradient(160deg, color-mix(in srgb, var(--brand-400) 12%, var(--surface)), var(--surface-strong));
 }
 
 .summary-opening {
@@ -288,8 +288,8 @@
 }
 
 .summary-out {
-  border-color: color-mix(in srgb, #f59e0b 38%, var(--border));
-  background: linear-gradient(160deg, color-mix(in srgb, #f59e0b 12%, var(--surface)), var(--surface-strong));
+  border-color: color-mix(in srgb, var(--gold-500) 38%, var(--border));
+  background: linear-gradient(160deg, color-mix(in srgb, var(--gold-500) 12%, var(--surface)), var(--surface-strong));
 }
 
 .summary-expense {
@@ -298,13 +298,13 @@
 }
 
 .summary-net {
-  border-color: color-mix(in srgb, #6366f1 38%, var(--border));
-  background: linear-gradient(160deg, color-mix(in srgb, #6366f1 12%, var(--surface)), var(--surface-strong));
+  border-color: color-mix(in srgb, var(--ink-900) 38%, var(--border));
+  background: linear-gradient(160deg, color-mix(in srgb, var(--ink-900) 12%, var(--surface)), var(--surface-strong));
 }
 
 .summary-advance-count {
-  border-color: color-mix(in srgb, #0ea5e9 38%, var(--border));
-  background: linear-gradient(160deg, color-mix(in srgb, #0ea5e9 12%, var(--surface)), var(--surface-strong));
+  border-color: color-mix(in srgb, var(--brand-500) 38%, var(--border));
+  background: linear-gradient(160deg, color-mix(in srgb, var(--brand-500) 12%, var(--surface)), var(--surface-strong));
 }
 
 .summary-advance-deduction {
@@ -313,8 +313,8 @@
 }
 
 .summary-month-movement {
-  border-color: color-mix(in srgb, #0f766e 38%, var(--border));
-  background: linear-gradient(160deg, color-mix(in srgb, #0f766e 12%, var(--surface)), var(--surface-strong));
+  border-color: color-mix(in srgb, var(--brand-700) 38%, var(--border));
+  background: linear-gradient(160deg, color-mix(in srgb, var(--brand-700) 12%, var(--surface)), var(--surface-strong));
 }
 
 .summary-closure-rate {
@@ -324,7 +324,7 @@
 
 .acc-links-card {
   margin-bottom: var(--space-5);
-  background: linear-gradient(145deg, color-mix(in srgb, #0f766e 6%, var(--surface)), var(--surface-strong));
+  background: linear-gradient(145deg, color-mix(in srgb, var(--brand-700) 6%, var(--surface)), var(--surface-strong));
   border-color: color-mix(in srgb, #14b8a6 24%, var(--border));
   animation: accCardIn 560ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }

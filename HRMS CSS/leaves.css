@@ -46,19 +46,19 @@
 }
 
 .leave-summary .summary-card:nth-child(1) {
-  border-color: color-mix(in srgb, #0ea5e9 35%, var(--border));
+  border-color: color-mix(in srgb, var(--brand-500) 35%, var(--border));
 }
 
 .leave-summary .summary-card:nth-child(2) {
-  border-color: color-mix(in srgb, #f59e0b 35%, var(--border));
+  border-color: color-mix(in srgb, var(--gold-500) 35%, var(--border));
 }
 
 .leave-summary .summary-card:nth-child(3) {
-  border-color: color-mix(in srgb, #10b981 35%, var(--border));
+  border-color: color-mix(in srgb, var(--brand-400) 35%, var(--border));
 }
 
 .leave-summary .summary-card:nth-child(4) {
-  border-color: color-mix(in srgb, #ef4444 35%, var(--border));
+  border-color: color-mix(in srgb, var(--gold-700) 35%, var(--border));
 }
 
 .table-scroll {
@@ -124,7 +124,7 @@
 
 .badge.status-rejected {
   background: #fecaca;
-  color: #991b1b;
+  color: var(--gold-700);
 }
 
 .leave-row {

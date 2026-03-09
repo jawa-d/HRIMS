@@ -42,7 +42,7 @@
     linear-gradient(150deg, color-mix(in srgb, var(--surface-strong) 92%, var(--primary-soft)), var(--surface-strong)),
     var(--surface-strong);
   border: 1px solid color-mix(in srgb, var(--border) 78%, transparent);
-  box-shadow: 0 12px 28px rgba(11, 18, 32, 0.08);
+  box-shadow: 0 12px 28px color-mix(in srgb, var(--ink-900) 8%, transparent);
 }
 
 .summary-head {

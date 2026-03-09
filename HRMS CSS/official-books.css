@@ -39,7 +39,7 @@
   border: 1px solid #d7e0ea;
   border-radius: 12px;
   padding: 26px;
-  color: #0f172a;
+  color: var(--ink-900);
   box-shadow: 0 10px 30px rgba(2, 8, 23, 0.07);
   overflow: hidden;
 }
@@ -67,7 +67,7 @@
   display: flex;
   justify-content: space-between;
   gap: 14px;
-  border-bottom: 2px solid #0f766e;
+  border-bottom: 2px solid var(--brand-700);
   padding-bottom: 12px;
 }
 
@@ -152,7 +152,7 @@
 }
 
 .ob-sign-line {
-  border-top: 1px solid #0f172a;
+  border-top: 1px solid var(--ink-900);
   padding-top: 6px;
   font-weight: 700;
 }

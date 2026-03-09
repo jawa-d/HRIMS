@@ -39,19 +39,19 @@
 }
 
 .threat-kpis .threat-kpi:nth-child(1) {
-  border-color: color-mix(in srgb, #0ea5e9 35%, var(--border));
+  border-color: color-mix(in srgb, var(--brand-500) 35%, var(--border));
 }
 
 .threat-kpis .threat-kpi:nth-child(2) {
-  border-color: color-mix(in srgb, #ef4444 35%, var(--border));
+  border-color: color-mix(in srgb, var(--gold-700) 35%, var(--border));
 }
 
 .threat-kpis .threat-kpi:nth-child(3) {
-  border-color: color-mix(in srgb, #f59e0b 35%, var(--border));
+  border-color: color-mix(in srgb, var(--gold-500) 35%, var(--border));
 }
 
 .threat-kpis .threat-kpi:nth-child(4) {
-  border-color: color-mix(in srgb, #22c55e 35%, var(--border));
+  border-color: color-mix(in srgb, var(--brand-400) 35%, var(--border));
 }
 
 .threat-toolbar {
@@ -111,7 +111,7 @@
   padding: 10px 12px;
   border: 1px solid rgba(239, 68, 68, 0.35);
   border-radius: 12px;
-  color: #ef4444;
+  color: var(--gold-700);
   font-weight: 700;
   justify-self: end;
 }
@@ -120,7 +120,7 @@
   width: 10px;
   height: 10px;
   border-radius: 999px;
-  background: #ef4444;
+  background: var(--gold-700);
   box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
   animation: live-pulse 1.4s ease-out infinite;
 }
@@ -179,10 +179,10 @@
   border-radius: 999px;
 }
 
-.legend-dot.is-critical { background: #ef4444; }
-.legend-dot.is-high { background: #f97316; }
+.legend-dot.is-critical { background: var(--gold-700); }
+.legend-dot.is-high { background: var(--gold-700); }
 .legend-dot.is-medium { background: #eab308; }
-.legend-dot.is-low { background: #3b82f6; }
+.legend-dot.is-low { background: var(--brand-500); }
 
 .map-note {
   margin-top: var(--space-3);
@@ -270,7 +270,7 @@
 }
 
 .incident-item.is-blocked {
-  border-color: #ef4444;
+  border-color: var(--gold-700);
   box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.2);
 }
 
@@ -307,20 +307,20 @@
   animation: marker-ping 1.8s ease-out infinite;
 }
 
-.threat-marker.risk-critical { background: #ef4444; box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.65); }
-.threat-marker.risk-high { background: #f97316; box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.6); }
+.threat-marker.risk-critical { background: var(--gold-700); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.65); }
+.threat-marker.risk-high { background: var(--gold-700); box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.6); }
 .threat-marker.risk-medium { background: #eab308; box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.58); }
-.threat-marker.risk-low { background: #3b82f6; box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.55); }
+.threat-marker.risk-low { background: var(--brand-500); box-shadow: 0 0 0 0 color-mix(in srgb, var(--brand-500) 55%, transparent); }
 
 .leaflet-interactive.attack-lane {
   stroke-dasharray: 8 10;
   animation: lane-flow var(--lane-speed) linear infinite;
 }
 
-.leaflet-interactive.attack-lane.lane-risk-critical { stroke: #ef4444; }
-.leaflet-interactive.attack-lane.lane-risk-high { stroke: #f97316; }
+.leaflet-interactive.attack-lane.lane-risk-critical { stroke: var(--gold-700); }
+.leaflet-interactive.attack-lane.lane-risk-high { stroke: var(--gold-700); }
 .leaflet-interactive.attack-lane.lane-risk-medium { stroke: #eab308; }
-.leaflet-interactive.attack-lane.lane-risk-low { stroke: #3b82f6; }
+.leaflet-interactive.attack-lane.lane-risk-low { stroke: var(--brand-500); }
 
 body.lanes-paused .leaflet-interactive.attack-lane,
 body.lanes-paused .threat-marker,

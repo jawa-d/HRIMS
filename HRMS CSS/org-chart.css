@@ -3,19 +3,19 @@ html[data-theme="light"] {
   --org-card-bg: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
   --org-card-border: #cbd5e1;
   --org-card-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
-  --org-name: #0f172a;
+  --org-name: var(--ink-900);
   --org-meta: #334155;
   --org-toggle-bg: #ffffff;
   --org-toggle-border: #94a3b8;
-  --org-toggle-text: #0f172a;
-  --org-toggle-hover: #0f766e;
+  --org-toggle-text: var(--ink-900);
+  --org-toggle-hover: var(--brand-700);
   --org-chip-bg: #e0f2fe;
   --org-chip-text: #075985;
   --org-chip-border: #7dd3fc;
-  --org-level-1-border: #0f766e;
+  --org-level-1-border: var(--brand-700);
   --org-level-1-card-border: #2dd4bf;
   --org-level-1-card-bg: linear-gradient(180deg, #f0fdfa 0%, #ccfbf1 100%);
-  --org-level-2-border: #0284c7;
+  --org-level-2-border: var(--brand-700);
   --org-level-2-card-border: #38bdf8;
   --org-level-2-card-bg: linear-gradient(180deg, #eff6ff 0%, #dbeafe 100%);
   --org-level-3-border: #7c3aed;
@@ -41,7 +41,7 @@ html[data-theme="dark"] {
   --org-level-1-card-border: #14b8a6;
   --org-level-1-card-bg: linear-gradient(180deg, rgba(7, 46, 56, 0.95) 0%, rgba(6, 78, 59, 0.86) 100%);
   --org-level-2-border: #38bdf8;
-  --org-level-2-card-border: #0ea5e9;
+  --org-level-2-card-border: var(--brand-500);
   --org-level-2-card-bg: linear-gradient(180deg, rgba(8, 47, 73, 0.95) 0%, rgba(3, 105, 161, 0.78) 100%);
   --org-level-3-border: #c084fc;
   --org-level-3-card-border: #a855f7;
@@ -216,7 +216,7 @@ html[data-theme="dark"] {
 }
 
 .org-highlight .org-card {
-  border-color: #f59e0b;
+  border-color: var(--gold-500);
   box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.35);
 }
 

@@ -47,15 +47,15 @@
 }
 
 .summary-month {
-  border-color: color-mix(in srgb, #f59e0b 36%, var(--border));
+  border-color: color-mix(in srgb, var(--gold-500) 36%, var(--border));
 }
 
 .summary-count {
-  border-color: color-mix(in srgb, #6366f1 36%, var(--border));
+  border-color: color-mix(in srgb, var(--ink-900) 36%, var(--border));
 }
 
 .summary-net {
-  border-color: color-mix(in srgb, #10b981 36%, var(--border));
+  border-color: color-mix(in srgb, var(--brand-400) 36%, var(--border));
 }
 
 .table-scroll {

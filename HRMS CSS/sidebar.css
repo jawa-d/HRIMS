@@ -303,7 +303,7 @@ body.sidebar-collapsed .sidebar {
     display: block;
     position: fixed;
     inset: 0;
-    background: rgba(8, 12, 22, 0.48);
+    background: color-mix(in srgb, var(--ink-900) 48%, transparent);
     opacity: 0;
     pointer-events: none;
     transition: opacity var(--transition-base);

@@ -36,7 +36,7 @@
 
 .health-state.offline {
   background: #fecaca;
-  color: #991b1b;
+  color: var(--gold-700);
 }
 
 .health-table td,

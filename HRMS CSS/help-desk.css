@@ -36,15 +36,15 @@
 }
 
 .helpdesk-kpis .helpdesk-kpi:nth-child(1) {
-  border-color: color-mix(in srgb, #0ea5e9 35%, var(--border));
+  border-color: color-mix(in srgb, var(--brand-500) 35%, var(--border));
 }
 
 .helpdesk-kpis .helpdesk-kpi:nth-child(2) {
-  border-color: color-mix(in srgb, #6366f1 35%, var(--border));
+  border-color: color-mix(in srgb, var(--ink-900) 35%, var(--border));
 }
 
 .helpdesk-kpis .helpdesk-kpi:nth-child(3) {
-  border-color: color-mix(in srgb, #10b981 35%, var(--border));
+  border-color: color-mix(in srgb, var(--brand-400) 35%, var(--border));
 }
 
 .helpdesk-kpi strong {

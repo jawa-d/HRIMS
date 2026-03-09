@@ -1,7 +1,7 @@
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(11, 18, 32, 0.45);
+  background: color-mix(in srgb, var(--ink-900) 45%, transparent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -141,12 +141,12 @@ body.modal-open {
 }
 
 .modal-body::-webkit-scrollbar-track {
-  background: rgba(148, 163, 184, 0.18);
+  background: color-mix(in srgb, var(--ink-900) 14%, transparent);
   border-radius: 999px;
 }
 
 .modal-body::-webkit-scrollbar-thumb {
-  background: rgba(15, 118, 110, 0.42);
+  background: color-mix(in srgb, var(--brand-700) 42%, transparent);
   border-radius: 999px;
 }
 

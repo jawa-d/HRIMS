@@ -1,40 +1,145 @@
 .maintenance-shell {
+  --shape-size-a: clamp(220px, 34vw, 460px);
+  --shape-size-b: clamp(180px, 28vw, 360px);
+  --shape-size-c: clamp(140px, 20vw, 280px);
   min-height: 100vh;
   display: grid;
   place-items: center;
-  padding: 20px;
+  padding: clamp(18px, 3vw, 34px);
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
   background:
-    radial-gradient(720px 420px at 15% 15%, rgba(14, 165, 233, 0.2), transparent 65%),
-    radial-gradient(720px 420px at 85% 20%, rgba(16, 185, 129, 0.2), transparent 65%),
-    radial-gradient(700px 400px at 50% 100%, rgba(244, 114, 182, 0.15), transparent 70%),
-    var(--bg);
+    radial-gradient(1000px 600px at 8% 12%, color-mix(in srgb, var(--brand-500) 16%, transparent), transparent 62%),
+    radial-gradient(900px 520px at 92% 10%, color-mix(in srgb, var(--brand-400) 16%, transparent), transparent 62%),
+    radial-gradient(1000px 560px at 50% 110%, color-mix(in srgb, var(--gold-500) 14%, transparent), transparent 70%),
+    linear-gradient(180deg, color-mix(in srgb, var(--surface) 88%, var(--white)), var(--bg));
+}
+
+.maintenance-decor {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.maintenance-shape {
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(1px);
+  opacity: 0.85;
+  will-change: transform;
+}
+
+.maintenance-shape.shape-a {
+  width: var(--shape-size-a);
+  height: var(--shape-size-a);
+  top: -12%;
+  left: -8%;
+  background: radial-gradient(circle at 32% 28%, color-mix(in srgb, var(--brand-500) 52%, var(--white)), color-mix(in srgb, var(--brand-700) 55%, transparent));
+  animation: float-a 12s ease-in-out infinite;
+}
+
+.maintenance-shape.shape-b {
+  width: var(--shape-size-b);
+  height: var(--shape-size-b);
+  right: -6%;
+  top: 12%;
+  background: radial-gradient(circle at 38% 35%, color-mix(in srgb, var(--gold-500) 56%, var(--white)), color-mix(in srgb, var(--gold-700) 52%, transparent));
+  animation: float-b 14s ease-in-out infinite;
+}
+
+.maintenance-shape.shape-c {
+  width: var(--shape-size-c);
+  height: var(--shape-size-c);
+  left: 44%;
+  bottom: -9%;
+  background: radial-gradient(circle at 40% 35%, color-mix(in srgb, var(--brand-400) 52%, var(--white)), color-mix(in srgb, var(--ink-900) 40%, transparent));
+  animation: float-c 11s ease-in-out infinite;
+}
+
+.maintenance-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--ink-900) 7%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--ink-900) 7%, transparent) 1px, transparent 1px);
+  background-size: 36px 36px;
+  mask-image: radial-gradient(ellipse at center, black 45%, transparent 88%);
+  opacity: 0.25;
+  animation: grid-pan 24s linear infinite;
 }
 
 .maintenance-card {
-  width: min(680px, 96vw);
+  width: min(760px, 96vw);
   display: grid;
   gap: var(--space-4);
   text-align: center;
+  position: relative;
+  overflow: hidden;
+  border-radius: 24px;
+  border: 1px solid color-mix(in srgb, var(--brand-500) 26%, var(--border));
+  background:
+    linear-gradient(160deg, color-mix(in srgb, var(--surface-strong) 92%, var(--white)) 0%, color-mix(in srgb, var(--brand-400) 10%, var(--surface)) 100%);
+  box-shadow:
+    0 26px 80px color-mix(in srgb, var(--ink-900) 22%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--white) 60%, transparent);
+  animation: card-drop 700ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.maintenance-card::before {
+  content: "";
+  position: absolute;
+  inset-inline: -8%;
+  top: -90px;
+  height: 130px;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--brand-500) 34%, transparent), color-mix(in srgb, var(--gold-500) 30%, transparent), transparent);
+  filter: blur(16px);
+  opacity: 0.8;
 }
 
 .maintenance-icon {
-  width: 74px;
-  height: 74px;
+  width: 84px;
+  height: 84px;
   margin: 0 auto;
   border-radius: 999px;
   display: grid;
   place-items: center;
-  background: rgba(245, 158, 11, 0.15);
-  color: #b45309;
+  background: linear-gradient(145deg, color-mix(in srgb, var(--gold-500) 34%, var(--white)), color-mix(in srgb, var(--gold-700) 30%, var(--white)));
+  color: var(--gold-700);
+  border: 1px solid color-mix(in srgb, var(--gold-700) 32%, var(--border));
+  box-shadow: 0 12px 28px color-mix(in srgb, var(--gold-700) 24%, transparent);
+  animation: icon-pulse 3s ease-in-out infinite;
+}
+
+.maintenance-icon i {
+  width: 30px;
+  height: 30px;
+}
+
+.maintenance-badge {
+  margin: 0 auto;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--brand-500) 28%, var(--border));
+  background: color-mix(in srgb, var(--brand-400) 14%, var(--white));
+  color: var(--ink-900);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
 .maintenance-title {
-  font-size: clamp(1.35rem, 2.4vw, 1.9rem);
-  font-weight: 700;
+  font-size: clamp(1.55rem, 2.7vw, 2.2rem);
+  font-weight: 800;
+  color: var(--ink-900);
+  line-height: 1.25;
 }
 
 .maintenance-desc {
   color: var(--text-muted);
+  max-width: 64ch;
+  margin: 0 auto;
 }
 
 .maintenance-meta {
@@ -42,10 +147,14 @@
   align-items: center;
   gap: 8px;
   margin: 0 auto;
-  padding: 8px 12px;
-  border: 1px solid var(--border);
+  padding: 9px 13px;
+  border: 1px solid color-mix(in srgb, var(--ink-900) 14%, var(--border));
   border-radius: var(--radius-md);
-  background: var(--surface-strong);
+  background: color-mix(in srgb, var(--white) 86%, var(--surface));
+}
+
+.maintenance-meta strong {
+  color: var(--ink-900);
 }
 
 .maintenance-actions {
@@ -53,4 +162,116 @@
   flex-wrap: wrap;
   justify-content: center;
   gap: var(--space-2);
+}
+
+.maintenance-actions .btn {
+  min-width: 150px;
+  font-weight: 700;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.maintenance-actions .btn:hover {
+  transform: translateY(-2px);
+}
+
+.maintenance-actions .btn.btn-outline {
+  border-width: 2px;
+}
+
+.maintenance-actions .btn.btn-outline:hover {
+  background: color-mix(in srgb, var(--brand-500) 12%, transparent);
+  box-shadow: 0 12px 24px color-mix(in srgb, var(--brand-700) 18%, transparent);
+}
+
+@keyframes card-drop {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes icon-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 12px 28px color-mix(in srgb, var(--gold-700) 24%, transparent);
+  }
+  50% {
+    transform: scale(1.06);
+    box-shadow: 0 16px 36px color-mix(in srgb, var(--gold-700) 30%, transparent);
+  }
+}
+
+@keyframes float-a {
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate(20px, -18px) rotate(6deg);
+  }
+}
+
+@keyframes float-b {
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate(-24px, 16px) rotate(-7deg);
+  }
+}
+
+@keyframes float-c {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(16px, -12px) scale(1.05);
+  }
+}
+
+@keyframes grid-pan {
+  0% {
+    transform: translate(0, 0);
+  }
+  100% {
+    transform: translate(-36px, -36px);
+  }
+}
+
+@media (max-width: 760px) {
+  .maintenance-card {
+    border-radius: 18px;
+    padding: var(--space-5) var(--space-4);
+    gap: var(--space-3);
+  }
+
+  .maintenance-icon {
+    width: 72px;
+    height: 72px;
+  }
+
+  .maintenance-actions .btn {
+    min-width: 0;
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .maintenance-grid,
+  .maintenance-shape,
+  .maintenance-icon,
+  .maintenance-card {
+    animation: none !important;
+  }
+
+  .maintenance-actions .btn {
+    transition: none;
+  }
 }

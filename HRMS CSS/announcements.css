@@ -25,19 +25,19 @@
 }
 
 .ann-kpis .ann-kpi:nth-child(1) {
-  border-color: color-mix(in srgb, #0ea5e9 35%, var(--border));
+  border-color: color-mix(in srgb, var(--brand-500) 35%, var(--border));
 }
 
 .ann-kpis .ann-kpi:nth-child(2) {
-  border-color: color-mix(in srgb, #10b981 35%, var(--border));
+  border-color: color-mix(in srgb, var(--brand-400) 35%, var(--border));
 }
 
 .ann-kpis .ann-kpi:nth-child(3) {
-  border-color: color-mix(in srgb, #3b82f6 35%, var(--border));
+  border-color: color-mix(in srgb, var(--brand-500) 35%, var(--border));
 }
 
 .ann-kpis .ann-kpi:nth-child(4) {
-  border-color: color-mix(in srgb, #f59e0b 35%, var(--border));
+  border-color: color-mix(in srgb, var(--gold-500) 35%, var(--border));
 }
 
 .ann-grid {
@@ -112,7 +112,7 @@
 }
 
 .ann-status-draft {
-  background: rgba(59, 130, 246, 0.16);
+  background: color-mix(in srgb, var(--brand-500) 16%, transparent);
   color: #1d4ed8;
 }
 

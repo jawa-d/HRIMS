@@ -2,9 +2,13 @@ import { enforceAuth, getRole, getUserProfile } from "../Aman/guard.js";
 import { initI18n } from "../Languages/i18n.js";
 import { renderNavbar } from "../Collaboration interface/ui-navbar.js";
 import { renderSidebar } from "../Collaboration interface/ui-sidebar.js";
+import { openModal } from "../Collaboration interface/ui-modal.js";
 import { showToast } from "../Collaboration interface/ui-toast.js";
 import { showTableSkeleton } from "../Collaboration interface/ui-skeleton.js";
 import { trackUxEvent } from "../Services/telemetry.service.js";
+import { APP_NAME } from "../app.config.js";
+import { logSecurityEvent } from "../Services/security-audit.service.js";
+import { createNotification } from "../Services/notifications.service.js";
 import {
   listInsuranceDocs,
   createInsuranceDoc,
@@ -22,9 +26,7 @@ const user = getUserProfile();
 const role = getRole();
 renderNavbar({ user, role });
 renderSidebar("insurance_docs");
-if (window.lucide?.createIcons) {
-  window.lucide.createIcons();
-}
+if (window.lucide?.createIcons) window.lucide.createIcons();
 
 const canManage = ["super_admin", "hr_admin", "manager"].includes(role);
 const canDelete = ["super_admin", "hr_admin"].includes(role);
@@ -59,199 +61,505 @@ const totalCommissionEl = document.getElementById("insurance-total-commission");
 const totalStampEl = document.getElementById("insurance-total-stamp");
 const avgRiskEl = document.getElementById("insurance-avg-risk");
 const expiringSoonEl = document.getElementById("insurance-expiring-soon");
+const formSection = document.getElementById("insurance-form-section");
+const summarySection = document.getElementById("insurance-summary-section");
+const listSection = document.getElementById("insurance-list-section");
+const pageMode = String(document.body.dataset.insuranceMode || "library").toLowerCase() === "entry" ? "entry" : "library";
+const isEntryMode = pageMode === "entry";
+const isLibraryMode = pageMode === "library";
 
-const numberFmt = new Intl.NumberFormat(undefined, {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2
-});
-
+const numFmt = new Intl.NumberFormat(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const INSURANCE_TYPES = [
-  { key: "motor", label: "تأمين المركبات" },
-  { key: "health", label: "التأمين الصحي" },
-  { key: "life", label: "تأمين الحياة" },
-  { key: "fire", label: "تأمين الحريق" },
-  { key: "marine", label: "التأمين البحري" },
-  { key: "engineering", label: "التأمين الهندسي" },
-  { key: "travel", label: "تأمين السفر" },
-  { key: "liability", label: "تأمين المسؤولية المدنية" },
-  { key: "workers_comp", label: "تأمين إصابات العمل" },
-  { key: "accident", label: "تأمين الحوادث الشخصية" },
-  { key: "burglary", label: "تأمين السرقة" },
-  { key: "other", label: "أنواع أخرى" }
+  ["motor", "المركبات / Motor"], ["health", "الصحي / Health"], ["life", "الحياة / Life"], ["fire", "الحريق / Fire"],
+  ["marine", "البحري / Marine"], ["engineering", "الهندسي / Engineering"], ["travel", "السفر / Travel"], ["liability", "المسؤولية / Liability"],
+  ["workers_comp", "إصابات العمل / Workers Comp"], ["accident", "الحوادث / Accident"], ["burglary", "السرقة / Burglary"], ["other", "أخرى / Other"]
 ];
-
-const EXTRA_FIELDS_BY_TYPE = {
-  motor: [
-    { key: "coverageType", label: "نوع التغطية", type: "select", required: true, options: ["إلزامي", "شامل", "ضد الغير"] },
-    { key: "plateNo", label: "رقم المركبة", type: "text", required: true },
-    { key: "chassisNo", label: "رقم الشاصي", type: "text", required: true },
-    { key: "modelYear", label: "سنة الصنع", type: "number", required: true },
-    { key: "vehicleUse", label: "استخدام المركبة", type: "select", required: true, options: ["خصوصي", "تجاري", "أجرة", "حكومي"] },
-    { key: "deductible", label: "التحمل", type: "number", required: false }
-  ],
-  health: [
-    { key: "planType", label: "نوع الخطة", type: "select", required: true, options: ["فردي", "عائلي", "جماعي"] },
-    { key: "beneficiaries", label: "عدد المستفيدين", type: "number", required: true },
-    { key: "networkType", label: "نوع الشبكة الطبية", type: "select", required: true, options: ["داخل العراق", "إقليمي", "دولي"] },
-    { key: "hospitalGrade", label: "درجة المستشفى", type: "text", required: false },
-    { key: "chronicCoverage", label: "تغطية الأمراض المزمنة", type: "select", required: true, options: ["نعم", "لا"] }
-  ],
-  life: [
-    { key: "beneficiaryName", label: "اسم المستفيد", type: "text", required: true },
-    { key: "beneficiaryRelation", label: "صلة القرابة", type: "text", required: false },
-    { key: "sumAssured", label: "مبلغ التعويض", type: "number", required: true },
-    { key: "policyTerm", label: "مدة الوثيقة (سنة)", type: "number", required: true },
-    { key: "paymentFrequency", label: "تكرار السداد", type: "select", required: true, options: ["شهري", "ربع سنوي", "نصف سنوي", "سنوي"] }
-  ],
-  fire: [
-    { key: "propertyAddress", label: "عنوان العقار", type: "text", required: true },
-    { key: "propertyUse", label: "استخدام العقار", type: "select", required: true, options: ["سكني", "تجاري", "صناعي", "مخزن"] },
-    { key: "constructionType", label: "نوع الإنشاء", type: "text", required: true },
-    { key: "fireSystem", label: "نظام الإطفاء", type: "select", required: true, options: ["متوفر", "غير متوفر"] },
-    { key: "contentsValue", label: "قيمة المحتويات", type: "number", required: false }
-  ],
-  marine: [
-    { key: "cargoType", label: "نوع البضاعة", type: "text", required: true },
-    { key: "vesselName", label: "اسم السفينة/الناقلة", type: "text", required: false },
-    { key: "portFrom", label: "ميناء/منشأ الشحن", type: "text", required: true },
-    { key: "portTo", label: "ميناء/وجهة الوصول", type: "text", required: true },
-    { key: "shipmentDate", label: "تاريخ الشحن", type: "date", required: true }
-  ],
-  engineering: [
-    { key: "engineeringType", label: "نوع الهندسي", type: "select", required: true, options: ["CAR", "EAR", "معدات", "أعطال ميكانيكية"] },
-    { key: "projectName", label: "اسم المشروع", type: "text", required: true },
-    { key: "siteLocation", label: "موقع المشروع", type: "text", required: true },
-    { key: "contractor", label: "اسم المقاول", type: "text", required: true },
-    { key: "projectDuration", label: "مدة التنفيذ (أشهر)", type: "number", required: false }
-  ],
-  travel: [
-    { key: "destination", label: "جهة السفر", type: "text", required: true },
-    { key: "tripPurpose", label: "غرض السفر", type: "select", required: true, options: ["سياحة", "عمل", "دراسة", "علاج"] },
-    { key: "travelerCount", label: "عدد المسافرين", type: "number", required: true },
-    { key: "covidCoverage", label: "تغطية COVID-19", type: "select", required: false, options: ["نعم", "لا"] }
-  ],
-  liability: [
-    { key: "activityType", label: "نوع النشاط", type: "text", required: true },
-    { key: "liabilityLimit", label: "حد المسؤولية", type: "number", required: true },
-    { key: "thirdPartyScope", label: "نطاق الطرف الثالث", type: "text", required: true },
-    { key: "claimHistory", label: "سجل المطالبات", type: "text", required: false }
-  ],
-  workers_comp: [
-    { key: "employeeCount", label: "عدد العاملين", type: "number", required: true },
-    { key: "workNature", label: "طبيعة العمل", type: "text", required: true },
-    { key: "safetyLevel", label: "مستوى السلامة", type: "select", required: true, options: ["عالي", "متوسط", "منخفض"] },
-    { key: "highRiskJobs", label: "وظائف عالية الخطورة", type: "text", required: false }
-  ],
-  accident: [
-    { key: "coveredPersons", label: "الأشخاص المشمولون", type: "number", required: true },
-    { key: "accidentScope", label: "نطاق الحوادث", type: "text", required: true },
-    { key: "medicalLimit", label: "حد المصاريف الطبية", type: "number", required: true }
-  ],
-  burglary: [
-    { key: "insuredLocation", label: "موقع التأمين", type: "text", required: true },
-    { key: "securitySystem", label: "أنظمة الحماية", type: "text", required: true },
-    { key: "nightGuard", label: "حراسة ليلية", type: "select", required: true, options: ["نعم", "لا"] },
-    { key: "previousIncidents", label: "حوادث سابقة", type: "text", required: false }
-  ],
-  other: [
-    { key: "customField1", label: "تفصيل 1", type: "text", required: true },
-    { key: "customField2", label: "تفصيل 2", type: "text", required: false },
-    { key: "customField3", label: "تفصيل 3", type: "text", required: false }
-  ]
-};
 
 let insuranceDocs = [];
 let insuranceParties = [];
 let editingId = "";
+let stagedFiles = [];
 
-function safeNumber(value) {
-  const num = Number(value);
-  if (!Number.isFinite(num)) return 0;
-  return Math.max(0, num);
-}
+const pro = {};
 
-function typeLabel(typeKey) {
-  return INSURANCE_TYPES.find((item) => item.key === typeKey)?.label || typeKey || "-";
-}
+const txt = (v) => String(v || "").trim();
+const money = (v) => numFmt.format(Math.max(0, Number(v) || 0));
+const today = () => new Date().toISOString().slice(0, 10);
+const esc = (v) => txt(v).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll("\"", "&quot;");
+const byType = (k) => INSURANCE_TYPES.find((t) => t[0] === k)?.[1] || k || "-";
+const COMPANY_NAME_AR = "شركة وادي الرافدين";
+const COMPANY_NAME_EN = APP_NAME || "Wadi Al-Rafidain";
+const COMPANY_LOGO_PATH = "assets/logo.jpg";
+let companyLogoDataUrlPromise = null;
+let pdfArabicFontReadyPromise = null;
+const PDF_ARABIC_FONT_URL = "https://raw.githubusercontent.com/aliftype/amiri/master/fonts/ttf/Amiri-Regular.ttf";
+const PDF_ARABIC_FONT_FILE = "Amiri-Regular.ttf";
+const PDF_ARABIC_FONT_NAME = "Amiri";
+const AR_LABELS = {
+  "Coverage Type": "نوع التغطية",
+  "Plate Number": "رقم اللوحة",
+  "Chassis Number": "رقم الشاصي",
+  "Engine Number": "رقم المحرك",
+  "Model Year": "سنة الصنع",
+  "Vehicle Brand": "ماركة المركبة",
+  "Vehicle Model": "موديل المركبة",
+  "Vehicle Use": "استخدام المركبة",
+  "Seat Count": "عدد المقاعد",
+  "Deductible": "التحمل",
+  "Plan Type": "نوع الخطة",
+  "Beneficiaries Count": "عدد المستفيدين",
+  "Network Scope": "نطاق الشبكة",
+  "Hospital Room Class": "درجة الغرفة",
+  "Annual Limit": "الحد السنوي",
+  "Co-pay %": "نسبة التحمل",
+  "Pre-existing Conditions": "الحالات السابقة",
+  "Maternity Coverage": "تغطية الولادة",
+  "Beneficiary Name": "اسم المستفيد",
+  "Beneficiary Relation": "صلة القرابة",
+  "Insured DOB": "تاريخ الميلاد",
+  "Smoker Status": "حالة التدخين",
+  "Sum Assured": "مبلغ التأمين",
+  "Policy Term (Years)": "مدة الوثيقة (سنة)",
+  "Premium Mode": "نمط الدفع",
+  "Occupation Risk Class": "تصنيف المخاطر",
+  "Property Address": "عنوان العقار",
+  "Property Use": "استخدام العقار",
+  "Construction Type": "نوع الإنشاء",
+  "Fire Protection": "حماية الحريق",
+  "Building Value": "قيمة المبنى",
+  "Content Value": "قيمة المحتويات",
+  "Occupancy": "الإشغال",
+  "Cargo Type": "نوع البضاعة",
+  "Packing Type": "نوع التغليف",
+  "Conveyance": "وسيلة النقل",
+  "Vessel/Carrier Name": "اسم الناقلة",
+  "Port of Loading": "ميناء الشحن",
+  "Port of Discharge": "ميناء التفريغ",
+  "Shipment Date": "تاريخ الشحن",
+  "Incoterm": "شرط الشحن",
+  "Declared Value": "القيمة المعلنة",
+  "Policy Form": "شكل الوثيقة",
+  "Project Name": "اسم المشروع",
+  "Project Owner": "مالك المشروع",
+  "Project Location": "موقع المشروع",
+  "Main Contractor": "المقاول الرئيسي",
+  "Sum Insured": "المبلغ المؤمن",
+  "Maintenance Months": "أشهر الصيانة",
+  "TPL Limit": "حد الطرف الثالث",
+  "Destination": "الوجهة",
+  "Trip Purpose": "غرض السفر",
+  "Travelers Count": "عدد المسافرين",
+  "Trip Duration (Days)": "مدة الرحلة (يوم)",
+  "Passport Number": "رقم الجواز",
+  "Coverage Plan": "خطة التغطية",
+  "Winter Sports Cover": "تغطية الرياضات الشتوية",
+  "COVID Cover": "تغطية كوفيد",
+  "Business Activity": "النشاط التجاري",
+  "Annual Turnover": "الدوران السنوي",
+  "Employee Count": "عدد الموظفين",
+  "Liability Limit": "حد المسؤولية",
+  "Third Party Scope": "نطاق الطرف الثالث",
+  "Geographical Scope": "النطاق الجغرافي",
+  "Previous Claims": "المطالبات السابقة",
+  "Employees Count": "عدد العاملين",
+  "Nature of Work": "طبيعة العمل",
+  "Estimated Payroll": "الرواتب التقديرية",
+  "Safety Level": "مستوى السلامة",
+  "High Risk Roles": "الوظائف عالية الخطورة",
+  "Prior Claims Count": "عدد المطالبات السابقة",
+  "Medical Network": "الشبكة الطبية",
+  "Covered Persons": "الأشخاص المشمولون",
+  "Accident Scope": "نطاق الحوادث",
+  "Occupation Class": "فئة المهنة",
+  "Medical Expense Limit": "حد المصاريف الطبية",
+  "Disability Benefit Limit": "حد العجز",
+  "Death Benefit": "تعويض الوفاة",
+  "Sports Risk Cover": "تغطية مخاطر الرياضة",
+  "Insured Location": "موقع التأمين",
+  "Building Type": "نوع المبنى",
+  "Security System": "نظام الحماية",
+  "Alarm Monitoring": "مراقبة الإنذار",
+  "Safe Type": "نوع الخزنة",
+  "Stock Value": "قيمة المخزون",
+  "Cash in Safe Limit": "حد النقد بالخزنة",
+  "Night Guard": "حراسة ليلية",
+  "Prior Incidents": "الحوادث السابقة",
+  "Line of Business": "نوع النشاط",
+  "Risk Description": "وصف المخاطر",
+  "Key Conditions": "الشروط الرئيسية",
+  "Underwriting Notes": "ملاحظات الاكتتاب"
+};
+const biLabel = (label) => (AR_LABELS[label] ? `${AR_LABELS[label]} / ${label}` : label);
+const EXTRA_FIELDS_BY_TYPE = {
+  motor: [
+    { key: "coverageType", label: "Coverage Type", type: "select", required: true, options: ["Comprehensive", "Third Party", "Mandatory"] },
+    { key: "plateNo", label: "Plate Number", type: "text", required: true, placeholder: "Baghdad-12345" },
+    { key: "chassisNo", label: "Chassis Number", type: "text", required: true },
+    { key: "engineNo", label: "Engine Number", type: "text", required: true },
+    { key: "modelYear", label: "Model Year", type: "number", required: true, min: 1950, step: 1 },
+    { key: "vehicleBrand", label: "Vehicle Brand", type: "text", required: true },
+    { key: "vehicleModel", label: "Vehicle Model", type: "text", required: true },
+    { key: "vehicleUse", label: "Vehicle Use", type: "select", required: true, options: ["Private", "Commercial", "Taxi", "Government"] },
+    { key: "seatCount", label: "Seat Count", type: "number", required: false, min: 1, step: 1 },
+    { key: "deductible", label: "Deductible", type: "number", required: false, min: 0, step: 0.01 }
+  ],
+  health: [
+    { key: "planType", label: "Plan Type", type: "select", required: true, options: ["Individual", "Family", "Corporate"] },
+    { key: "beneficiaries", label: "Beneficiaries Count", type: "number", required: true, min: 1, step: 1 },
+    { key: "networkType", label: "Network Scope", type: "select", required: true, options: ["Local", "Regional", "International"] },
+    { key: "roomClass", label: "Hospital Room Class", type: "select", required: false, options: ["Shared", "Private", "VIP"] },
+    { key: "annualLimit", label: "Annual Limit", type: "number", required: true, min: 0, step: 0.01 },
+    { key: "coPayRate", label: "Co-pay %", type: "number", required: false, min: 0, step: 0.01 },
+    { key: "preExisting", label: "Pre-existing Conditions", type: "select", required: false, options: ["Covered", "Excluded", "Conditional"] },
+    { key: "maternityCoverage", label: "Maternity Coverage", type: "select", required: false, options: ["Yes", "No"] }
+  ],
+  life: [
+    { key: "beneficiaryName", label: "Beneficiary Name", type: "text", required: true },
+    { key: "beneficiaryRelation", label: "Beneficiary Relation", type: "text", required: false },
+    { key: "insuredDob", label: "Insured DOB", type: "date", required: true },
+    { key: "smokerStatus", label: "Smoker Status", type: "select", required: true, options: ["Smoker", "Non-smoker"] },
+    { key: "sumAssured", label: "Sum Assured", type: "number", required: true, min: 0, step: 0.01 },
+    { key: "policyTermYears", label: "Policy Term (Years)", type: "number", required: true, min: 1, step: 1 },
+    { key: "premiumMode", label: "Premium Mode", type: "select", required: true, options: ["Monthly", "Quarterly", "Semi-Annual", "Annual"] },
+    { key: "occupationRisk", label: "Occupation Risk Class", type: "select", required: false, options: ["Low", "Medium", "High"] }
+  ],
+  fire: [
+    { key: "propertyAddress", label: "Property Address", type: "text", required: true },
+    { key: "propertyUse", label: "Property Use", type: "select", required: true, options: ["Residential", "Commercial", "Industrial", "Warehouse"] },
+    { key: "constructionType", label: "Construction Type", type: "text", required: true },
+    { key: "fireProtection", label: "Fire Protection", type: "select", required: true, options: ["Sprinkler", "Hydrant", "Extinguisher", "None"] },
+    { key: "buildingValue", label: "Building Value", type: "number", required: true, min: 0, step: 0.01 },
+    { key: "contentValue", label: "Content Value", type: "number", required: false, min: 0, step: 0.01 },
+    { key: "occupancy", label: "Occupancy", type: "select", required: false, options: ["Owner Occupied", "Rented", "Vacant"] }
+  ],
+  marine: [
+    { key: "cargoType", label: "Cargo Type", type: "text", required: true },
+    { key: "packingType", label: "Packing Type", type: "text", required: false },
+    { key: "conveyanceType", label: "Conveyance", type: "select", required: true, options: ["Sea", "Air", "Land", "Multi-Modal"] },
+    { key: "vesselName", label: "Vessel/Carrier Name", type: "text", required: false },
+    { key: "portFrom", label: "Port of Loading", type: "text", required: true },
+    { key: "portTo", label: "Port of Discharge", type: "text", required: true },
+    { key: "shipmentDate", label: "Shipment Date", type: "date", required: true },
+    { key: "incoterm", label: "Incoterm", type: "select", required: false, options: ["FOB", "CIF", "CFR", "EXW", "DAP"] },
+    { key: "declaredValue", label: "Declared Value", type: "number", required: true, min: 0, step: 0.01 }
+  ],
+  engineering: [
+    { key: "engineeringType", label: "Policy Form", type: "select", required: true, options: ["CAR", "EAR", "CPM", "Machinery Breakdown"] },
+    { key: "projectName", label: "Project Name", type: "text", required: true },
+    { key: "projectOwner", label: "Project Owner", type: "text", required: true },
+    { key: "siteLocation", label: "Project Location", type: "text", required: true },
+    { key: "contractor", label: "Main Contractor", type: "text", required: true },
+    { key: "sumInsured", label: "Sum Insured", type: "number", required: true, min: 0, step: 0.01 },
+    { key: "maintenanceMonths", label: "Maintenance Months", type: "number", required: false, min: 0, step: 1 },
+    { key: "thirdPartyLimit", label: "TPL Limit", type: "number", required: false, min: 0, step: 0.01 }
+  ],
+  travel: [
+    { key: "destination", label: "Destination", type: "text", required: true },
+    { key: "tripPurpose", label: "Trip Purpose", type: "select", required: true, options: ["Tourism", "Business", "Study", "Medical"] },
+    { key: "travelerCount", label: "Travelers Count", type: "number", required: true, min: 1, step: 1 },
+    { key: "tripDays", label: "Trip Duration (Days)", type: "number", required: true, min: 1, step: 1 },
+    { key: "passportNo", label: "Passport Number", type: "text", required: true },
+    { key: "coveragePlan", label: "Coverage Plan", type: "select", required: true, options: ["Economy", "Standard", "Premium"] },
+    { key: "winterSports", label: "Winter Sports Cover", type: "select", required: false, options: ["Yes", "No"] },
+    { key: "covidCoverage", label: "COVID Cover", type: "select", required: false, options: ["Yes", "No"] }
+  ],
+  liability: [
+    { key: "activityType", label: "Business Activity", type: "text", required: true },
+    { key: "annualTurnover", label: "Annual Turnover", type: "number", required: true, min: 0, step: 0.01 },
+    { key: "employeeCount", label: "Employee Count", type: "number", required: true, min: 1, step: 1 },
+    { key: "liabilityLimit", label: "Liability Limit", type: "number", required: true, min: 0, step: 0.01 },
+    { key: "thirdPartyScope", label: "Third Party Scope", type: "text", required: true },
+    { key: "geoScope", label: "Geographical Scope", type: "select", required: false, options: ["Iraq", "Regional", "Worldwide"] },
+    { key: "claimHistory", label: "Previous Claims", type: "text", required: false },
+    { key: "deductible", label: "Deductible", type: "number", required: false, min: 0, step: 0.01 }
+  ],
+  workers_comp: [
+    { key: "employeeCount", label: "Employees Count", type: "number", required: true, min: 1, step: 1 },
+    { key: "workNature", label: "Nature of Work", type: "text", required: true },
+    { key: "payrollEstimate", label: "Estimated Payroll", type: "number", required: true, min: 0, step: 0.01 },
+    { key: "safetyLevel", label: "Safety Level", type: "select", required: true, options: ["High", "Medium", "Low"] },
+    { key: "highRiskRoles", label: "High Risk Roles", type: "text", required: false },
+    { key: "priorClaimsCount", label: "Prior Claims Count", type: "number", required: false, min: 0, step: 1 },
+    { key: "medicalNetwork", label: "Medical Network", type: "select", required: false, options: ["Basic", "Standard", "Premium"] }
+  ],
+  accident: [
+    { key: "coveredPersons", label: "Covered Persons", type: "number", required: true, min: 1, step: 1 },
+    { key: "accidentScope", label: "Accident Scope", type: "text", required: true },
+    { key: "occupationClass", label: "Occupation Class", type: "select", required: true, options: ["Office", "Field", "Industrial"] },
+    { key: "medicalLimit", label: "Medical Expense Limit", type: "number", required: true, min: 0, step: 0.01 },
+    { key: "disabilityLimit", label: "Disability Benefit Limit", type: "number", required: false, min: 0, step: 0.01 },
+    { key: "deathBenefit", label: "Death Benefit", type: "number", required: false, min: 0, step: 0.01 },
+    { key: "sportsRisk", label: "Sports Risk Cover", type: "select", required: false, options: ["Yes", "No"] }
+  ],
+  burglary: [
+    { key: "insuredLocation", label: "Insured Location", type: "text", required: true },
+    { key: "buildingType", label: "Building Type", type: "select", required: true, options: ["Shop", "Office", "Warehouse", "Home"] },
+    { key: "securitySystem", label: "Security System", type: "text", required: true },
+    { key: "alarmMonitoring", label: "Alarm Monitoring", type: "select", required: false, options: ["24/7", "Business Hours", "None"] },
+    { key: "safeType", label: "Safe Type", type: "text", required: false },
+    { key: "stockValue", label: "Stock Value", type: "number", required: true, min: 0, step: 0.01 },
+    { key: "cashLimit", label: "Cash in Safe Limit", type: "number", required: false, min: 0, step: 0.01 },
+    { key: "nightGuard", label: "Night Guard", type: "select", required: false, options: ["Yes", "No"] },
+    { key: "priorIncidents", label: "Prior Incidents", type: "text", required: false }
+  ],
+  other: [
+    { key: "lineOfBusiness", label: "Line of Business", type: "text", required: true },
+    { key: "riskDescription", label: "Risk Description", type: "textarea", required: true, rows: 2 },
+    { key: "keyConditions", label: "Key Conditions", type: "textarea", required: false, rows: 2 },
+    { key: "underwritingNotes", label: "Underwriting Notes", type: "textarea", required: false, rows: 2 }
+  ]
+};
 
-function todayKey() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function absoluteAssetUrl(path) {
-  try {
-    return new URL(path, window.location.href).href;
-  } catch (_) {
-    return path;
+function normalizeAttachments(item) {
+  if (Array.isArray(item.attachments) && item.attachments.length) {
+    return item.attachments.map((a) => ({
+      fileUrl: txt(a.fileUrl || a.url),
+      fileName: txt(a.fileName || a.name) || "attachment",
+      mimeType: txt(a.mimeType),
+      sizeBytes: Number(a.sizeBytes || 0) || 0
+    })).filter((a) => a.fileUrl);
   }
+  if (item.fileUrl) return [{ fileUrl: txt(item.fileUrl), fileName: txt(item.fileName) || "attachment", mimeType: "", sizeBytes: 0 }];
+  return [];
 }
 
-function buildTypeOptions() {
-  typeSelect.innerHTML = INSURANCE_TYPES.map((item) => `<option value="${item.key}">${item.label}</option>`).join("");
-  typeFilter.innerHTML = `<option value="">كل الأنواع</option>${INSURANCE_TYPES.map((item) => `<option value="${item.key}">${item.label}</option>`).join("")}`;
-}
-
-function buildPartyOptions(selectedId = "") {
-  const options = insuranceParties
-    .slice()
-    .sort((a, b) => String(a.partyName || "").localeCompare(String(b.partyName || ""), "ar"))
-    .map((party) => {
-      const partyId = String(party.id || "").trim();
-      const partyType = String(party.partyType || "client").trim() === "company" ? "شركة" : "عميل";
-      const label = `${party.partyName || "-"} (${partyType})`;
-      return `<option value="${partyId}" ${selectedId === partyId ? "selected" : ""}>${label}</option>`;
-    })
-    .join("");
-  insuredPartySelect.innerHTML = `<option value="">اختر شركة/عميل</option>${options}`;
+function normalizeDoc(item) {
+  const issueDate = txt(item.issueDate || item.startDate);
+  const expiryDate = txt(item.expiryDate || item.endDate);
+  const status = txt(item.status) || (expiryDate && expiryDate < today() ? "expired" : "active");
+  return {
+    ...item,
+    issueDate,
+    expiryDate,
+    startDate: issueDate,
+    endDate: expiryDate,
+    customerName: txt(item.customerName || item.insuredName),
+    uploadedBy: txt(item.uploadedBy || item.createdByName || item.createdByUid),
+    idNumber: txt(item.idNumber),
+    folder: txt(item.folder),
+    category: txt(item.category),
+    tags: Array.isArray(item.tags) ? item.tags.map((t) => txt(t)).filter(Boolean) : [],
+    status,
+    attachments: normalizeAttachments(item)
+  };
 }
 
 function renderExtraFields(typeKey = typeSelect.value, values = {}) {
   const fields = EXTRA_FIELDS_BY_TYPE[typeKey] || EXTRA_FIELDS_BY_TYPE.other;
-  extraFieldsRoot.innerHTML = fields
-    .map((field) => {
+  const requiredCount = fields.filter((field) => field.required).length;
+  extraFieldsRoot.innerHTML = `
+    <div class="insurance-extra-meta">النوع / Type: ${esc(byType(typeKey))} | الحقول / Fields: ${fields.length} | الإلزامي / Required: ${requiredCount}</div>
+    ${fields.map((field) => {
       const requiredMark = field.required ? " *" : "";
-      const requiredAttr = field.required ? "required" : "";
-      const isSelect = field.type === "select";
-      if (isSelect) {
-        const options = (field.options || [])
-          .map((opt) => `<option value="${opt}" ${String(values?.[field.key] || "") === String(opt) ? "selected" : ""}>${opt}</option>`)
+      const requiredAttr = field.required ? " required" : "";
+      const placeholderAttr = field.placeholder ? ` placeholder="${esc(field.placeholder)}"` : "";
+      const labelText = biLabel(field.label);
+      if (field.type === "select") {
+        const optionsHtml = (field.options || [])
+          .map((option) => {
+            const selected = txt(values[field.key]) === txt(option) ? " selected" : "";
+            return `<option value="${esc(option)}"${selected}>${esc(option)}</option>`;
+          })
           .join("");
         return `
-          <label>${field.label}${requiredMark}
-            <select class="select insurance-extra-input" data-extra-key="${field.key}" data-extra-label="${field.label}" data-required="${field.required ? "1" : "0"}">
-              <option value="">اختر</option>
-              ${options}
+          <label>${labelText}${requiredMark}
+            <select class="select insurance-extra-input" data-extra-key="${field.key}" data-extra-label="${labelText}" data-required="${field.required ? "1" : "0"}"${requiredAttr}>
+              <option value="">اختر / Select</option>
+              ${optionsHtml}
             </select>
-          </label>
-        `;
+          </label>`;
+      }
+      if (field.type === "textarea") {
+        const rowsAttr = Number(field.rows || 2);
+        return `
+        <label>${labelText}${requiredMark}
+          <textarea class="input insurance-extra-input" data-extra-key="${field.key}" data-extra-label="${labelText}" data-required="${field.required ? "1" : "0"}" rows="${rowsAttr}"${requiredAttr}${placeholderAttr}>${esc(values[field.key])}</textarea>
+        </label>`;
       }
       const inputType = field.type === "number" ? "number" : field.type === "date" ? "date" : "text";
-      const step = inputType === "number" ? " step=\"0.01\" min=\"0\"" : "";
+      const minAttr = typeof field.min === "number" ? ` min="${field.min}"` : (inputType === "number" ? " min=\"0\"" : "");
+      const stepAttr = typeof field.step === "number" ? ` step="${field.step}"` : (inputType === "number" ? " step=\"0.01\"" : "");
       return `
-        <label>${field.label}${requiredMark}
-          <input class="input insurance-extra-input" data-extra-key="${field.key}" data-extra-label="${field.label}" data-required="${field.required ? "1" : "0"}" type="${inputType}"${step} value="${String(values?.[field.key] || "").replaceAll("\"", "&quot;")}" ${requiredAttr} />
-        </label>
-      `;
-    })
-    .join("");
+        <label>${labelText}${requiredMark}
+          <input class="input insurance-extra-input" data-extra-key="${field.key}" data-extra-label="${labelText}" data-required="${field.required ? "1" : "0"}" type="${inputType}"${minAttr}${stepAttr}${placeholderAttr} value="${esc(values[field.key])}"${requiredAttr} />
+        </label>`;
+    }).join("")}
+  `;
 }
 
 function readExtraFieldsStrict() {
   const extraDetails = {};
   let missingLabel = "";
   extraFieldsRoot.querySelectorAll(".insurance-extra-input").forEach((input) => {
-    const key = String(input.dataset.extraKey || "").trim();
-    if (!key) return;
-    const label = String(input.dataset.extraLabel || key).trim();
-    const required = String(input.dataset.required || "0") === "1";
-    const value = String(input.value || "").trim();
-    if (required && !value && !missingLabel) {
-      missingLabel = label;
-    }
-    if (!value) return;
-    extraDetails[key] = value;
+    const key = txt(input.dataset.extraKey);
+    const label = txt(input.dataset.extraLabel || key);
+    const required = txt(input.dataset.required) === "1";
+    const value = txt(input.value);
+    if (required && !value && !missingLabel) missingLabel = label;
+    if (value) extraDetails[key] = value;
   });
   return { extraDetails, missingLabel };
+}
+
+function buildTypeOptions() {
+  typeSelect.innerHTML = INSURANCE_TYPES.map(([k, l]) => `<option value="${k}">${l}</option>`).join("");
+  typeFilter.innerHTML = `<option value="">كل الأنواع / All Types</option>${INSURANCE_TYPES.map(([k, l]) => `<option value="${k}">${l}</option>`).join("")}`;
+}
+
+function buildPartyOptions(selectedId = "") {
+  const opts = insuranceParties
+    .slice()
+    .sort((a, b) => txt(a.partyName).localeCompare(txt(b.partyName)))
+    .map((party) => `<option value="${esc(party.id)}" ${txt(party.id) === selectedId ? "selected" : ""}>${esc(party.partyName)}</option>`)
+    .join("");
+  insuredPartySelect.innerHTML = `<option value="">اختر / Select</option>${opts}`;
+}
+
+function applyModeLayout() {
+  document.body.classList.toggle("insurance-mode-entry", isEntryMode);
+  document.body.classList.toggle("insurance-mode-library", isLibraryMode);
+  const titleEl = document.querySelector(".page-title");
+  const subtitleEl = document.querySelector(".page-header .text-muted");
+  if (titleEl) {
+    titleEl.textContent = isEntryMode
+      ? "إدخال وثائق التأمين / Insurance Document Entry"
+      : "مكتبة وثائق التأمين / Insurance Documents Library";
+  }
+  if (subtitleEl) {
+    subtitleEl.textContent = isEntryMode
+      ? "شاشة إدخال وعملية تحديث منفصلة بالكامل مع حقول ديناميكية حسب نوع التأمين."
+      : "شاشة أرشفة وبحث وتحليل الوثائق مع إجراءات العرض والطباعة والتصدير.";
+  }
+  const headerActions = document.querySelector(".insurance-header-actions");
+  if (headerActions && !headerActions.querySelector("[data-mode-nav]")) {
+    const nav = document.createElement("div");
+    nav.className = "insurance-mode-nav";
+    nav.innerHTML = `
+      <a class="btn ${isLibraryMode ? "btn-primary" : "btn-outline"}" data-mode-nav href="insurance-docs.html">مكتبة الوثائق / Library</a>
+      <a class="btn ${isEntryMode ? "btn-primary" : "btn-outline"}" data-mode-nav href="insurance-docs-entry.html">إدخال الوثائق / Entry</a>
+    `;
+    headerActions.prepend(nav);
+  }
+
+  if (isLibraryMode) {
+    if (formSection) formSection.classList.add("hidden");
+    if (summarySection) summarySection.classList.remove("hidden");
+    if (listSection) listSection.classList.remove("hidden");
+    if (saveBtn) saveBtn.classList.add("hidden");
+    if (newBtn) newBtn.classList.add("hidden");
+  }
+
+  if (isEntryMode) {
+    if (formSection) formSection.classList.remove("hidden");
+    if (summarySection) summarySection.classList.add("hidden");
+    if (listSection) listSection.classList.add("hidden");
+    if (exportExcelBtn) exportExcelBtn.classList.add("hidden");
+    if (exportPdfBtn) exportPdfBtn.classList.add("hidden");
+    if (printListBtn) printListBtn.classList.add("hidden");
+  }
+}
+
+function addEnhancements() {
+  const formCard = document.querySelector(".insurance-form-card");
+  const inlineActions = document.querySelector(".insurance-inline-actions");
+  const listHead = document.querySelector(".insurance-list-head");
+  if (!formCard || !inlineActions || !listHead) return;
+
+  const fields = document.createElement("div");
+  fields.className = "insurance-grid insurance-grid-4 insurance-pro-grid";
+  fields.innerHTML = `
+    <label>اسم الزبون / Customer Name<input class="input" id="insurance-customer-name" /></label>
+    <label>رقم الهوية / ID Number<input class="input" id="insurance-id-number" /></label>
+    <label>تاريخ الإصدار / Issue Date<input class="input" id="insurance-issue-date" type="date" /></label>
+    <label>تاريخ الانتهاء / Expiry Date<input class="input" id="insurance-expiry-date" type="date" /></label>
+    <label>من رفع الوثيقة / Uploaded By<input class="input" id="insurance-uploaded-by" readonly /></label>
+    <label>الحالة / Status<select class="select" id="insurance-status"><option value="active">فعال / Active</option><option value="expired">منتهي / Expired</option></select></label>
+    <label>المجلد / Folder<input class="input" id="insurance-folder" placeholder="مثال / e.g. 2026/Q1" /></label>
+    <label>التصنيف / الوسوم - Category / Tags<input class="input" id="insurance-category" placeholder="تصنيف / Category" /><input class="input" id="insurance-tags" placeholder="وسم1, وسم2 / tag1, tag2" style="margin-top:6px" /></label>
+  `;
+  formCard.insertBefore(fields, inlineActions);
+
+  const filters = document.createElement("div");
+  filters.className = "insurance-advanced-filters";
+  filters.innerHTML = `
+    <label>الزبون / Customer<input class="input" id="insurance-filter-customer" /></label>
+    <label>رقم الوثيقة / Policy No<input class="input" id="insurance-filter-policy" /></label>
+    <label>من تاريخ / Date From<input class="input" id="insurance-filter-date-from" type="date" /></label>
+    <label>إلى تاريخ / Date To<input class="input" id="insurance-filter-date-to" type="date" /></label>
+    <label>المجلد / Folder<input class="input" id="insurance-filter-folder" /></label>
+    <label>التصنيف / Category<input class="input" id="insurance-filter-category" /></label>
+  `;
+  listHead.after(filters);
+
+  const fileLabel = fileInput.closest("label");
+  const uploadBox = document.createElement("div");
+  uploadBox.className = "insurance-upload-extras";
+  uploadBox.innerHTML = `
+    <div class="insurance-dropzone" id="insurance-dropzone" tabindex="0">اسحب الملفات هنا أو اضغط للاختيار / Drag & drop files here or click</div>
+    <div class="insurance-file-lists">
+      <div><small class="text-muted">ملفات جديدة / New files</small><ul id="insurance-staged-files" class="insurance-file-list"></ul></div>
+      <div><small class="text-muted">ملفات محفوظة / Saved files</small><ul id="insurance-existing-files" class="insurance-file-list"></ul></div>
+    </div>`;
+  fileLabel.after(uploadBox);
+  fileInput.multiple = true;
+
+  pro.customerNameInput = document.getElementById("insurance-customer-name");
+  pro.idNumberInput = document.getElementById("insurance-id-number");
+  pro.issueDateInput = document.getElementById("insurance-issue-date");
+  pro.expiryDateInput = document.getElementById("insurance-expiry-date");
+  pro.uploadedByInput = document.getElementById("insurance-uploaded-by");
+  pro.statusSelect = document.getElementById("insurance-status");
+  pro.folderInput = document.getElementById("insurance-folder");
+  pro.categoryInput = document.getElementById("insurance-category");
+  pro.tagsInput = document.getElementById("insurance-tags");
+  pro.filterCustomerInput = document.getElementById("insurance-filter-customer");
+  pro.filterPolicyInput = document.getElementById("insurance-filter-policy");
+  pro.filterDateFromInput = document.getElementById("insurance-filter-date-from");
+  pro.filterDateToInput = document.getElementById("insurance-filter-date-to");
+  pro.filterFolderInput = document.getElementById("insurance-filter-folder");
+  pro.filterCategoryInput = document.getElementById("insurance-filter-category");
+  pro.stagedList = document.getElementById("insurance-staged-files");
+  pro.existingList = document.getElementById("insurance-existing-files");
+  pro.dropzone = document.getElementById("insurance-dropzone");
+
+  pro.uploadedByInput.value = txt(user?.name || user?.email || user?.uid || "system");
+  [pro.filterCustomerInput, pro.filterPolicyInput, pro.filterDateFromInput, pro.filterDateToInput, pro.filterFolderInput, pro.filterCategoryInput]
+    .forEach((el) => el.addEventListener("input", renderTable));
+
+  const addFiles = (list) => {
+    const current = new Set(stagedFiles.map((f) => `${f.name}:${f.size}:${f.lastModified}`));
+    Array.from(list || []).forEach((file) => {
+      const key = `${file.name}:${file.size}:${file.lastModified}`;
+      if (current.has(key)) return;
+      current.add(key);
+      stagedFiles.push(file);
+    });
+    fileInput.value = "";
+    renderStagedFiles();
+  };
+  fileInput.addEventListener("change", () => addFiles(fileInput.files));
+  pro.dropzone.addEventListener("click", () => fileInput.click());
+  pro.dropzone.addEventListener("dragover", (e) => { e.preventDefault(); pro.dropzone.classList.add("is-drag"); });
+  pro.dropzone.addEventListener("dragleave", (e) => { e.preventDefault(); pro.dropzone.classList.remove("is-drag"); });
+  pro.dropzone.addEventListener("drop", (e) => { e.preventDefault(); pro.dropzone.classList.remove("is-drag"); addFiles(e.dataTransfer?.files); });
+
+  insuredPartySelect.addEventListener("change", () => {
+    if (txt(pro.customerNameInput.value)) return;
+    const party = insuranceParties.find((p) => txt(p.id) === txt(insuredPartySelect.value));
+    if (party) pro.customerNameInput.value = txt(party.partyName);
+  });
+}
+
+function renderStagedFiles(doc = null) {
+  if (!pro.stagedList || !pro.existingList) return;
+  pro.stagedList.innerHTML = stagedFiles.map((f, idx) => `<li><span>${esc(f.name)}</span><button class="btn btn-ghost" data-remove="${idx}" type="button">حذف / Remove</button></li>`).join("");
+  pro.stagedList.querySelectorAll("button[data-remove]").forEach((btn) => btn.addEventListener("click", () => {
+    stagedFiles = stagedFiles.filter((_, i) => i !== Number(btn.dataset.remove));
+    renderStagedFiles(doc);
+  }));
+
+  const current = doc ? normalizeAttachments(doc) : (editingId ? normalizeAttachments(insuranceDocs.find((d) => d.id === editingId) || {}) : []);
+  pro.existingList.innerHTML = current.length ? current.map((f) => `<li><a target="_blank" rel="noopener" href="${encodeURI(f.fileUrl)}">${esc(f.fileName)}</a></li>`).join("") : "<li>لا توجد ملفات محفوظة / No saved files</li>";
 }
 
 function readFileAsDataUrl(file) {
@@ -264,434 +572,582 @@ function readFileAsDataUrl(file) {
 }
 
 async function uploadFileViaServer(file) {
-  const dataUrl = await readFileAsDataUrl(file);
   const response = await fetch("/api/public-upload", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      fileName: file.name || "insurance-file",
-      mimeType: file.type || "",
-      dataUrl
-    })
+    body: JSON.stringify({ fileName: file.name || "insurance-file", mimeType: file.type || "", dataUrl: await readFileAsDataUrl(file) })
   });
   const result = await response.json().catch(() => ({}));
-  if (!response.ok || !result?.ok || !result?.data?.url) {
-    throw new Error(result?.error || "File upload failed");
-  }
-  return {
-    fileUrl: String(result.data.url || "").trim(),
-    fileName: String(result.data.fileName || file.name || "attachment").trim()
-  };
+  if (!response.ok || !result?.ok || !result?.data?.url) throw new Error(result?.error || "File upload failed");
+  return { fileUrl: txt(result.data.url), fileName: txt(result.data.fileName || file.name), mimeType: txt(result.data.mimeType || file.type), sizeBytes: Number(file.size || 0) || 0 };
 }
 
 async function collectPayload() {
-  const policyNo = String(policyNoInput.value || "").trim();
-  const partyId = String(insuredPartySelect.value || "").trim();
-  if (!policyNo || !partyId) {
-    throw new Error("policy-party-required");
-  }
-
-  const party = insuranceParties.find((item) => String(item.id || "") === partyId);
-  if (!party) throw new Error("party-not-found");
+  const policyNo = txt(policyNoInput.value);
+  const customerName = txt(pro.customerNameInput?.value);
+  const issueDate = txt(pro.issueDateInput?.value || startDateInput.value);
+  const expiryDate = txt(pro.expiryDateInput?.value || endDateInput.value);
+  if (!policyNo || !customerName) throw new Error("policy-customer-required");
+  if (issueDate && expiryDate && expiryDate < issueDate) throw new Error("invalid-date-range");
 
   const { extraDetails, missingLabel } = readExtraFieldsStrict();
-  if (missingLabel) {
-    throw new Error(`missing-extra:${missingLabel}`);
-  }
+  if (missingLabel) throw new Error(`missing-extra:${missingLabel}`);
+
+  const base = editingId ? normalizeAttachments(insuranceDocs.find((d) => d.id === editingId) || {}) : [];
+  const uploaded = [];
+  for (const file of stagedFiles) uploaded.push(await uploadFileViaServer(file));
+  const attachments = uploaded.length ? [...base, ...uploaded] : base;
 
   const payload = {
-    insuranceType: String(typeSelect.value || "other"),
+    insuranceType: txt(typeSelect.value || "other"),
     policyNo,
-    insuredPartyId: partyId,
-    insuredName: String(party.partyName || "").trim(),
-    insuredEntityType: String(party.partyType || "client").trim(),
-    insuredAmount: safeNumber(amountInput.value),
-    startDate: String(startDateInput.value || "").trim(),
-    endDate: String(endDateInput.value || "").trim(),
-    premium: safeNumber(premiumInput.value),
-    riskRate: safeNumber(riskRateInput.value),
-    commission: safeNumber(commissionInput.value),
-    stampFee: safeNumber(stampFeeInput.value),
-    notes: String(notesInput.value || "").trim(),
+    customerName,
+    idNumber: txt(pro.idNumberInput?.value),
+    issueDate, expiryDate, startDate: issueDate, endDate: expiryDate,
+    uploadedBy: txt(pro.uploadedByInput?.value || user?.name || user?.email || user?.uid),
+    status: txt(pro.statusSelect?.value || (expiryDate < today() ? "expired" : "active")),
+    folder: txt(pro.folderInput?.value),
+    category: txt(pro.categoryInput?.value),
+    tags: txt(pro.tagsInput?.value).split(",").map((t) => txt(t)).filter(Boolean),
+    insuredPartyId: txt(insuredPartySelect.value),
+    insuredName: customerName,
+    insuredAmount: Math.max(0, Number(amountInput.value) || 0),
+    premium: Math.max(0, Number(premiumInput.value) || 0),
+    riskRate: Math.max(0, Number(riskRateInput.value) || 0),
+    commission: Math.max(0, Number(commissionInput.value) || 0),
+    stampFee: Math.max(0, Number(stampFeeInput.value) || 0),
+    notes: txt(notesInput.value),
     extraDetails,
-    createdByUid: String(user?.uid || "").trim(),
-    createdByName: String(user?.name || user?.email || user?.uid || "").trim()
+    attachments,
+    createdByUid: txt(user?.uid),
+    createdByName: txt(user?.name || user?.email || user?.uid)
   };
-
-  if (payload.startDate && payload.endDate && payload.endDate < payload.startDate) {
-    throw new Error("invalid-date-range");
-  }
-
-  const file = fileInput.files?.[0] || null;
-  if (file) {
-    const uploaded = await uploadFileViaServer(file);
-    payload.fileUrl = uploaded.fileUrl;
-    payload.fileName = uploaded.fileName;
-  } else if (editingId) {
-    const current = insuranceDocs.find((item) => item.id === editingId) || {};
-    payload.fileUrl = String(current.fileUrl || "").trim();
-    payload.fileName = String(current.fileName || "").trim();
-  } else {
-    payload.fileUrl = "";
-    payload.fileName = "";
-  }
-
+  payload.fileUrl = attachments[0]?.fileUrl || "";
+  payload.fileName = attachments[0]?.fileName || "";
   return payload;
 }
 
 function resetForm() {
   editingId = "";
+  stagedFiles = [];
   typeSelect.value = "motor";
   policyNoInput.value = "";
   insuredPartySelect.value = "";
   amountInput.value = "";
-  startDateInput.value = todayKey();
-  endDateInput.value = todayKey();
+  startDateInput.value = today();
+  endDateInput.value = today();
   premiumInput.value = "";
   riskRateInput.value = "";
   commissionInput.value = "";
   stampFeeInput.value = "";
   notesInput.value = "";
   fileInput.value = "";
+  pro.customerNameInput.value = "";
+  pro.idNumberInput.value = "";
+  pro.issueDateInput.value = today();
+  pro.expiryDateInput.value = today();
+  pro.uploadedByInput.value = txt(user?.name || user?.email || user?.uid || "system");
+  pro.statusSelect.value = "active";
+  pro.folderInput.value = "";
+  pro.categoryInput.value = "";
+  pro.tagsInput.value = "";
+  saveBtn.textContent = "حفظ الوثيقة / Save Document";
   renderExtraFields("motor");
-  saveBtn.textContent = "حفظ الوثيقة";
+  renderStagedFiles();
 }
 
 function fillFormFromDoc(item) {
   editingId = item.id;
+  stagedFiles = [];
   typeSelect.value = item.insuranceType || "other";
   policyNoInput.value = item.policyNo || "";
-  const partyId = String(item.insuredPartyId || "").trim();
-  if (partyId && insuranceParties.some((p) => String(p.id) === partyId)) {
-    insuredPartySelect.value = partyId;
-  } else {
-    const match = insuranceParties.find((p) => String(p.partyName || "").trim() === String(item.insuredName || "").trim());
-    insuredPartySelect.value = match?.id || "";
-  }
+  insuredPartySelect.value = txt(item.insuredPartyId);
   amountInput.value = String(item.insuredAmount ?? "");
-  startDateInput.value = item.startDate || "";
-  endDateInput.value = item.endDate || "";
+  startDateInput.value = item.issueDate || "";
+  endDateInput.value = item.expiryDate || "";
   premiumInput.value = String(item.premium ?? "");
   riskRateInput.value = String(item.riskRate ?? "");
   commissionInput.value = String(item.commission ?? "");
   stampFeeInput.value = String(item.stampFee ?? "");
   notesInput.value = item.notes || "";
   fileInput.value = "";
+  pro.customerNameInput.value = item.customerName || "";
+  pro.idNumberInput.value = item.idNumber || "";
+  pro.issueDateInput.value = item.issueDate || "";
+  pro.expiryDateInput.value = item.expiryDate || "";
+  pro.uploadedByInput.value = item.uploadedBy || txt(user?.name || user?.email || user?.uid || "system");
+  pro.statusSelect.value = item.status || "active";
+  pro.folderInput.value = item.folder || "";
+  pro.categoryInput.value = item.category || "";
+  pro.tagsInput.value = (item.tags || []).join(", ");
+  saveBtn.textContent = "تحديث الوثيقة / Update Document";
   renderExtraFields(typeSelect.value, item.extraDetails || {});
-  saveBtn.textContent = "تحديث الوثيقة";
+  renderStagedFiles(item);
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-function rowPeriod(item) {
-  const from = item.startDate || "-";
-  const to = item.endDate || "-";
-  return `${from} إلى ${to}`;
-}
-
 function rowSearchText(item) {
-  const extras = Object.entries(item.extraDetails || {})
-    .map(([k, v]) => `${k} ${v}`)
-    .join(" ");
-  return [
-    typeLabel(item.insuranceType),
-    item.policyNo,
-    item.insuredName,
-    item.insuredAmount,
-    item.premium,
-    item.riskRate,
-    item.commission,
-    item.stampFee,
-    item.startDate,
-    item.endDate,
-    item.notes,
-    item.fileName,
-    extras
-  ]
-    .map((value) => String(value || "").toLowerCase())
-    .join(" ");
+  const extras = Object.entries(item.extraDetails || {}).map(([k, v]) => `${k} ${v}`).join(" ");
+  return [item.policyNo, item.customerName, item.idNumber, item.insuranceType, item.issueDate, item.expiryDate, item.uploadedBy, item.status, item.folder, item.category, (item.tags || []).join(" "), item.notes, extras].map((v) => txt(v).toLowerCase()).join(" ");
 }
 
-function formatMoney(value) {
-  return numberFmt.format(safeNumber(value));
-}
-
-function daysUntil(dateStr) {
-  if (!dateStr) return Number.POSITIVE_INFINITY;
-  const end = new Date(dateStr);
-  if (Number.isNaN(end.getTime())) return Number.POSITIVE_INFINITY;
-  const now = new Date();
-  const ms = end.getTime() - now.getTime();
-  return Math.ceil(ms / (1000 * 60 * 60 * 24));
-}
-
-function exportRows(items) {
-  return items.map((item) => {
-    const extraText = Object.entries(item.extraDetails || {})
-      .map(([k, v]) => `${k}: ${v}`)
-      .join(" | ");
-    return {
-      "Insurance Type": typeLabel(item.insuranceType),
-      "نوع التأمين": typeLabel(item.insuranceType),
-      "Policy No": item.policyNo || "-",
-      "رقم الوثيقة": item.policyNo || "-",
-      "Insured Party": item.insuredName || "-",
-      "اسم المؤمن/الشركة": item.insuredName || "-",
-      "Insured Amount": safeNumber(item.insuredAmount),
-      "مبلغ التأمين": safeNumber(item.insuredAmount),
-      "Premium": safeNumber(item.premium),
-      "قسط التأمين": safeNumber(item.premium),
-      "Risk Rate %": safeNumber(item.riskRate),
-      "نسبة الخطر %": safeNumber(item.riskRate),
-      "Commission": safeNumber(item.commission),
-      "العمولة": safeNumber(item.commission),
-      "Stamp Fee": safeNumber(item.stampFee),
-      "رسم الطابع": safeNumber(item.stampFee),
-      "From": item.startDate || "-",
-      "من": item.startDate || "-",
-      "To": item.endDate || "-",
-      "إلى": item.endDate || "-",
-      "Attachment": item.fileName || "-",
-      "المرفق": item.fileName || "-",
-      "Notes": item.notes || "-",
-      "ملاحظات": item.notes || "-",
-      "Details": extraText || "-",
-      "تفاصيل إضافية": extraText || "-"
-    };
+function getFilteredDocs() {
+  const q = txt(searchInput.value).toLowerCase();
+  const type = txt(typeFilter.value);
+  const customer = txt(pro.filterCustomerInput?.value).toLowerCase();
+  const policy = txt(pro.filterPolicyInput?.value).toLowerCase();
+  const from = txt(pro.filterDateFromInput?.value);
+  const to = txt(pro.filterDateToInput?.value);
+  const folder = txt(pro.filterFolderInput?.value).toLowerCase();
+  const category = txt(pro.filterCategoryInput?.value).toLowerCase();
+  return insuranceDocs.filter((item) => {
+    if (type && item.insuranceType !== type) return false;
+    if (customer && !txt(item.customerName).toLowerCase().includes(customer)) return false;
+    if (policy && !txt(item.policyNo).toLowerCase().includes(policy)) return false;
+    if (folder && !txt(item.folder).toLowerCase().includes(folder)) return false;
+    if (category && !txt(item.category).toLowerCase().includes(category)) return false;
+    if (from && item.issueDate && item.issueDate < from) return false;
+    if (to && item.issueDate && item.issueDate > to) return false;
+    if (q && !rowSearchText(item).includes(q)) return false;
+    return true;
   });
 }
 
 function reportMetrics(items) {
   const count = items.length;
-  const amountTotal = items.reduce((sum, item) => sum + safeNumber(item.insuredAmount), 0);
-  const premiumTotal = items.reduce((sum, item) => sum + safeNumber(item.premium), 0);
-  const commissionTotal = items.reduce((sum, item) => sum + safeNumber(item.commission), 0);
-  const stampTotal = items.reduce((sum, item) => sum + safeNumber(item.stampFee), 0);
-  const riskAvg = count ? items.reduce((sum, item) => sum + safeNumber(item.riskRate), 0) / count : 0;
-  const expiringSoon = items.filter((item) => {
-    const d = daysUntil(item.endDate);
-    return d >= 0 && d <= 30;
-  }).length;
+  const amountTotal = items.reduce((s, i) => s + (Number(i.insuredAmount) || 0), 0);
+  const premiumTotal = items.reduce((s, i) => s + (Number(i.premium) || 0), 0);
+  const commissionTotal = items.reduce((s, i) => s + (Number(i.commission) || 0), 0);
+  const stampTotal = items.reduce((s, i) => s + (Number(i.stampFee) || 0), 0);
+  const riskAvg = count ? items.reduce((s, i) => s + (Number(i.riskRate) || 0), 0) / count : 0;
+  const expiringSoon = items.filter((i) => i.expiryDate && i.expiryDate >= today() && i.expiryDate <= new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10)).length;
   return { count, amountTotal, premiumTotal, commissionTotal, stampTotal, riskAvg, expiringSoon };
 }
 
-function exportToExcel(items) {
-  if (!window.XLSX) {
-    showToast("error", "Excel library not available");
+function toAuditMeta(item = {}) {
+  return {
+    policyNo: txt(item.policyNo),
+    customerName: txt(item.customerName),
+    issueDate: txt(item.issueDate),
+    expiryDate: txt(item.expiryDate),
+    status: txt(item.status),
+    folder: txt(item.folder),
+    category: txt(item.category)
+  };
+}
+
+function logInsuranceAudit(action, item = {}, status = "success", message = "") {
+  return logSecurityEvent({
+    actorUid: txt(user?.uid),
+    actorEmail: txt(user?.email),
+    actorRole: txt(role),
+    action,
+    severity: status === "failed" ? "high" : "info",
+    status,
+    entity: "insurance_documents",
+    entityId: txt(item.id),
+    message,
+    metadata: toAuditMeta(item)
+  });
+}
+
+async function notifyExpiry(item, daysLeft) {
+  const uid = txt(user?.uid);
+  if (!uid) return;
+  const dayKey = today();
+  const localKey = `insurance-expiry-alert:${txt(item.id)}:${dayKey}`;
+  try {
+    if (localStorage.getItem(localKey)) return;
+  } catch (_) {
+    // no-op
+  }
+
+  const isExpired = daysLeft < 0;
+  const title = isExpired ? "Policy expired" : "Policy expiring soon";
+  const body = isExpired
+    ? `Policy ${txt(item.policyNo)} for ${txt(item.customerName)} expired on ${txt(item.expiryDate)}.`
+    : `Policy ${txt(item.policyNo)} for ${txt(item.customerName)} expires in ${daysLeft} day(s) on ${txt(item.expiryDate)}.`;
+
+  try {
+    await createNotification({
+      toUid: uid,
+      title,
+      body,
+      type: "insurance",
+      priority: isExpired ? "high" : "medium",
+      actionHref: "insurance-docs.html"
+    });
+    try {
+      localStorage.setItem(localKey, "1");
+    } catch (_) {
+      // no-op
+    }
+  } catch (_) {
+    // skip notification failures; UI toast still informs user
+  }
+}
+
+async function pushExpiryAlerts(items) {
+  const nowKey = today();
+  const urgent = items.filter((item) => item.expiryDate && item.expiryDate >= nowKey && item.expiryDate <= new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10));
+  const expired = items.filter((item) => item.expiryDate && item.expiryDate < nowKey);
+
+  if (urgent.length) {
+    showToast("info", `تنبيه: ${urgent.length} وثيقة تنتهي خلال 30 يوم`);
+  }
+  if (expired.length) {
+    showToast("error", `تنبيه: ${expired.length} وثيقة منتهية بالفعل`);
+  }
+
+  const candidates = [...expired, ...urgent].slice(0, 25);
+  for (const item of candidates) {
+    if (!item.expiryDate) continue;
+    const diffMs = new Date(item.expiryDate).getTime() - Date.now();
+    const daysLeft = Math.ceil(diffMs / 86400000);
+    await notifyExpiry(item, daysLeft);
+  }
+}
+
+function detectPdfImageFormat(dataUrl = "") {
+  const value = txt(dataUrl).toLowerCase();
+  if (value.startsWith("data:image/png")) return "PNG";
+  if (value.startsWith("data:image/webp")) return "WEBP";
+  return "JPEG";
+}
+
+function readBlobAsDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("Failed to read logo"));
+    reader.readAsDataURL(blob);
+  });
+}
+
+function arrayBufferToBase64(buffer) {
+  let binary = "";
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(i, i + chunkSize);
+    binary += String.fromCharCode(...chunk);
+  }
+  return btoa(binary);
+}
+
+function safePdfText(doc, value) {
+  const text = txt(value);
+  if (!text) return "";
+  if (typeof doc.processArabic === "function") {
+    return doc.processArabic(text);
+  }
+  return text;
+}
+
+async function ensureArabicPdfFont(doc) {
+  if (!pdfArabicFontReadyPromise) {
+    pdfArabicFontReadyPromise = (async () => {
+      try {
+        const response = await fetch(PDF_ARABIC_FONT_URL, { cache: "force-cache" });
+        if (!response.ok) return false;
+        const buffer = await response.arrayBuffer();
+        const base64 = arrayBufferToBase64(buffer);
+        doc.addFileToVFS(PDF_ARABIC_FONT_FILE, base64);
+        doc.addFont(PDF_ARABIC_FONT_FILE, PDF_ARABIC_FONT_NAME, "normal");
+        return true;
+      } catch (_) {
+        return false;
+      }
+    })();
+  }
+
+  const ok = await pdfArabicFontReadyPromise;
+  if (ok) {
+    try {
+      doc.setFont(PDF_ARABIC_FONT_NAME, "normal");
+    } catch (_) {
+      return false;
+    }
+  }
+  return ok;
+}
+
+async function getCompanyLogoDataUrl() {
+  if (!companyLogoDataUrlPromise) {
+    companyLogoDataUrlPromise = (async () => {
+      try {
+        const response = await fetch(COMPANY_LOGO_PATH, { cache: "force-cache" });
+        if (!response.ok) return "";
+        const blob = await response.blob();
+        return await readBlobAsDataUrl(blob);
+      } catch (_) {
+        return "";
+      }
+    })();
+  }
+  return companyLogoDataUrlPromise;
+}
+
+async function drawCompanyPdfHeader(doc, options = {}) {
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const logoDataUrl = await getCompanyLogoDataUrl();
+  const titleAr = txt(options.titleAr || "تقرير التأمين");
+  const titleEn = txt(options.titleEn || "Insurance Report");
+  const generatedAt = txt(options.generatedAt || new Date().toLocaleString());
+
+  doc.setDrawColor(15, 118, 110);
+  doc.setTextColor(15, 23, 42);
+  const arabicFontReady = await ensureArabicPdfFont(doc);
+
+  if (logoDataUrl) {
+    const format = detectPdfImageFormat(logoDataUrl);
+    doc.addImage(logoDataUrl, format, 14, 10, 18, 18);
+  }
+
+  doc.setFont(arabicFontReady ? PDF_ARABIC_FONT_NAME : "helvetica", "normal");
+  doc.setFontSize(13);
+  doc.text(safePdfText(doc, `${COMPANY_NAME_AR} / ${COMPANY_NAME_EN}`), 36, 16);
+  doc.setFontSize(11);
+  doc.text(safePdfText(doc, `${titleAr} / ${titleEn}`), 36, 22);
+  doc.setFontSize(9);
+  doc.text(`Generated: ${generatedAt}`, 36, 27);
+
+  const rightX = pageWidth - 14;
+  doc.setFontSize(9);
+  doc.text("Insurance Module", rightX, 16, { align: "right" });
+  doc.text(`Date: ${today()}`, rightX, 21, { align: "right" });
+
+  doc.setLineWidth(0.6);
+  doc.line(14, 31, pageWidth - 14, 31);
+
+  return 35;
+}
+
+async function generatePolicyPdf(item) {
+  const JsPdf = window.jspdf?.jsPDF;
+  if (!JsPdf) {
+    showToast("error", "مكتبة PDF غير متاحة / PDF library not available");
     return;
   }
-  const rows = exportRows(items);
-  const wb = window.XLSX.utils.book_new();
-  const ws = window.XLSX.utils.json_to_sheet(rows);
-  window.XLSX.utils.book_append_sheet(wb, ws, "InsuranceDocs");
-  window.XLSX.writeFile(wb, `insurance-docs-${new Date().toISOString().slice(0, 10)}.xlsx`);
-}
 
-function buildReportHtml(items, title = "تقرير وثائق التأمين") {
-  const logoUrl = absoluteAssetUrl("../HRMS%20Html/assets/logo.jpg");
-  const metrics = reportMetrics(items);
-  const printedAt = new Date().toLocaleString();
-  const rows = items
-    .map((item) => {
-      const extra = Object.entries(item.extraDetails || {})
-        .map(([k, v]) => `${k}: ${v}`)
-        .join(" | ");
-      return `
-        <tr>
-          <td>${typeLabel(item.insuranceType)}</td>
-          <td>${item.policyNo || "-"}</td>
-          <td>${item.insuredName || "-"}</td>
-          <td>${formatMoney(item.insuredAmount)}</td>
-          <td>${formatMoney(item.premium)}</td>
-          <td>${formatMoney(item.riskRate)}</td>
-          <td>${formatMoney(item.commission)}</td>
-          <td>${formatMoney(item.stampFee)}</td>
-          <td>${item.startDate || "-"} - ${item.endDate || "-"}</td>
-          <td>${extra || item.notes || "-"}</td>
-        </tr>
-      `;
-    })
-    .join("");
-
-  return `
-    <html>
-      <head>
-        <title>Insurance Documents Report</title>
-        <style>
-          @page { size: A4 landscape; margin: 10mm; }
-          body { font-family: Arial, sans-serif; margin: 0; color: #0f172a; font-size: 12px; }
-          .sheet { border: 1px solid #d5dde8; border-radius: 10px; padding: 12px; }
-          .head { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0f766e; padding-bottom: 10px; margin-bottom: 10px; }
-          .brand { display: flex; align-items: center; gap: 10px; }
-          .brand img { width: 44px; height: 44px; border-radius: 8px; border: 1px solid #cbd5e1; }
-          .title-ar { font-weight: 700; direction: rtl; text-align: right; }
-          .title-en { color: #334155; }
-          .meta { display: grid; gap: 2px; font-size: 11px; }
-          .metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 10px; }
-          .box { border: 1px solid #d6dee6; border-radius: 8px; padding: 6px 8px; }
-          table { width: 100%; border-collapse: collapse; font-size: 10px; }
-          th, td { border: 1px solid #d6dee6; padding: 5px; text-align: left; vertical-align: top; }
-          th { background: #e8f2f1; }
-        </style>
-      </head>
-      <body>
-        <div class="sheet">
-          <div class="head">
-            <div class="brand">
-              <img src="${logoUrl}" alt="Company Logo" onerror="this.style.display='none'" />
-              <div>
-                <div class="title-ar">شركة وادي الرافدين - ${title}</div>
-                <div class="title-en">Wadi Al-Rafidain Company - Insurance Documents Report</div>
-              </div>
-            </div>
-            <div class="meta">
-              <div><strong>Printed:</strong> ${printedAt}</div>
-              <div><strong>Rows / عدد السجلات:</strong> ${metrics.count}</div>
-            </div>
-          </div>
-          <div class="metrics">
-            <div class="box"><strong>Total Amount</strong><div>إجمالي مبلغ التأمين: ${formatMoney(metrics.amountTotal)}</div></div>
-            <div class="box"><strong>Total Premium</strong><div>إجمالي القسط: ${formatMoney(metrics.premiumTotal)}</div></div>
-            <div class="box"><strong>Total Commission</strong><div>إجمالي العمولات: ${formatMoney(metrics.commissionTotal)}</div></div>
-            <div class="box"><strong>Avg Risk / Expiring</strong><div>${numberFmt.format(metrics.riskAvg)}% | ${metrics.expiringSoon}</div></div>
-          </div>
-          <table>
-            <thead>
-              <tr>
-                <th>Insurance Type / نوع التأمين</th>
-                <th>Policy No / رقم الوثيقة</th>
-                <th>Insured / المؤمن</th>
-                <th>Amount / مبلغ</th>
-                <th>Premium / قسط</th>
-                <th>Risk % / نسبة الخطر</th>
-                <th>Commission / عمولة</th>
-                <th>Stamp / رسم الطابع</th>
-                <th>Period / الفترة</th>
-                <th>Details / تفاصيل</th>
-              </tr>
-            </thead>
-            <tbody>${rows}</tbody>
-          </table>
-        </div>
-      </body>
-    </html>
-  `;
-}
-
-function exportReportPdf(items) {
-  const printable = window.open("", "_blank");
-  if (!printable) return;
-  printable.document.write(buildReportHtml(items, "تقرير وثائق التأمين"));
-  printable.document.close();
-  printable.focus();
-  printable.print();
-}
-
-function getFilteredDocs() {
-  const q = String(searchInput.value || "").trim().toLowerCase();
-  const type = String(typeFilter.value || "").trim();
-  return insuranceDocs.filter((item) => {
-    const matchesType = !type || item.insuranceType === type;
-    const matchesSearch = !q || rowSearchText(item).includes(q);
-    return matchesType && matchesSearch;
+  const doc = new JsPdf({ orientation: "p", unit: "mm", format: "a4" });
+  const arabicFontReady = await ensureArabicPdfFont(doc);
+  const startY = await drawCompanyPdfHeader(doc, {
+    titleAr: "وثيقة تأمين",
+    titleEn: "Insurance Policy Document",
+    generatedAt: new Date().toLocaleString()
   });
-}
 
-function printDocs(items, title = "وثائق التأمين") {
-  const printable = window.open("", "_blank");
-  if (!printable) return;
-  printable.document.write(buildReportHtml(items, title));
-  printable.document.close();
-  printable.focus();
-  printable.print();
-}
+  const rows = [
+    ["رقم الوثيقة / Policy Number", safePdfText(doc, txt(item.policyNo) || "-")],
+    ["اسم الزبون / Customer Name", safePdfText(doc, txt(item.customerName) || "-")],
+    ["رقم الهوية / ID Number", safePdfText(doc, txt(item.idNumber) || "-")],
+    ["نوع التأمين / Policy Type", safePdfText(doc, byType(item.insuranceType))],
+    ["تاريخ الإصدار / Issue Date", safePdfText(doc, txt(item.issueDate) || "-")],
+    ["تاريخ الانتهاء / Expiry Date", safePdfText(doc, txt(item.expiryDate) || "-")],
+    ["من رفع الوثيقة / Uploaded By", safePdfText(doc, txt(item.uploadedBy) || "-")],
+    ["الحالة / Status", safePdfText(doc, txt(item.status) || "-")],
+    ["المجلد / Folder", safePdfText(doc, txt(item.folder) || "-")],
+    ["التصنيف / Category", safePdfText(doc, txt(item.category) || "-")],
+    ["الوسوم / Tags", safePdfText(doc, (item.tags || []).join(", ") || "-")],
+    ["مبلغ التأمين / Insured Amount", money(item.insuredAmount)],
+    ["القسط / Premium", money(item.premium)],
+    ["العمولة / Commission", money(item.commission)],
+    ["رسم الطابع / Stamp Fee", money(item.stampFee)],
+    ["ملاحظات / Notes", safePdfText(doc, txt(item.notes) || "-")]
+  ];
 
-function bindRowActions() {
-  tbody.querySelectorAll("button[data-action]").forEach((button) => {
-    button.addEventListener("click", async () => {
-      const id = String(button.dataset.id || "").trim();
-      const action = String(button.dataset.action || "").trim();
-      const item = insuranceDocs.find((doc) => doc.id === id);
-      if (!item) return;
-      if (action === "edit" && canManage) {
-        fillFormFromDoc(item);
-      }
-      if (action === "print") {
-        printDocs([item], `وثيقة تأمين رقم ${item.policyNo || ""}`);
-      }
-      if (action === "delete" && canDelete) {
-        if (!window.confirm("هل تريد حذف هذه الوثيقة؟")) return;
-        try {
-          await deleteInsuranceDoc(item.id);
-          showToast("success", "تم حذف الوثيقة");
-          await loadInsuranceDocs();
-        } catch (error) {
-          console.error("Delete insurance doc failed:", error);
-          showToast("error", "فشل حذف الوثيقة");
-        }
-      }
+  if (typeof doc.autoTable === "function") {
+    doc.autoTable({
+      startY,
+      head: [[safePdfText(doc, "الحقل / Field"), safePdfText(doc, "القيمة / Value")]],
+      body: rows,
+      styles: { fontSize: 9, cellPadding: 2, font: arabicFontReady ? PDF_ARABIC_FONT_NAME : "helvetica" },
+      headStyles: { fillColor: [15, 118, 110] }
     });
+  } else {
+    rows.forEach((row, idx) => {
+      doc.text(`${row[0]}: ${row[1]}`, 14, startY + 5 + idx * 6);
+    });
+  }
+
+  const filename = `policy-${txt(item.policyNo || item.id || "document")}.pdf`.replace(/[^a-zA-Z0-9._-]/g, "_");
+  doc.save(filename);
+}
+
+async function generatePoliciesReportPdf(items) {
+  const JsPdf = window.jspdf?.jsPDF;
+  if (!JsPdf) {
+    showToast("error", "مكتبة PDF غير متاحة / PDF library not available");
+    return;
+  }
+  const doc = new JsPdf({ orientation: "l", unit: "mm", format: "a4" });
+  const arabicFontReady = await ensureArabicPdfFont(doc);
+  const startY = await drawCompanyPdfHeader(doc, {
+    titleAr: "تقرير وثائق التأمين",
+    titleEn: "Insurance Policies Report",
+    generatedAt: new Date().toLocaleString()
   });
+
+  const body = items.map((item) => [
+    safePdfText(doc, txt(item.policyNo) || "-"),
+    safePdfText(doc, txt(item.customerName) || "-"),
+    safePdfText(doc, txt(item.idNumber) || "-"),
+    safePdfText(doc, byType(item.insuranceType)),
+    safePdfText(doc, txt(item.issueDate) || "-"),
+    safePdfText(doc, txt(item.expiryDate) || "-"),
+    safePdfText(doc, txt(item.status) || "-"),
+    money(item.insuredAmount),
+    money(item.premium)
+  ]);
+
+  if (typeof doc.autoTable === "function") {
+    doc.autoTable({
+      startY,
+      head: [[
+        safePdfText(doc, "رقم الوثيقة / Policy"),
+        safePdfText(doc, "الزبون / Customer"),
+        safePdfText(doc, "الهوية / ID"),
+        safePdfText(doc, "النوع / Type"),
+        safePdfText(doc, "الإصدار / Issue"),
+        safePdfText(doc, "الانتهاء / Expiry"),
+        safePdfText(doc, "الحالة / Status"),
+        safePdfText(doc, "المبلغ / Amount"),
+        safePdfText(doc, "القسط / Premium")
+      ]],
+      body,
+      styles: { fontSize: 8, cellPadding: 2, font: arabicFontReady ? PDF_ARABIC_FONT_NAME : "helvetica" },
+      headStyles: { fillColor: [15, 118, 110] }
+    });
+  }
+  const filename = `insurance-report-${today()}.pdf`;
+  doc.save(filename);
+}
+
+function showViewer(item) {
+  const attachments = normalizeAttachments(item);
+  if (!attachments.length) return showToast("error", "لا توجد ملفات مرفقة / No files attached");
+  const content = document.createElement("div");
+  content.className = "insurance-viewer-modal";
+  content.innerHTML = `
+    <div class="insurance-viewer-toolbar">
+      <select id="viewer-file" class="select">${attachments.map((f, i) => `<option value="${i}">${esc(f.fileName)}</option>`).join("")}</select>
+      <label class="viewer-zoom-label">Zoom <input id="viewer-zoom" type="range" min="0.5" max="2" step="0.1" value="1"></label>
+      <a id="viewer-download" class="btn btn-outline" target="_blank" rel="noopener">Download</a>
+    </div>
+    <div id="viewer-stage" class="insurance-viewer-stage"></div>`;
+  openModal({ title: `Policy ${txt(item.policyNo)}`, content, actions: [{ label: "Close", className: "btn btn-ghost" }] });
+
+  const sel = content.querySelector("#viewer-file");
+  const zoom = content.querySelector("#viewer-zoom");
+  const stage = content.querySelector("#viewer-stage");
+  const dl = content.querySelector("#viewer-download");
+  const render = () => {
+    const file = attachments[Number(sel.value) || 0] || attachments[0];
+    const scale = Number(zoom.value || 1);
+    const lower = txt(file.fileName).toLowerCase();
+    const isPdf = lower.endsWith(".pdf") || txt(file.mimeType).includes("pdf");
+    const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(lower) || txt(file.mimeType).startsWith("image/");
+    dl.href = file.fileUrl;
+    if (isPdf) stage.innerHTML = `<div class="viewer-frame-wrap" style="transform:scale(${scale});transform-origin:top left;width:${100 / scale}%"><iframe class="viewer-frame" src="${file.fileUrl}#toolbar=1"></iframe></div>`;
+    else if (isImage) stage.innerHTML = `<img class="viewer-image" src="${file.fileUrl}" style="transform:scale(${scale});transform-origin:top left" />`;
+    else stage.innerHTML = `<div class="viewer-fallback"><p>Preview unavailable.</p><a class="btn btn-primary" target="_blank" rel="noopener" href="${file.fileUrl}">Open File</a></div>`;
+  };
+  sel.addEventListener("change", render);
+  zoom.addEventListener("input", render);
+  render();
 }
 
 function renderSummary(filtered) {
   const totals = reportMetrics(insuranceDocs);
-  const filteredMetrics = reportMetrics(filtered);
+  const f = reportMetrics(filtered);
   totalCountEl.textContent = String(totals.count);
-  totalAmountEl.textContent = formatMoney(totals.amountTotal);
-  totalPremiumEl.textContent = formatMoney(totals.premiumTotal);
+  totalAmountEl.textContent = money(totals.amountTotal);
+  totalPremiumEl.textContent = money(totals.premiumTotal);
   filteredCountEl.textContent = String(filtered.length);
-  totalCommissionEl.textContent = formatMoney(totals.commissionTotal);
-  totalStampEl.textContent = formatMoney(totals.stampTotal);
-  avgRiskEl.textContent = `${numberFmt.format(filtered.length ? filteredMetrics.riskAvg : totals.riskAvg)}%`;
-  expiringSoonEl.textContent = String(filtered.length ? filteredMetrics.expiringSoon : totals.expiringSoon);
+  totalCommissionEl.textContent = money(totals.commissionTotal);
+  totalStampEl.textContent = money(totals.stampTotal);
+  avgRiskEl.textContent = `${numFmt.format(filtered.length ? f.riskAvg : totals.riskAvg)}%`;
+  expiringSoonEl.textContent = String(filtered.length ? f.expiringSoon : totals.expiringSoon);
 }
 
 function renderTable() {
   const filtered = getFilteredDocs();
-  tbody.innerHTML = filtered
-    .map(
-      (item) => `
-        <tr>
-          <td><span class="insurance-chip">${typeLabel(item.insuranceType)}</span></td>
-          <td>${item.policyNo || "-"}</td>
-          <td>${item.insuredName || "-"}</td>
-          <td>${formatMoney(item.insuredAmount)}</td>
-          <td>${formatMoney(item.premium)}</td>
-          <td>${rowPeriod(item)}</td>
-          <td>
-            ${canManage ? `<button class="btn btn-ghost" data-action="edit" data-id="${item.id}">تعديل</button>` : ""}
-            <button class="btn btn-ghost" data-action="print" data-id="${item.id}">طباعة</button>
-            ${canDelete ? `<button class="btn btn-ghost" data-action="delete" data-id="${item.id}">حذف</button>` : ""}
-          </td>
-        </tr>
-      `
-    )
-    .join("");
+  tbody.innerHTML = filtered.map((item) => `
+    <tr>
+      <td><span class="insurance-chip">${esc(byType(item.insuranceType))}</span><small class="insurance-status ${item.status === "expired" ? "status-expired" : "status-active"}">${esc(item.status)}</small></td>
+      <td><strong>${esc(item.policyNo)}</strong><br><small>${esc(item.idNumber)}</small></td>
+      <td>${esc(item.customerName)}<br><small>${esc(item.uploadedBy)}</small></td>
+      <td>${money(item.insuredAmount)}</td>
+      <td>${money(item.premium)}</td>
+      <td>${esc(item.issueDate)} to ${esc(item.expiryDate)}<br><small>${esc(item.folder)} / ${esc(item.category)}</small></td>
+      <td>
+        <button class="btn btn-ghost" data-action="view" data-id="${item.id}">عرض / View</button>
+        ${canManage ? `<button class="btn btn-ghost" data-action="edit" data-id="${item.id}">تعديل / Edit</button>` : ""}
+        <button class="btn btn-ghost" data-action="pdf" data-id="${item.id}">PDF</button>
+        <button class="btn btn-ghost" data-action="print" data-id="${item.id}">طباعة / Print</button>
+        ${canDelete ? `<button class="btn btn-ghost" data-action="delete" data-id="${item.id}">حذف / Delete</button>` : ""}
+      </td>
+    </tr>`).join("");
   emptyState.classList.toggle("hidden", filtered.length > 0);
   renderSummary(filtered);
-  bindRowActions();
+
+  tbody.querySelectorAll("button[data-action]").forEach((button) => button.addEventListener("click", async () => {
+    const id = txt(button.dataset.id);
+    const action = txt(button.dataset.action);
+    const item = insuranceDocs.find((d) => d.id === id);
+    if (!item) return;
+    if (action === "view") {
+      showViewer(item);
+      void logInsuranceAudit("insurance_doc_viewed", item, "success", "Document opened in viewer.");
+    }
+    if (action === "edit" && canManage) {
+      if (isLibraryMode) {
+        window.location.href = `insurance-docs-entry.html?edit=${encodeURIComponent(item.id)}`;
+      } else {
+        fillFormFromDoc(item);
+      }
+    }
+    if (action === "pdf") {
+      void generatePolicyPdf(item);
+      void logInsuranceAudit("insurance_doc_pdf_generated", item, "success", "Single policy PDF generated.");
+    }
+    if (action === "print") window.print();
+    if (action === "delete" && canDelete) {
+      if (!window.confirm("حذف هذه الوثيقة؟ / Delete this policy?")) return;
+      try {
+        await deleteInsuranceDoc(item.id);
+        showToast("success", "Deleted");
+        void logInsuranceAudit("insurance_doc_deleted", item, "success", "Policy deleted.");
+        await loadInsuranceDocs();
+      }
+      catch (error) {
+        console.error(error);
+        showToast("error", "Delete failed");
+        void logInsuranceAudit("insurance_doc_deleted", item, "failed", error?.message || "Delete failed");
+      }
+    }
+  }));
 }
 
 async function loadInsuranceDocs() {
   try {
     showTableSkeleton(tbody, { rows: 6, cols: 7 });
-    insuranceDocs = await listInsuranceDocs({ limitCount: 700 });
+    insuranceDocs = (await listInsuranceDocs({ limitCount: 700 })).map(normalizeDoc);
     renderTable();
+    renderStagedFiles();
+    await pushExpiryAlerts(insuranceDocs);
   } catch (error) {
-    console.error("Load insurance docs failed:", error);
+    console.error(error);
     insuranceDocs = [];
     renderTable();
-    showToast("error", "تعذر تحميل وثائق التأمين");
+    showToast("error", "Failed to load docs");
   }
 }
 
 async function loadInsuranceParties() {
-  try {
-    insuranceParties = await listInsuranceParties({ limitCount: 1000 });
-  } catch (error) {
-    console.error("Load insurance parties failed:", error);
-    insuranceParties = [];
-  }
+  try { insuranceParties = await listInsuranceParties({ limitCount: 1000 }); }
+  catch (error) { console.error(error); insuranceParties = []; }
   buildPartyOptions();
 }
 
@@ -702,81 +1158,88 @@ async function handleSave() {
     const payload = await collectPayload();
     if (editingId) {
       await updateInsuranceDoc(editingId, payload);
-      showToast("success", "تم تحديث الوثيقة بنجاح");
-    } else {
-      await createInsuranceDoc(payload);
-      showToast("success", "تم حفظ الوثيقة بنجاح");
+      showToast("success", "Updated");
+      void logInsuranceAudit("insurance_doc_updated", { ...payload, id: editingId }, "success", "Policy updated.");
+    }
+    else {
+      const newId = await createInsuranceDoc(payload);
+      showToast("success", "Saved");
+      void logInsuranceAudit("insurance_doc_created", { ...payload, id: newId }, "success", "Policy created.");
+    }
+    if (isEntryMode) {
+      window.location.href = "insurance-docs.html?saved=1";
+      return;
     }
     resetForm();
     await loadInsuranceDocs();
   } catch (error) {
-    const message = String(error?.message || "");
-    if (message === "policy-party-required") {
-      showToast("error", "رقم الوثيقة واسم المؤمن/الشركة مطلوبان");
-    } else if (message === "party-not-found") {
-      showToast("error", "الجهة المختارة غير موجودة، اختر من القائمة");
-    } else if (error?.message === "invalid-date-range") {
-      showToast("error", "تاريخ نهاية التأمين يجب أن يكون بعد تاريخ البداية");
-    } else if (message.startsWith("missing-extra:")) {
-      showToast("error", `الحقل الإلزامي ناقص: ${message.replace("missing-extra:", "")}`);
-    } else {
-      console.error("Save insurance doc failed:", error);
-      showToast("error", error?.message || "فشل حفظ الوثيقة");
-    }
+    const message = txt(error?.message);
+    if (message === "policy-customer-required") showToast("error", "Policy number and customer name are required");
+    else if (message === "invalid-date-range") showToast("error", "Expiry date must be after issue date");
+    else if (message.startsWith("missing-extra:")) showToast("error", `Missing field: ${message.replace("missing-extra:", "")}`);
+    else { console.error(error); showToast("error", message || "Save failed"); }
+    void logInsuranceAudit(editingId ? "insurance_doc_updated" : "insurance_doc_created", { id: editingId || "" }, "failed", message || "Save failed");
   } finally {
     saveBtn.disabled = false;
   }
 }
 
-if (!canManage) {
-  saveBtn.classList.add("hidden");
-  newBtn.classList.add("hidden");
-}
-
+if (!canManage) { saveBtn.classList.add("hidden"); newBtn.classList.add("hidden"); }
+applyModeLayout();
+addEnhancements();
 buildTypeOptions();
 resetForm();
+renderExtraFields("motor");
 
-typeSelect.addEventListener("change", () => {
-  renderExtraFields(typeSelect.value);
-});
-saveBtn.addEventListener("click", () => {
-  void handleSave();
-});
+typeSelect.addEventListener("change", () => renderExtraFields(typeSelect.value));
+saveBtn.addEventListener("click", () => void handleSave());
 newBtn.addEventListener("click", resetForm);
 searchInput.addEventListener("input", renderTable);
 typeFilter.addEventListener("change", renderTable);
-printListBtn.addEventListener("click", () => {
+printListBtn.addEventListener("click", () => { if (!getFilteredDocs().length) return showToast("error", "لا توجد نتائج / No results"); window.print(); });
+exportExcelBtn.addEventListener("click", () => {
+  const rows = getFilteredDocs().map((item) => ({
+    policyNo: item.policyNo, customerName: item.customerName, idNumber: item.idNumber, policyType: byType(item.insuranceType),
+    issueDate: item.issueDate, expiryDate: item.expiryDate, uploadedBy: item.uploadedBy, status: item.status,
+    folder: item.folder, category: item.category, tags: item.tags.join(", "), notes: item.notes
+  }));
+  if (!rows.length) return showToast("error", "لا توجد نتائج / No results");
+  if (!window.XLSX) return showToast("error", "مكتبة Excel غير متاحة / Excel library not available");
+  const wb = window.XLSX.utils.book_new();
+  const ws = window.XLSX.utils.json_to_sheet(rows);
+  window.XLSX.utils.book_append_sheet(wb, ws, "InsuranceDocs");
+  window.XLSX.writeFile(wb, `insurance-docs-${today()}.xlsx`);
+});
+exportPdfBtn.addEventListener("click", () => {
   const filtered = getFilteredDocs();
-  if (!filtered.length) {
-    showToast("error", "لا توجد نتائج للطباعة");
-    return;
-  }
-  printDocs(filtered, "تقرير وثائق التأمين");
+  if (!filtered.length) return showToast("error", "لا توجد نتائج / No results");
+  void generatePoliciesReportPdf(filtered);
+  void logInsuranceAudit("insurance_docs_report_pdf_generated", { id: "list" }, "success", `Generated report PDF for ${filtered.length} policy(s).`);
 });
-exportExcelBtn?.addEventListener("click", () => {
-  const filtered = getFilteredDocs();
-  if (!filtered.length) {
-    showToast("error", "لا توجد نتائج للتصدير");
-    return;
-  }
-  exportToExcel(filtered);
-});
-exportPdfBtn?.addEventListener("click", () => {
-  const filtered = getFilteredDocs();
-  if (!filtered.length) {
-    showToast("error", "لا توجد نتائج للتصدير");
-    return;
-  }
-  void exportReportPdf(filtered);
-});
-window.addEventListener("global-search", (event) => {
-  searchInput.value = event.detail || "";
-  renderTable();
-});
+window.addEventListener("global-search", (event) => { searchInput.value = event.detail || ""; renderTable(); });
 
 trackUxEvent({ event: "page_open", module: "insurance_docs" });
-
 (async () => {
   await loadInsuranceParties();
-  await loadInsuranceDocs();
+  if (isLibraryMode) {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("saved") === "1") {
+      showToast("success", "تم حفظ الوثيقة بنجاح / Document saved successfully");
+    }
+    await loadInsuranceDocs();
+    return;
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  const editId = txt(params.get("edit"));
+  if (editId) {
+    await loadInsuranceDocs();
+    const item = insuranceDocs.find((doc) => txt(doc.id) === editId);
+    if (item) {
+      fillFormFromDoc(item);
+    } else {
+      showToast("error", "الوثيقة غير موجودة / Document not found");
+    }
+  }
 })();
+

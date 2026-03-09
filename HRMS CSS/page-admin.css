@@ -38,7 +38,7 @@
 }
 
 .page-admin-badge.locked {
-  background: rgba(59, 130, 246, 0.16);
+  background: color-mix(in srgb, var(--brand-500) 16%, transparent);
   color: #1d4ed8;
 }
 
