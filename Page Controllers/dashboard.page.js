@@ -10,6 +10,7 @@ import { listAttendance } from "../Services/attendance.service.js";
 import { listDepartments } from "../Services/departments.service.js";
 import { listPositions } from "../Services/positions.service.js";
 import { listNotifications, markNotificationRead } from "../Services/notifications.service.js";
+import { listInsuranceDocs } from "../Services/insurance-docs.service.js";
 
 if (!enforceAuth("dashboard")) {
   throw new Error("Unauthorized");
@@ -38,6 +39,10 @@ const welcomeName = document.getElementById("welcome-name");
 const welcomeDate = document.getElementById("welcome-date");
 const welcomeTotal = document.getElementById("welcome-total");
 const welcomeDepts = document.getElementById("welcome-depts");
+const insuranceKpiTotalDocs = document.getElementById("insurance-kpi-total-docs");
+const insuranceKpiActiveDocs = document.getElementById("insurance-kpi-active-docs");
+const insuranceKpiExpiringDocs = document.getElementById("insurance-kpi-expiring-docs");
+const insuranceKpiTotalAmount = document.getElementById("insurance-kpi-total-amount");
 
 let activityItems = [];
 let notificationItems = [];
@@ -167,6 +172,47 @@ function normalizeStatus(status = "") {
   return String(status).trim().toLowerCase().replaceAll("-", "_").replaceAll(" ", "_");
 }
 
+function toAmount(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function isActiveInsuranceStatus(status = "") {
+  return ["active", "valid", "running", "in_force"].includes(normalizeStatus(status));
+}
+
+function normalizeInsuranceDoc(item = {}) {
+  const createdAt = toDate(item.createdAt);
+  const issueDate = toDate(item.issueDate || item.startDate) || createdAt;
+  const expiryDate = toDate(item.expiryDate || item.endDate);
+  const status = normalizeStatus(item.status || "");
+  return {
+    insuranceType: String(item.insuranceType || "other").trim() || "other",
+    status,
+    createdAt,
+    issueDate,
+    expiryDate,
+    insuredAmount: toAmount(item.insuredAmount || item.amount || item.sumInsured),
+    premium: toAmount(item.premium)
+  };
+}
+
+function formatCompactNumber(value) {
+  const lang = getLanguage() === "ar" ? "ar" : undefined;
+  return new Intl.NumberFormat(lang, { notation: "compact", maximumFractionDigits: 1 }).format(Number(value) || 0);
+}
+
+function getRecentMonthTokens(months = 6) {
+  const list = [];
+  const d = new Date();
+  d.setDate(1);
+  for (let i = months - 1; i >= 0; i -= 1) {
+    const x = new Date(d.getFullYear(), d.getMonth() - i, 1);
+    list.push(`${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}`);
+  }
+  return list;
+}
+
 function isPendingLeaveStatus(status = "") {
   return ["submitted", "pending", "manager_review", "hr_review", "in_review"].includes(normalizeStatus(status));
 }
@@ -228,6 +274,10 @@ function applyDashboardSearch(query) {
   renderNotifications(filteredNotifications);
 }
 
+function asArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
 async function loadDashboard() {
   const performanceMode = detectPerformanceMode();
   if (performanceMode) {
@@ -254,7 +304,8 @@ async function loadDashboard() {
     listLeaves({ limitCount: 200 }),
     listPayroll({ limitCount: 200 }),
     listAttendance({ limitCount: 300 }),
-    listNotifications({ limitCount: 50 })
+    listNotifications({ limitCount: 50 }),
+    listInsuranceDocs({ limitCount: 800 })
   ]);
 
   const getValue = (index, fallback = []) => {
@@ -264,13 +315,14 @@ async function loadDashboard() {
     return fallback;
   };
 
-  const employees = getValue(0, []);
-  const departments = getValue(1, []);
-  const positions = getValue(2, []);
-  const leaves = getValue(3, []);
-  const payroll = getValue(4, []);
-  const attendance = getValue(5, []);
-  const notifications = getValue(6, []);
+  const employees = asArray(getValue(0, []));
+  const departments = asArray(getValue(1, []));
+  const positions = asArray(getValue(2, []));
+  const leaves = asArray(getValue(3, []));
+  const payroll = asArray(getValue(4, []));
+  const attendance = asArray(getValue(5, []));
+  const notifications = asArray(getValue(6, []));
+  const insuranceDocs = asArray(getValue(7, [])).map(normalizeInsuranceDoc);
 
   kpiEmployees.textContent = String(employees.length);
   kpiDepartments.textContent = String(departments.length);
@@ -290,6 +342,21 @@ async function loadDashboard() {
   if (kpiPendingApprovals) kpiPendingApprovals.textContent = String(pendingApprovals);
   if (kpiPayrollReady) kpiPayrollReady.textContent = String(payrollReady);
   if (kpiCriticalAlerts) kpiCriticalAlerts.textContent = String(criticalAlerts);
+  if (insuranceKpiTotalDocs) insuranceKpiTotalDocs.textContent = String(insuranceDocs.length);
+
+  const now = new Date();
+  const in30Days = new Date(now.getTime() + 30 * 86400000);
+  const activeInsuranceDocs = insuranceDocs.filter((doc) => {
+    if (doc.status) return isActiveInsuranceStatus(doc.status);
+    if (!doc.expiryDate) return true;
+    return doc.expiryDate >= now;
+  });
+  const expiringInsuranceDocs = insuranceDocs.filter((doc) => doc.expiryDate && doc.expiryDate >= now && doc.expiryDate <= in30Days);
+  const insuredAmountTotal = insuranceDocs.reduce((sum, doc) => sum + doc.insuredAmount, 0);
+
+  if (insuranceKpiActiveDocs) insuranceKpiActiveDocs.textContent = String(activeInsuranceDocs.length);
+  if (insuranceKpiExpiringDocs) insuranceKpiExpiringDocs.textContent = String(expiringInsuranceDocs.length);
+  if (insuranceKpiTotalAmount) insuranceKpiTotalAmount.textContent = formatCompactNumber(insuredAmountTotal);
 
   renderActivity([
     ...employees.slice(0, 3).map((emp) => ({
@@ -371,19 +438,42 @@ async function loadDashboard() {
     const payrollLabels = Object.keys(payrollByMonth).sort();
     const recentLabels = payrollLabels.slice(-6);
     const payrollTotals = recentLabels.map((month) => payrollByMonth[month]);
+    const employeeMonthTokens = getRecentMonthTokens(6);
+    const monthlyJoinCounts = new Map(employeeMonthTokens.map((token) => [token, 0]));
+    employees.forEach((employee) => {
+      const d = toDate(employee.hireDate || employee.joinDate || employee.startDate || employee.createdAt);
+      if (!d) return;
+      const token = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      if (!monthlyJoinCounts.has(token)) return;
+      monthlyJoinCounts.set(token, (monthlyJoinCounts.get(token) || 0) + 1);
+    });
+    const employeeTrendValues = employeeMonthTokens.map((token) => monthlyJoinCounts.get(token) || 0);
+
+    const insuranceTypeMap = insuranceDocs.reduce((acc, doc) => {
+      const key = doc.insuranceType || "other";
+      acc[key] = (acc[key] || 0) + 1;
+      return acc;
+    }, {});
+    const insuranceTypeLabels = Object.keys(insuranceTypeMap);
+    const insuranceTypeValues = insuranceTypeLabels.map((key) => insuranceTypeMap[key]);
+
+    const insuranceMonthTokens = getRecentMonthTokens(6);
+    const insuranceMonthMap = new Map(insuranceMonthTokens.map((token) => [token, 0]));
+    insuranceDocs.forEach((doc) => {
+      const d = doc.issueDate || toDate(doc.createdAt);
+      if (!d) return;
+      const token = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      if (!insuranceMonthMap.has(token)) return;
+      insuranceMonthMap.set(token, (insuranceMonthMap.get(token) || 0) + 1);
+    });
+    const insuranceTrendValues = insuranceMonthTokens.map((token) => insuranceMonthMap.get(token) || 0);
+
     const chartQueue = [
       () => new window.Chart(document.getElementById("headcount-chart"), {
         type: "line",
         data: {
-          labels: [
-            t("dashboard.chart.month.jan"),
-            t("dashboard.chart.month.feb"),
-            t("dashboard.chart.month.mar"),
-            t("dashboard.chart.month.apr"),
-            t("dashboard.chart.month.may"),
-            t("dashboard.chart.month.jun")
-          ],
-          datasets: [{ label: t("dashboard.chart.headcount_label"), data: [12, 18, 20, 24, 28, employees.length], borderColor: chartPrimary, backgroundColor: chartSoft, fill: true }]
+          labels: employeeMonthTokens,
+          datasets: [{ label: t("dashboard.chart.headcount_label"), data: employeeTrendValues, borderColor: chartPrimary, backgroundColor: chartSoft, fill: true }]
         },
         options: chartDefaults
       }),
@@ -418,13 +508,41 @@ async function loadDashboard() {
           datasets: [{ label: t("dashboard.chart.payroll_label"), data: payrollTotals.length ? payrollTotals : [0], borderColor: chartPrimary, backgroundColor: chartSoft, fill: true }]
         },
         options: chartDefaults
-      })
+      }),
+      () => {
+        const canvas = document.getElementById("insurance-type-chart");
+        if (!canvas) return null;
+        return new window.Chart(canvas, {
+          type: "doughnut",
+          data: {
+            labels: insuranceTypeLabels.length ? insuranceTypeLabels : [t("dashboard.chart.no_data")],
+            datasets: [{ data: insuranceTypeValues.length ? insuranceTypeValues : [0], backgroundColor: [chartPrimary, chartAccent, "#f59e0b", "#6366f1", "#ef4444", "#14b8a6", "#334155"] }]
+          },
+          options: chartDefaults
+        });
+      },
+      () => {
+        const canvas = document.getElementById("insurance-trend-chart");
+        if (!canvas) return null;
+        return new window.Chart(canvas, {
+          type: "line",
+          data: {
+            labels: insuranceMonthTokens,
+            datasets: [{ label: "Insurance Issued", data: insuranceTrendValues, borderColor: chartAccent, backgroundColor: chartSoft, fill: true }]
+          },
+          options: chartDefaults
+        });
+      }
     ];
 
     chartQueue.forEach((render, index) => {
       scheduleWork(() => {
         if (currentToken !== chartRenderToken) return;
-        render();
+        try {
+          render();
+        } catch (error) {
+          console.error("Dashboard chart render failed:", error);
+        }
       }, performanceMode ? index * 18 : index * 44);
     });
   }
@@ -433,5 +551,7 @@ async function loadDashboard() {
 }
 
 trackUxEvent({ event: "page_open", module: "dashboard" });
-loadDashboard();
+loadDashboard().catch((error) => {
+  console.error("Dashboard load failed:", error);
+});
 window.addEventListener("global-search", (event) => applyDashboardSearch(event.detail));

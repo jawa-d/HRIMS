@@ -397,7 +397,12 @@ function openOpeningBalanceModal() {
             return true;
           } catch (error) {
             console.error("Cashbox opening balance save failed:", error);
-            showToast("error", "Failed to update opening balance");
+            const code = String(error?.code || "");
+            if (code.includes("permission-denied")) {
+              showToast("error", "Permission denied while updating opening balance");
+            } else {
+              showToast("error", "Failed to update opening balance");
+            }
             return false;
           }
         }

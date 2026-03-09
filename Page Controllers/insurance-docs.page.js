@@ -82,6 +82,15 @@ let stagedFiles = [];
 
 const pro = {};
 
+const updateSummaryValue = (el, nextValue) => {
+  if (!el) return;
+  const current = txt(el.textContent);
+  if (current === nextValue) return;
+  el.textContent = nextValue;
+  el.classList.remove("is-updated");
+  requestAnimationFrame(() => el.classList.add("is-updated"));
+};
+
 const txt = (v) => String(v || "").trim();
 const money = (v) => numFmt.format(Math.max(0, Number(v) || 0));
 const today = () => new Date().toISOString().slice(0, 10);
@@ -91,8 +100,11 @@ const COMPANY_NAME_AR = "شركة وادي الرافدين";
 const COMPANY_NAME_EN = APP_NAME || "Wadi Al-Rafidain";
 const COMPANY_LOGO_PATH = "assets/logo.jpg";
 let companyLogoDataUrlPromise = null;
-let pdfArabicFontReadyPromise = null;
-const PDF_ARABIC_FONT_URL = "https://raw.githubusercontent.com/aliftype/amiri/master/fonts/ttf/Amiri-Regular.ttf";
+let pdfArabicFontBase64Promise = null;
+const PDF_ARABIC_FONT_URLS = [
+  "https://cdn.jsdelivr.net/gh/aliftype/amiri@master/fonts/ttf/Amiri-Regular.ttf",
+  "https://raw.githubusercontent.com/aliftype/amiri/master/fonts/ttf/Amiri-Regular.ttf"
+];
 const PDF_ARABIC_FONT_FILE = "Amiri-Regular.ttf";
 const PDF_ARABIC_FONT_NAME = "Amiri";
 const AR_LABELS = {
@@ -836,40 +848,83 @@ function arrayBufferToBase64(buffer) {
 }
 
 function safePdfText(doc, value) {
-  const text = txt(value);
+  let text = txt(value);
   if (!text) return "";
+  // Recover UTF-8 text that was decoded as Latin-1 (common mojibake pattern: Ø, Ù, Ã, Â).
+  if (/[ØÙÃÂþ]/.test(text)) {
+    try {
+      const bytes = Uint8Array.from(Array.from(text, (ch) => ch.charCodeAt(0) & 0xff));
+      const decoded = new TextDecoder("utf-8", { fatal: false }).decode(bytes);
+      if (decoded && !/[ØÙÃÂþ]/.test(decoded)) text = decoded;
+    } catch (_) {
+      // Keep original text if decoding fails.
+    }
+  }
   if (typeof doc.processArabic === "function") {
     return doc.processArabic(text);
   }
   return text;
 }
 
-async function ensureArabicPdfFont(doc) {
-  if (!pdfArabicFontReadyPromise) {
-    pdfArabicFontReadyPromise = (async () => {
-      try {
-        const response = await fetch(PDF_ARABIC_FONT_URL, { cache: "force-cache" });
-        if (!response.ok) return false;
-        const buffer = await response.arrayBuffer();
-        const base64 = arrayBufferToBase64(buffer);
-        doc.addFileToVFS(PDF_ARABIC_FONT_FILE, base64);
-        doc.addFont(PDF_ARABIC_FONT_FILE, PDF_ARABIC_FONT_NAME, "normal");
-        return true;
-      } catch (_) {
-        return false;
+function pickPdfLabel(ar, en, arabicFontReady) {
+  return arabicFontReady ? `${ar} / ${en}` : en;
+}
+
+function toPdfEnglishLabel(value) {
+  const text = txt(value);
+  if (!text) return "-";
+  const parts = text.split("/");
+  return txt(parts[parts.length - 1]) || text;
+}
+
+function safePdfCellText(doc, value, arabicFontReady) {
+  const text = txt(value);
+  if (!text) return "-";
+  return arabicFontReady ? safePdfText(doc, text) : text;
+}
+
+async function loadArabicPdfFontBase64() {
+  if (!pdfArabicFontBase64Promise) {
+    pdfArabicFontBase64Promise = (async () => {
+      for (const url of PDF_ARABIC_FONT_URLS) {
+        try {
+          const response = await fetch(url, { cache: "force-cache" });
+          if (!response.ok) continue;
+          const buffer = await response.arrayBuffer();
+          const base64 = arrayBufferToBase64(buffer);
+          if (base64) return base64;
+        } catch (_) {
+          // Try next source.
+        }
       }
+      return "";
     })();
   }
+  return pdfArabicFontBase64Promise;
+}
 
-  const ok = await pdfArabicFontReadyPromise;
-  if (ok) {
-    try {
-      doc.setFont(PDF_ARABIC_FONT_NAME, "normal");
-    } catch (_) {
-      return false;
-    }
+async function ensureArabicPdfFont(doc) {
+  const base64 = await loadArabicPdfFontBase64();
+  if (!base64) return false;
+
+  try {
+    doc.addFileToVFS(PDF_ARABIC_FONT_FILE, base64);
+  } catch (_) {
+    // VFS may already have the font.
   }
-  return ok;
+
+  try {
+    doc.addFont(PDF_ARABIC_FONT_FILE, PDF_ARABIC_FONT_NAME, "normal");
+  } catch (_) {
+    // Font may already be registered for this instance.
+  }
+
+  try {
+    doc.setFont(PDF_ARABIC_FONT_NAME, "normal");
+    return true;
+  } catch (_) {
+    return false;
+  }
 }
 
 async function getCompanyLogoDataUrl() {
@@ -906,9 +961,9 @@ async function drawCompanyPdfHeader(doc, options = {}) {
 
   doc.setFont(arabicFontReady ? PDF_ARABIC_FONT_NAME : "helvetica", "normal");
   doc.setFontSize(13);
-  doc.text(safePdfText(doc, `${COMPANY_NAME_AR} / ${COMPANY_NAME_EN}`), 36, 16);
+  doc.text(safePdfCellText(doc, pickPdfLabel(COMPANY_NAME_AR, COMPANY_NAME_EN, arabicFontReady), arabicFontReady), 36, 16);
   doc.setFontSize(11);
-  doc.text(safePdfText(doc, `${titleAr} / ${titleEn}`), 36, 22);
+  doc.text(safePdfCellText(doc, pickPdfLabel(titleAr, titleEn, arabicFontReady), arabicFontReady), 36, 22);
   doc.setFontSize(9);
   doc.text(`Generated: ${generatedAt}`, 36, 27);
 
@@ -957,6 +1012,15 @@ async function generatePolicyPdf(item) {
     ["ملاحظات / Notes", safePdfText(doc, txt(item.notes) || "-")]
   ];
 
+  if (!arabicFontReady) {
+    rows.forEach((row) => {
+      const label = txt(row[0]);
+      const parts = label.split("/");
+      row[0] = txt(parts[parts.length - 1]) || label;
+      row[1] = txt(row[1]) || "-";
+    });
+  }
+
   if (typeof doc.autoTable === "function") {
     doc.autoTable({
       startY,
@@ -990,16 +1054,40 @@ async function generatePoliciesReportPdf(items) {
   });
 
   const body = items.map((item) => [
-    safePdfText(doc, txt(item.policyNo) || "-"),
-    safePdfText(doc, txt(item.customerName) || "-"),
-    safePdfText(doc, txt(item.idNumber) || "-"),
-    safePdfText(doc, byType(item.insuranceType)),
-    safePdfText(doc, txt(item.issueDate) || "-"),
-    safePdfText(doc, txt(item.expiryDate) || "-"),
-    safePdfText(doc, txt(item.status) || "-"),
+    safePdfCellText(doc, txt(item.policyNo) || "-", arabicFontReady),
+    safePdfCellText(doc, txt(item.customerName) || "-", arabicFontReady),
+    safePdfCellText(doc, txt(item.idNumber) || "-", arabicFontReady),
+    safePdfCellText(doc, arabicFontReady ? byType(item.insuranceType) : toPdfEnglishLabel(byType(item.insuranceType)), arabicFontReady),
+    safePdfCellText(doc, txt(item.issueDate) || "-", arabicFontReady),
+    safePdfCellText(doc, txt(item.expiryDate) || "-", arabicFontReady),
+    safePdfCellText(doc, txt(item.status) || "-", arabicFontReady),
     money(item.insuredAmount),
     money(item.premium)
   ]);
+
+  if (typeof doc.autoTable === "function") {
+    const reportHead = [
+      safePdfCellText(doc, pickPdfLabel("رقم الوثيقة", "Policy", arabicFontReady), arabicFontReady),
+      safePdfCellText(doc, pickPdfLabel("الزبون", "Customer", arabicFontReady), arabicFontReady),
+      safePdfCellText(doc, pickPdfLabel("الهوية", "ID", arabicFontReady), arabicFontReady),
+      safePdfCellText(doc, pickPdfLabel("النوع", "Type", arabicFontReady), arabicFontReady),
+      safePdfCellText(doc, pickPdfLabel("الإصدار", "Issue", arabicFontReady), arabicFontReady),
+      safePdfCellText(doc, pickPdfLabel("الانتهاء", "Expiry", arabicFontReady), arabicFontReady),
+      safePdfCellText(doc, pickPdfLabel("الحالة", "Status", arabicFontReady), arabicFontReady),
+      safePdfCellText(doc, pickPdfLabel("المبلغ", "Amount", arabicFontReady), arabicFontReady),
+      safePdfCellText(doc, pickPdfLabel("القسط", "Premium", arabicFontReady), arabicFontReady)
+    ];
+
+    doc.autoTable({
+      startY,
+      head: [reportHead],
+      body,
+      styles: { fontSize: 8, cellPadding: 2, font: arabicFontReady ? PDF_ARABIC_FONT_NAME : "helvetica" },
+      headStyles: { fillColor: [15, 118, 110] }
+    });
+    doc.save(`insurance-report-${today()}.pdf`);
+    return;
+  }
 
   if (typeof doc.autoTable === "function") {
     doc.autoTable({
@@ -1061,14 +1149,14 @@ function showViewer(item) {
 function renderSummary(filtered) {
   const totals = reportMetrics(insuranceDocs);
   const f = reportMetrics(filtered);
-  totalCountEl.textContent = String(totals.count);
-  totalAmountEl.textContent = money(totals.amountTotal);
-  totalPremiumEl.textContent = money(totals.premiumTotal);
-  filteredCountEl.textContent = String(filtered.length);
-  totalCommissionEl.textContent = money(totals.commissionTotal);
-  totalStampEl.textContent = money(totals.stampTotal);
-  avgRiskEl.textContent = `${numFmt.format(filtered.length ? f.riskAvg : totals.riskAvg)}%`;
-  expiringSoonEl.textContent = String(filtered.length ? f.expiringSoon : totals.expiringSoon);
+  updateSummaryValue(totalCountEl, String(totals.count));
+  updateSummaryValue(totalAmountEl, money(totals.amountTotal));
+  updateSummaryValue(totalPremiumEl, money(totals.premiumTotal));
+  updateSummaryValue(filteredCountEl, String(filtered.length));
+  updateSummaryValue(totalCommissionEl, money(totals.commissionTotal));
+  updateSummaryValue(totalStampEl, money(totals.stampTotal));
+  updateSummaryValue(avgRiskEl, `${numFmt.format(filtered.length ? f.riskAvg : totals.riskAvg)}%`);
+  updateSummaryValue(expiringSoonEl, String(filtered.length ? f.expiringSoon : totals.expiringSoon));
 }
 
 function renderTable() {

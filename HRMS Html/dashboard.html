@@ -198,6 +198,84 @@
               </div>
             </a>
           </section>
+          <section class="card insurance-analytics-card">
+            <div class="insurance-analytics-head">
+              <h3 class="section-title">
+                <i data-lucide="shield-check"></i>
+                <span>تحليل عام لوثائق التأمين / Insurance Documents Analytics</span>
+              </h3>
+            </div>
+            <div class="insurance-kpi-grid">
+              <a class="kpi-link" href="insurance-docs.html">
+                <div class="card kpi-card">
+                  <div class="kpi-head">
+                    <span>إجمالي الوثائق / Total Policies</span>
+                    <i class="kpi-icon" data-lucide="files"></i>
+                  </div>
+                  <div class="kpi-meta">
+                    <i data-lucide="database"></i>
+                    <span>من قاعدة البيانات الحية</span>
+                  </div>
+                  <div class="kpi-value" id="insurance-kpi-total-docs">0</div>
+                </div>
+              </a>
+              <a class="kpi-link" href="insurance-docs.html">
+                <div class="card kpi-card">
+                  <div class="kpi-head">
+                    <span>وثائق فعالة / Active Policies</span>
+                    <i class="kpi-icon" data-lucide="badge-check"></i>
+                  </div>
+                  <div class="kpi-meta">
+                    <i data-lucide="activity"></i>
+                    <span>حسب حالة الوثيقة</span>
+                  </div>
+                  <div class="kpi-value" id="insurance-kpi-active-docs">0</div>
+                </div>
+              </a>
+              <a class="kpi-link" href="insurance-docs.html">
+                <div class="card kpi-card">
+                  <div class="kpi-head">
+                    <span>تنتهي خلال 30 يوم / Expiring Soon</span>
+                    <i class="kpi-icon" data-lucide="alarm-clock"></i>
+                  </div>
+                  <div class="kpi-meta">
+                    <i data-lucide="calendar-range"></i>
+                    <span>تحتاج متابعة</span>
+                  </div>
+                  <div class="kpi-value" id="insurance-kpi-expiring-docs">0</div>
+                </div>
+              </a>
+              <a class="kpi-link" href="insurance-docs.html">
+                <div class="card kpi-card">
+                  <div class="kpi-head">
+                    <span>إجمالي مبلغ التأمين / Total Insured</span>
+                    <i class="kpi-icon" data-lucide="banknote"></i>
+                  </div>
+                  <div class="kpi-meta">
+                    <i data-lucide="trending-up"></i>
+                    <span>قيمة التغطيات الفعلية</span>
+                  </div>
+                  <div class="kpi-value" id="insurance-kpi-total-amount">0</div>
+                </div>
+              </a>
+            </div>
+            <div class="insurance-chart-grid">
+              <div class="card chart-card">
+                <h3 class="section-title">
+                  <i data-lucide="pie-chart"></i>
+                  <span>توزيع الأنواع / Policy Types Mix</span>
+                </h3>
+                <canvas id="insurance-type-chart"></canvas>
+              </div>
+              <div class="card chart-card">
+                <h3 class="section-title">
+                  <i data-lucide="line-chart"></i>
+                  <span>اتجاه الإصدار الشهري / Monthly Policy Issuance</span>
+                </h3>
+                <canvas id="insurance-trend-chart"></canvas>
+              </div>
+            </div>
+          </section>
           <section class="dashboard-grid">
             <div class="card chart-card">
               <h3 class="section-title">

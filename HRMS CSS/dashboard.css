@@ -367,6 +367,31 @@
   grid-template-columns: 1.45fr 1fr;
 }
 
+.insurance-analytics-card {
+  border-radius: 20px;
+  border: 1px solid color-mix(in srgb, var(--primary) 20%, var(--border));
+  background:
+    radial-gradient(280px 200px at 100% 0%, color-mix(in srgb, var(--primary-soft) 72%, transparent), transparent 78%),
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-strong) 95%, var(--primary-soft)), var(--surface-strong));
+}
+
+.insurance-analytics-head {
+  margin-bottom: var(--space-3);
+}
+
+.insurance-kpi-grid {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  margin-bottom: var(--space-3);
+}
+
+.insurance-chart-grid {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .chart-card {
   border-radius: 18px;
   border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
@@ -457,7 +482,8 @@
   }
 
   .spotlight-grid,
-  .dashboard-grid {
+  .dashboard-grid,
+  .insurance-chart-grid {
     grid-template-columns: 1fr;
   }
 }
