@@ -435,3 +435,30 @@ body[data-page="settings"] .card {
 body[data-page="profile"] .card {
   animation: card-slide 620ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
+
+.workspace-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: var(--space-3);
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--primary-soft) 30%, var(--surface-strong));
+}
+
+.workspace-nav .btn {
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+body[data-page="accounting"] .workspace-nav a[href="accounting.html"],
+body[data-page="payroll"] .workspace-nav a[href="payroll.html"],
+body[data-page="accounting_flow"] .workspace-nav a[href="accounting-flow.html"],
+body[data-page="cashbox"] .workspace-nav a[href="cashbox.html"],
+body[data-page="accounting_admin"] .workspace-nav a[href="accounting-admin.html"],
+body[data-page="advances_report"] .workspace-nav a[href="advances-report.html"] {
+  background: var(--primary);
+  color: var(--white);
+  border-color: color-mix(in srgb, var(--primary) 65%, var(--border));
+}
