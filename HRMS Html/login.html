@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>HRMS | Login</title>
+  <title>HRMS | Login Portal</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet" />
@@ -13,414 +13,278 @@
   <link rel="stylesheet" href="../HRMS%20CSS/toast.css" />
   <style>
     :root {
-      --navy-900: #0f1d36;
-      --navy-800: #14284b;
-      --navy-700: #1f3a6b;
-      --steel-300: #cbd5e1;
-      --steel-200: #e2e8f0;
-      --accent-gold: #c4a869;
-      --accent-cyan: #67e8f9;
+      --login-bg: #f5f7fb;
+      --login-panel: #ffffff;
+      --login-border: #e2e8f0;
+      --login-ink: #1e2c4f;
+      --login-muted: #63718b;
+      --login-primary: #1e2f8c;
+      --login-primary-strong: #16246f;
+      --login-accent: #1cc8aa;
+      --login-shadow: 0 24px 42px rgba(15, 23, 42, 0.12);
     }
 
-    .auth-layout {
+    * {
+      box-sizing: border-box;
+    }
+
+    body[data-page="login"] {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Manrope", "Cairo", sans-serif;
+      color: var(--login-ink);
+      background:
+        radial-gradient(circle at 14% 18%, rgba(30, 47, 140, 0.08), transparent 32%),
+        radial-gradient(circle at 84% 78%, rgba(39, 174, 164, 0.08), transparent 30%),
+        var(--login-bg);
+    }
+
+    .login-page {
       min-height: 100vh;
       display: grid;
-      place-items: center;
-      padding: 20px;
-      position: relative;
-      overflow: hidden;
-      background:
-        radial-gradient(1200px 780px at 0% 0%, #e9f0fa, transparent 72%),
-        radial-gradient(920px 720px at 100% 100%, #eef4ff, transparent 72%),
-        #f4f7fc;
+      grid-template-rows: 1fr auto;
     }
 
-    .network-bg {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 0;
-      opacity: 0.46;
-      pointer-events: none;
-    }
-
-    .auth-shell {
-      width: min(1140px, 96vw);
-      min-height: min(700px, 92vh);
-      border-radius: 24px;
-      border: 1px solid rgba(255, 255, 255, 0.7);
-      box-shadow: 0 24px 44px rgba(15, 23, 42, 0.16);
-      overflow: hidden;
-      z-index: 2;
+    .login-main {
+      width: min(1280px, 95vw);
+      margin: 24px auto 0;
       display: grid;
-      grid-template-columns: 1.08fr 0.92fr;
-      background: rgba(255, 255, 255, 0.88);
-      backdrop-filter: blur(8px);
+      align-items: center;
+      padding-bottom: 18px;
     }
 
-    .auth-hero {
-      position: relative;
-      padding: clamp(24px, 4vw, 52px);
-      color: #e2e8f0;
-      background:
-        linear-gradient(165deg, rgba(31, 58, 107, 0.96), rgba(15, 29, 54, 0.98)),
-        repeating-linear-gradient(
-          120deg,
-          rgba(148, 163, 184, 0.06) 0,
-          rgba(148, 163, 184, 0.06) 4px,
-          transparent 4px,
-          transparent 16px
-        );
+    .login-shell {
+      background: rgba(255, 255, 255, 0.74);
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      border-radius: 22px;
+      box-shadow: var(--login-shadow);
       display: grid;
-      align-content: space-between;
-      gap: 18px;
+      grid-template-columns: minmax(320px, 460px) 1fr;
+      gap: 34px;
+      padding: clamp(18px, 2.4vw, 34px);
     }
 
-    body.login-creative .auth-hero {
-      background:
-        radial-gradient(540px 340px at 26% 14%, rgba(34, 211, 238, 0.24), transparent 70%),
-        radial-gradient(500px 320px at 82% 90%, rgba(16, 185, 129, 0.22), transparent 72%),
-        linear-gradient(160deg, rgba(13, 27, 61, 0.9), rgba(14, 33, 77, 0.84));
-    }
-
-    body.login-creative .auth-form .btn-primary {
-      background: linear-gradient(140deg, #0ea5e9, #10b981);
+    .login-auth-wrap {
+      display: grid;
+      gap: 14px;
+      align-content: center;
     }
 
     .style-switch {
       display: inline-flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
       width: fit-content;
-      border: 1px solid rgba(148, 163, 184, 0.35);
       border-radius: 999px;
-      padding: 5px;
-      background: rgba(2, 6, 23, 0.32);
+      padding: 4px;
+      border: 1px solid var(--login-border);
+      background: #f8fafc;
     }
 
     .style-switch a {
       padding: 6px 10px;
       border-radius: 999px;
-      font-size: 0.78rem;
+      font-size: 0.74rem;
       font-weight: 700;
-      color: #bfdbfe;
+      color: #64748b;
+      text-decoration: none;
     }
 
     .style-switch a.active {
-      color: #0b1220;
-      background: linear-gradient(115deg, var(--accent-cyan), #dbeafe);
+      background: #e2e8ff;
+      color: #21317d;
     }
 
-    .hero-brand {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      width: fit-content;
-      padding: 8px 14px;
-      border-radius: 999px;
-      border: 1px solid rgba(196, 168, 105, 0.44);
-      color: #f5e7c8;
-      background: rgba(196, 168, 105, 0.11);
-      font-weight: 700;
-      font-size: 0.84rem;
-      margin-top: 10px;
-    }
-
-    .hero-seal-wrap {
-      margin-top: 20px;
-      display: grid;
-      place-items: center;
-    }
-
-    .hero-seal {
-      width: clamp(150px, 20vw, 210px);
-      aspect-ratio: 1;
-      border-radius: 50%;
-      border: 2px solid rgba(196, 168, 105, 0.65);
-      background:
-        radial-gradient(circle at 50% 30%, rgba(196, 168, 105, 0.28), transparent 65%),
-        radial-gradient(circle at 50% 70%, rgba(103, 232, 249, 0.2), transparent 62%),
-        rgba(15, 23, 42, 0.3);
-      box-shadow:
-        inset 0 0 0 1px rgba(226, 232, 240, 0.2),
-        0 18px 28px rgba(2, 6, 23, 0.35);
-      display: grid;
-      place-items: center;
-      position: relative;
-      animation: floatSeal 4.6s ease-in-out infinite;
-    }
-
-    .hero-seal::before {
-      content: "";
-      position: absolute;
-      inset: 10px;
-      border-radius: 50%;
-      border: 1px dashed rgba(148, 163, 184, 0.48);
-      animation: spinSeal 16s linear infinite;
-    }
-
-    .hero-seal svg {
-      width: 46%;
-      height: 46%;
-      color: #f8fafc;
-      filter: drop-shadow(0 4px 8px rgba(2, 6, 23, 0.5));
-    }
-
-    .hero-title {
-      font-size: clamp(1.65rem, 2.8vw, 2.35rem);
-      line-height: 1.14;
-      margin: 22px 0 0;
-      font-weight: 800;
-      letter-spacing: -0.01em;
-      max-width: 17ch;
-    }
-
-    .hero-subtitle {
-      margin-top: 12px;
-      max-width: 45ch;
-      color: #cbd5e1;
-      line-height: 1.7;
-    }
-
-    .hero-foot {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 10px;
-    }
-
-    .hero-chip {
-      text-align: center;
-      border: 1px solid rgba(148, 163, 184, 0.28);
-      border-radius: 12px;
-      padding: 10px 8px;
-      background: rgba(15, 23, 42, 0.26);
-      color: #cbd5e1;
-      font-size: 0.8rem;
-    }
-
-    .hero-chip strong {
-      display: block;
-      font-size: 1rem;
-      color: #e2e8f0;
-      margin-bottom: 3px;
-    }
-
-    .auth-panel {
-      padding: clamp(24px, 3.2vw, 48px);
-      display: grid;
-      align-content: center;
-      gap: 14px;
-      background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(248, 250, 252, 0.88));
-    }
-
-    .auth-card {
-      width: min(420px, 100%);
-      margin-inline: auto;
-      border: 1px solid rgba(148, 163, 184, 0.34);
+    .login-card {
+      background: var(--login-panel);
+      border: 1px solid var(--login-border);
       border-radius: 18px;
-      background: white;
-      box-shadow: 0 14px 28px rgba(15, 23, 42, 0.09);
-      padding: clamp(18px, 2.2vw, 28px);
+      padding: clamp(18px, 2.1vw, 30px);
+      box-shadow: 0 14px 24px rgba(15, 23, 42, 0.08);
       display: grid;
       gap: 16px;
-      animation: cardIn 450ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
     }
 
-    .auth-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      width: fit-content;
-      padding: 6px 12px;
-      border-radius: 999px;
-      border: 1px solid rgba(31, 58, 107, 0.16);
-      color: var(--navy-700);
-      background: #f1f5f9;
-      font-weight: 700;
-      font-size: 0.8rem;
-    }
-
-    .auth-card h1 {
-      font-size: clamp(1.62rem, 2.6vw, 2.1rem);
-      line-height: 1.1;
+    .portal-title {
       margin: 0;
-      color: #0f172a;
+      font-size: clamp(1.6rem, 2.2vw, 2.2rem);
+      letter-spacing: 0.03em;
+      font-weight: 800;
+      color: var(--login-primary);
+      text-transform: uppercase;
+      border-bottom: 3px solid var(--login-accent);
+      padding-bottom: 10px;
     }
 
-    .auth-card p {
-      color: #475569;
-      margin-top: 8px;
-      line-height: 1.65;
+    .portal-subtitle {
+      margin: 0;
+      font-size: 0.9rem;
+      letter-spacing: 0.2em;
+      font-weight: 700;
+      color: #334155;
+      text-transform: uppercase;
     }
 
     .auth-form {
       display: grid;
-      gap: 13px;
-    }
-
-    .auth-form label span {
-      display: inline-block;
-      margin-bottom: 6px;
-      color: #334155;
-      font-size: 0.88rem;
-      font-weight: 700;
+      gap: 10px;
+      margin-top: 6px;
     }
 
     .auth-form .input {
-      min-height: 48px;
-      border-radius: 12px;
-      border-color: rgba(148, 163, 184, 0.42);
-      background: #fff;
+      height: 48px;
+      border-radius: 999px;
+      border: 1px solid #d0d9e5;
+      background: #f9fbff;
+      color: #1f2937;
+      padding-inline: 16px;
+    }
+
+    .auth-form .input:focus {
+      border-color: #8ea5f9;
+      box-shadow: 0 0 0 3px rgba(78, 107, 230, 0.14);
+      background: #ffffff;
     }
 
     .auth-form .btn-primary {
-      min-height: 48px;
-      border-radius: 12px;
-      margin-top: 6px;
-      font-weight: 700;
-      letter-spacing: 0.01em;
-      background: linear-gradient(140deg, var(--navy-700), var(--navy-900));
-      box-shadow: 0 10px 16px rgba(15, 23, 42, 0.3);
+      height: 48px;
+      border-radius: 999px;
+      border: 0;
+      margin-top: 4px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      background: linear-gradient(135deg, var(--login-primary), var(--login-primary-strong));
+      box-shadow: 0 10px 18px rgba(30, 47, 140, 0.28);
     }
 
     .auth-form small {
-      color: #64748b;
+      color: var(--login-muted);
+      font-size: 0.82rem;
+      text-align: center;
     }
 
     .auth-data-note {
-      width: min(420px, 100%);
-      margin-inline: auto;
-      color: #475569;
-      font-size: 0.82rem;
+      margin: 0;
+      color: #51607b;
+      font-size: 0.8rem;
+      line-height: 1.6;
       text-align: center;
-      line-height: 1.55;
     }
 
-    @keyframes cardIn {
-      from {
-        opacity: 0;
-        transform: translateY(12px) scale(0.985);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-      }
+    .login-visual {
+      border: 1px solid #e8edf5;
+      border-radius: 20px;
+      background: linear-gradient(180deg, #fbfdff, #f2f6fd);
+      display: grid;
+      place-items: center;
+      padding: clamp(18px, 3vw, 32px);
+      min-height: 520px;
     }
 
-    @keyframes floatSeal {
-      0% {
-        transform: translateY(0);
-      }
-      50% {
-        transform: translateY(-8px);
-      }
-      100% {
-        transform: translateY(0);
-      }
+    .visual-illustration {
+      width: min(100%, 700px);
+      height: auto;
+      display: block;
     }
 
-    @keyframes spinSeal {
-      from {
-        transform: rotate(0deg);
-      }
-      to {
-        transform: rotate(360deg);
-      }
+    .login-footer {
+      background: #1e2f8c;
+      color: #e2e8f0;
+      text-align: center;
+      font-size: 0.78rem;
+      padding: 12px 16px;
     }
 
-    @media (max-width: 980px) {
-      .auth-shell {
+    @media (max-width: 1024px) {
+      .login-shell {
         grid-template-columns: 1fr;
       }
 
-      .hero-foot {
-        max-width: 560px;
+      .login-visual {
+        min-height: 320px;
       }
     }
 
     @media (max-width: 640px) {
-      .auth-layout {
-        padding: 10px;
+      .login-main {
+        width: min(100%, 96vw);
+        margin-top: 12px;
       }
 
-      .auth-shell {
+      .login-shell {
         border-radius: 16px;
-      }
-
-      .auth-hero {
-        padding: 18px;
-      }
-
-      .hero-foot {
-        grid-template-columns: 1fr;
-      }
-
-      .auth-panel {
         padding: 14px;
+        gap: 16px;
       }
-    }
 
-    @media (prefers-reduced-motion: reduce) {
-      .network-bg,
-      .hero-seal,
-      .hero-seal::before,
-      .auth-card {
-        animation: none !important;
+      .login-card {
+        border-radius: 14px;
       }
     }
   </style>
 </head>
 <body data-page="login">
-  <div class="auth-layout">
-    <canvas class="network-bg" id="network-bg" aria-hidden="true"></canvas>
-    <section class="auth-shell">
-      <aside class="auth-hero">
+  <div class="login-page">
+    <main class="login-main">
+      <section class="login-shell">
+        <section class="login-auth-wrap" aria-label="Authentication">
         <div class="style-switch">
           <a href="login.html?variant=executive" class="active">Executive</a>
           <a href="login.html?variant=creative">Creative</a>
         </div>
-        <div>
-          <span class="hero-brand">Wadi Al-Rafidain HR Authority</span>
-          <div class="hero-seal-wrap">
-            <div class="hero-seal" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
-                <circle cx="9" cy="7" r="3"></circle>
-                <path d="M22 20v-2a4 4 0 0 0-3-3.87"></path>
-                <path d="M16 3.13a3 3 0 0 1 0 5.75"></path>
-              </svg>
-            </div>
+          <div class="login-card">
+            <h1 class="portal-title">شركة وادي الرافدين نظام الداخلي</h1>
+            <p class="portal-subtitle" data-i18n="login.title">Login</p>
+            <form id="login-form" class="auth-form">
+              <input
+                class="input"
+                type="email"
+                id="login-email"
+                required
+                autofocus
+                placeholder="Email"
+              />
+              <button class="btn btn-primary" type="submit" data-i18n="login.submit">Sign In</button>
+              <small data-i18n="login.helper">Use your company account</small>
+            </form>
           </div>
-          <h2 class="hero-title">Institutional HR Control Gateway</h2>
-          <p class="hero-subtitle">Professional access portal for employee records, payroll operations, finance flow, and role-governed approvals.</p>
-        </div>
-        <div class="hero-foot">
-          <div class="hero-chip"><strong>ISO</strong>Governance</div>
-          <div class="hero-chip"><strong>RBAC</strong>Role Security</div>
-          <div class="hero-chip"><strong>Audit</strong>Traceability</div>
-        </div>
-      </aside>
+          <p class="auth-data-note" data-i18n="login.data_notice">Data is protected by the IT Department - Wadi Al-Rafidain Company.</p>
+        </section>
 
-      <section class="auth-panel">
-        <div class="auth-card">
-          <span class="auth-badge" data-i18n="app.name">Wadi Al-Rafidain Company</span>
-          <div>
-            <h1 data-i18n="login.title">Welcome back</h1>
-            <p data-i18n="login.subtitle">Sign in to your HR workspace</p>
-          </div>
-          <form id="login-form" class="auth-form">
-            <label>
-              <span data-i18n="login.email">Email</span>
-              <input class="input" type="email" id="login-email" required autofocus />
-            </label>
-            <button class="btn btn-primary" type="submit" data-i18n="login.submit">Sign In</button>
-            <small data-i18n="login.helper">Use your company account</small>
-          </form>
-        </div>
-        <p class="auth-data-note" data-i18n="login.data_notice">البيانات محفوظة لدى قسم تكنولوجيا المعلومات شركة وادي الرافدين</p>
+        <aside class="login-visual" aria-hidden="true">
+          <svg class="visual-illustration" viewBox="0 0 760 560" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="58" y="98" width="620" height="390" rx="18" fill="#EDF3FE" stroke="#D8E2F2"/>
+            <rect x="184" y="178" width="402" height="236" rx="12" fill="#FFFFFF" stroke="#C9D7EC"/>
+            <rect x="214" y="208" width="164" height="14" rx="7" fill="#D9E7FF"/>
+            <rect x="214" y="236" width="238" height="14" rx="7" fill="#ECF2FF"/>
+            <rect x="214" y="264" width="128" height="14" rx="7" fill="#ECF2FF"/>
+            <rect x="214" y="296" width="336" height="8" rx="4" fill="#D5DDF0"/>
+            <rect x="214" y="318" width="336" height="8" rx="4" fill="#E5EBF7"/>
+            <rect x="214" y="340" width="336" height="8" rx="4" fill="#E5EBF7"/>
+            <rect x="214" y="362" width="336" height="8" rx="4" fill="#E5EBF7"/>
+            <rect x="88" y="412" width="560" height="42" rx="10" fill="#7C9EF8" opacity="0.25"/>
+            <rect x="468" y="122" width="88" height="56" rx="10" fill="#E2EDFF"/>
+            <rect x="476" y="136" width="20" height="28" rx="4" fill="#80A4FF"/>
+            <rect x="504" y="132" width="44" height="8" rx="4" fill="#9DB7FF"/>
+            <rect x="504" y="146" width="34" height="8" rx="4" fill="#C4D6FF"/>
+            <circle cx="410" cy="252" r="84" fill="#EFF4FF"/>
+            <path d="M388 280C388 261.222 403.222 246 422 246H452V356H422C403.222 356 388 340.778 388 322V280Z" fill="#2E5EE8"/>
+            <rect x="438" y="246" width="64" height="110" rx="18" fill="#163D9F"/>
+            <circle cx="452" cy="226" r="22" fill="#2F3C58"/>
+            <path d="M340 360H538L520 426H356L340 360Z" fill="#1F2F4B"/>
+            <rect x="312" y="426" width="260" height="16" rx="8" fill="#D6DFEE"/>
+            <rect x="292" y="146" width="114" height="64" rx="10" fill="#E2EDFF"/>
+            <path d="M314 190L340 168L362 184L392 152" stroke="#4B78F2" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="314" cy="190" r="6" fill="#4B78F2"/>
+            <circle cx="340" cy="168" r="6" fill="#4B78F2"/>
+            <circle cx="362" cy="184" r="6" fill="#4B78F2"/>
+            <circle cx="392" cy="152" r="6" fill="#4B78F2"/>
+          </svg>
+        </aside>
       </section>
-    </section>
+    </main>
+
+    <footer class="login-footer">&copy; 2024-2026 Wadi Al-Rafidain HRMS Team. All rights reserved.</footer>
   </div>
   <script src="https://unpkg.com/lucide@latest"></script>
   <script type="module" src="../Page%20Controllers/login.page.js"></script>
