@@ -24,29 +24,29 @@
       <main class="page insurance-page">
         <div class="page-header">
           <div>
-            <h1 class="page-title">نظام حفظ وثائق التأمين</h1>
-            <p class="text-muted">إدارة احترافية لوثائق التأمين مع بحث شامل وطباعة وحقول متغيرة حسب النوع.</p>
+            <h1 class="page-title" data-i18n="insurance_docs.title">مكتبة وثائق التأمين</h1>
+            <p class="text-muted" data-i18n="insurance_docs.subtitle">إدارة واضحة لوثائق التأمين مع بحث وتقارير بشكل منظم.</p>
           </div>
           <div class="insurance-header-actions">
             <button class="btn btn-primary" id="insurance-save-btn">
               <i data-lucide="save"></i>
-              حفظ الوثيقة
+              <span data-i18n="insurance_docs.save_doc">حفظ الوثيقة</span>
             </button>
             <button class="btn btn-ghost" id="insurance-export-excel-btn">
               <i data-lucide="file-spreadsheet"></i>
-              تصدير Excel
+              <span data-i18n="insurance_docs.export_excel">تصدير Excel</span>
             </button>
             <button class="btn btn-ghost" id="insurance-export-pdf-btn">
               <i data-lucide="file-text"></i>
-              تصدير PDF
+              <span data-i18n="insurance_docs.export_pdf">تصدير PDF</span>
             </button>
             <button class="btn btn-ghost" id="insurance-new-btn">
               <i data-lucide="file-plus-2"></i>
-              وثيقة جديدة
+              <span data-i18n="insurance_docs.new_doc">وثيقة جديدة</span>
             </button>
             <button class="btn btn-outline" id="insurance-print-list-btn">
               <i data-lucide="printer"></i>
-              طباعة النتائج
+              <span data-i18n="insurance_docs.print_results">طباعة النتائج</span>
             </button>
           </div>
         </div>
@@ -113,35 +113,35 @@
 
         <section class="insurance-summary grid-4" id="insurance-summary-section">
           <div class="card summary-card">
-            <div class="text-muted">إجمالي الوثائق</div>
+            <div class="text-muted" data-i18n="insurance_docs.summary.total_docs">إجمالي الوثائق</div>
             <div class="summary-value" id="insurance-total-count">0</div>
           </div>
           <div class="card summary-card">
-            <div class="text-muted">إجمالي مبلغ التأمين</div>
+            <div class="text-muted" data-i18n="insurance_docs.summary.total_amount">إجمالي مبلغ التأمين</div>
             <div class="summary-value" id="insurance-total-amount">0</div>
           </div>
           <div class="card summary-card">
-            <div class="text-muted">إجمالي القسط</div>
+            <div class="text-muted" data-i18n="insurance_docs.summary.total_premium">إجمالي القسط</div>
             <div class="summary-value" id="insurance-total-premium">0</div>
           </div>
           <div class="card summary-card">
-            <div class="text-muted">نتائج البحث الحالية</div>
+            <div class="text-muted" data-i18n="insurance_docs.summary.current_results">نتائج البحث الحالية</div>
             <div class="summary-value" id="insurance-filtered-count">0</div>
           </div>
           <div class="card summary-card">
-            <div class="text-muted">إجمالي العمولات</div>
+            <div class="text-muted" data-i18n="insurance_docs.summary.total_commission">إجمالي العمولات</div>
             <div class="summary-value" id="insurance-total-commission">0</div>
           </div>
           <div class="card summary-card">
-            <div class="text-muted">إجمالي رسم الطابع</div>
+            <div class="text-muted" data-i18n="insurance_docs.summary.total_stamp">إجمالي رسم الطابع</div>
             <div class="summary-value" id="insurance-total-stamp">0</div>
           </div>
           <div class="card summary-card">
-            <div class="text-muted">متوسط نسبة الخطر</div>
+            <div class="text-muted" data-i18n="insurance_docs.summary.avg_risk">متوسط نسبة الخطر</div>
             <div class="summary-value" id="insurance-avg-risk">0%</div>
           </div>
           <div class="card summary-card">
-            <div class="text-muted">وثائق تنتهي خلال 30 يوم</div>
+            <div class="text-muted" data-i18n="insurance_docs.summary.expiring_30">وثائق تنتهي خلال 30 يوم</div>
             <div class="summary-value" id="insurance-expiring-soon">0</div>
           </div>
         </section>
@@ -149,13 +149,13 @@
         <section class="card insurance-list-card" id="insurance-list-section">
           <div class="insurance-list-head">
             <div class="insurance-search-wrap">
-              <label class="text-muted" for="insurance-search">بحث احترافي</label>
-              <input class="input" id="insurance-search" placeholder="ابحث برقم الوثيقة، الاسم، النوع، المبلغ، الفترات، التفاصيل..." />
+              <label class="text-muted" for="insurance-search" data-i18n="insurance_docs.search_label">بحث احترافي</label>
+              <input class="input" id="insurance-search" data-i18n-placeholder="insurance_docs.search_placeholder" placeholder="ابحث برقم الوثيقة، الاسم، النوع، المبلغ، الفترات، التفاصيل..." />
             </div>
             <div class="insurance-filter-wrap">
-              <label class="text-muted" for="insurance-type-filter">فلتر النوع</label>
+              <label class="text-muted" for="insurance-type-filter" data-i18n="insurance_docs.filter_type">فلتر النوع</label>
               <select class="select" id="insurance-type-filter">
-                <option value="">كل الأنواع</option>
+                <option value="" data-i18n="insurance_docs.all_types">كل الأنواع</option>
               </select>
             </div>
           </div>
@@ -164,28 +164,25 @@
             <table class="table insurance-table">
               <thead>
                 <tr>
-                  <th>نوع التأمين</th>
-                  <th>رقم الوثيقة</th>
-                  <th>المؤمن/الشركة</th>
-                  <th>مبلغ التأمين</th>
-                  <th>القسط</th>
-                  <th>الفترة</th>
-                  <th>الإجراءات</th>
+                  <th data-i18n="insurance_docs.table.type">نوع التأمين</th>
+                  <th data-i18n="insurance_docs.table.policy_no">رقم الوثيقة</th>
+                  <th data-i18n="insurance_docs.table.customer">المؤمن/الشركة</th>
+                  <th data-i18n="insurance_docs.table.amount">مبلغ التأمين</th>
+                  <th data-i18n="insurance_docs.table.premium">القسط</th>
+                  <th data-i18n="insurance_docs.table.period">الفترة</th>
+                  <th data-i18n="insurance_docs.table.actions">الإجراءات</th>
                 </tr>
               </thead>
               <tbody id="insurance-body"></tbody>
             </table>
           </div>
-          <div id="insurance-empty" class="empty-state hidden">لا توجد وثائق مطابقة.</div>
+          <div id="insurance-empty" class="empty-state hidden" data-i18n="insurance_docs.empty">لا توجد وثائق مطابقة.</div>
         </section>
       </main>
     </div>
   </div>
 
   <script src="https://unpkg.com/lucide@latest"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
   <script type="module" src="../Page%20Controllers/insurance-docs.page.js"></script>
 </body>
 </html>

@@ -46,6 +46,8 @@ const insuranceKpiTotalAmount = document.getElementById("insurance-kpi-total-amo
 
 let activityItems = [];
 let notificationItems = [];
+let activitySourceItems = [];
+let notificationSourceItems = [];
 let chartRenderToken = 0;
 
 function detectPerformanceMode() {
@@ -66,7 +68,10 @@ function scheduleWork(fn, delay = 0) {
   window.requestAnimationFrame(run);
 }
 
-function renderActivity(items) {
+function renderActivity(items, persistSource = true) {
+  if (persistSource) {
+    activitySourceItems = items;
+  }
   activityItems = items;
   activityList.innerHTML = items.length
     ? items
@@ -82,7 +87,10 @@ function renderActivity(items) {
     : `<div class="empty-state">${t("activity.empty")}</div>`;
 }
 
-function renderNotifications(items) {
+function renderNotifications(items, persistSource = true) {
+  if (persistSource) {
+    notificationSourceItems = items;
+  }
   notificationItems = items;
   if (!items.length) {
     notificationsList.innerHTML = `<div class="empty-state">${t("notifications.empty")}</div>`;
@@ -108,6 +116,12 @@ function renderNotifications(items) {
   notificationsList.querySelectorAll("button[data-id]").forEach((button) => {
     button.addEventListener("click", async () => {
       await markNotificationRead(button.dataset.id);
+      notificationSourceItems = notificationSourceItems.map((item) =>
+        String(item.id) === String(button.dataset.id) ? { ...item, isRead: true } : item
+      );
+      notificationItems = notificationItems.map((item) =>
+        String(item.id) === String(button.dataset.id) ? { ...item, isRead: true } : item
+      );
       button.closest(".notification-item")?.remove();
     });
   });
@@ -257,21 +271,21 @@ function bindDashboardQuickLinks() {
 function applyDashboardSearch(query) {
   const q = (query || "").trim().toLowerCase();
   if (!q) {
-    renderActivity(activityItems);
-    renderNotifications(notificationItems);
+    renderActivity(activitySourceItems, false);
+    renderNotifications(notificationSourceItems, false);
     return;
   }
 
-  const filteredActivity = activityItems.filter((item) => {
+  const filteredActivity = activitySourceItems.filter((item) => {
     return (item.title || "").toLowerCase().includes(q) || (item.subtitle || "").toLowerCase().includes(q);
   });
 
-  const filteredNotifications = notificationItems.filter((item) => {
+  const filteredNotifications = notificationSourceItems.filter((item) => {
     return (item.title || "").toLowerCase().includes(q) || (item.body || "").toLowerCase().includes(q);
   });
 
-  renderActivity(filteredActivity);
-  renderNotifications(filteredNotifications);
+  renderActivity(filteredActivity, false);
+  renderNotifications(filteredNotifications, false);
 }
 
 function asArray(value) {

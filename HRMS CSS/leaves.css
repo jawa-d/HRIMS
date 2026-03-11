@@ -3,6 +3,10 @@
   flex-wrap: wrap;
   gap: var(--space-3);
   align-items: flex-end;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface-strong) 92%, var(--primary-soft));
 }
 
 .leaves-actions .btn {
@@ -37,6 +41,8 @@
   padding: var(--space-4);
   border: 1px solid color-mix(in srgb, var(--primary-soft) 42%, var(--border));
   background: linear-gradient(180deg, var(--surface-strong), color-mix(in srgb, var(--surface) 86%, var(--primary-soft)));
+  border-radius: 14px;
+  box-shadow: 0 10px 20px color-mix(in srgb, var(--ink-900) 8%, transparent);
 }
 
 .summary-value {
@@ -64,6 +70,15 @@
 .table-scroll {
   width: 100%;
   overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.leave-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface-strong);
 }
 
 .employee-cell {
@@ -135,6 +150,10 @@
 
 .leave-row:hover {
   background: color-mix(in srgb, var(--leave-accent, var(--primary)) 8%, var(--surface));
+}
+
+.leave-row:nth-child(even) {
+  background: color-mix(in srgb, var(--surface) 65%, transparent);
 }
 
 .leave-row td:last-child .btn {

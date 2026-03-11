@@ -91,8 +91,13 @@ function getBalance(employeeId) {
 function buildRows() {
   const currentYear = new Date().getFullYear();
   const query = (searchInput?.value || "").trim().toLowerCase();
+  const userUid = String(user?.uid || "").trim();
+  const userEmail = String(user?.email || "").trim().toLowerCase();
   const employeeList = isEmployee
-    ? employees.filter((emp) => emp.id === user.uid || emp.empId === user.uid || emp.email === user.email)
+    ? employees.filter((emp) => {
+      const empEmail = String(emp?.email || "").trim().toLowerCase();
+      return emp.id === userUid || emp.empId === userUid || (empEmail && empEmail === userEmail);
+    })
     : employees;
 
   const rows = employeeList.map((emp) => {
@@ -263,6 +268,8 @@ async function handleBalanceAction(action, employeeId) {
     return;
   }
   if (action === "delete") {
+    const confirmed = window.confirm("Delete this balance?");
+    if (!confirmed) return;
     await deleteTimeoffBalance(employeeId);
     showToast("success", "Balance deleted");
     await loadBalances();

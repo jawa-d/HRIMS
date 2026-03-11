@@ -33,6 +33,8 @@ function ensureModal() {
     isBound = true;
   }
 }
+
+
 export function openModal({ title, content, actions = [] }) {
   ensureModal();
   modalRoot.querySelector("#modal-title").textContent = translateText(title || "");

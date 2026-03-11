@@ -1,5 +1,5 @@
 import { enforceAuth, getRole, getUserProfile } from "../Aman/guard.js";
-import { initI18n } from "../Languages/i18n.js";
+import { initI18n, t } from "../Languages/i18n.js";
 import { renderNavbar } from "../Collaboration interface/ui-navbar.js";
 import { renderSidebar } from "../Collaboration interface/ui-sidebar.js";
 import { openModal } from "../Collaboration interface/ui-modal.js";
@@ -81,6 +81,44 @@ let editingId = "";
 let stagedFiles = [];
 
 const pro = {};
+const externalScriptPromises = new Map();
+
+function loadExternalScriptOnce(src) {
+  if (externalScriptPromises.has(src)) return externalScriptPromises.get(src);
+  const promise = new Promise((resolve, reject) => {
+    const existing = document.querySelector(`script[src="${src}"]`);
+    if (existing) {
+      existing.addEventListener("load", () => resolve(), { once: true });
+      existing.addEventListener("error", () => reject(new Error(`Failed to load script: ${src}`)), { once: true });
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = src;
+    script.async = true;
+    script.addEventListener("load", () => resolve(), { once: true });
+    script.addEventListener("error", () => reject(new Error(`Failed to load script: ${src}`)), { once: true });
+    document.head.appendChild(script);
+  });
+  externalScriptPromises.set(src, promise);
+  return promise;
+}
+
+async function ensureExcelLib() {
+  if (window.XLSX) return true;
+  await loadExternalScriptOnce("https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js");
+  return Boolean(window.XLSX);
+}
+
+async function ensurePdfLib() {
+  if (!window.jspdf?.jsPDF) {
+    await loadExternalScriptOnce("https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js");
+  }
+  if (!window.jspdf?.jsPDF?.API?.autoTable) {
+    await loadExternalScriptOnce("https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js");
+  }
+  return Boolean(window.jspdf?.jsPDF);
+}
 
 const updateSummaryValue = (el, nextValue) => {
   if (!el) return;
@@ -415,7 +453,7 @@ function readExtraFieldsStrict() {
 
 function buildTypeOptions() {
   typeSelect.innerHTML = INSURANCE_TYPES.map(([k, l]) => `<option value="${k}">${l}</option>`).join("");
-  typeFilter.innerHTML = `<option value="">كل الأنواع / All Types</option>${INSURANCE_TYPES.map(([k, l]) => `<option value="${k}">${l}</option>`).join("")}`;
+  typeFilter.innerHTML = `<option value="">${esc(t("insurance_docs.all_types"))}</option>${INSURANCE_TYPES.map(([k, l]) => `<option value="${k}">${l}</option>`).join("")}`;
 }
 
 function buildPartyOptions(selectedId = "") {
@@ -434,13 +472,13 @@ function applyModeLayout() {
   const subtitleEl = document.querySelector(".page-header .text-muted");
   if (titleEl) {
     titleEl.textContent = isEntryMode
-      ? "إدخال وثائق التأمين / Insurance Document Entry"
-      : "مكتبة وثائق التأمين / Insurance Documents Library";
+      ? `${t("insurance_docs.new_doc")} / Insurance Document Entry`
+      : t("insurance_docs.title");
   }
   if (subtitleEl) {
     subtitleEl.textContent = isEntryMode
-      ? "شاشة إدخال وعملية تحديث منفصلة بالكامل مع حقول ديناميكية حسب نوع التأمين."
-      : "شاشة أرشفة وبحث وتحليل الوثائق مع إجراءات العرض والطباعة والتصدير.";
+      ? t("insurance_docs.subtitle_entry")
+      : t("insurance_docs.subtitle");
   }
   const headerActions = document.querySelector(".insurance-header-actions");
   if (headerActions && !headerActions.querySelector("[data-mode-nav]")) {
@@ -981,7 +1019,7 @@ async function drawCompanyPdfHeader(doc, options = {}) {
 async function generatePolicyPdf(item) {
   const JsPdf = window.jspdf?.jsPDF;
   if (!JsPdf) {
-    showToast("error", "مكتبة PDF غير متاحة / PDF library not available");
+    showToast("error", "PDF library not available");
     return;
   }
 
@@ -1042,7 +1080,7 @@ async function generatePolicyPdf(item) {
 async function generatePoliciesReportPdf(items) {
   const JsPdf = window.jspdf?.jsPDF;
   if (!JsPdf) {
-    showToast("error", "مكتبة PDF غير متاحة / PDF library not available");
+    showToast("error", "PDF library not available");
     return;
   }
   const doc = new JsPdf({ orientation: "l", unit: "mm", format: "a4" });
@@ -1170,11 +1208,11 @@ function renderTable() {
       <td>${money(item.premium)}</td>
       <td>${esc(item.issueDate)} to ${esc(item.expiryDate)}<br><small>${esc(item.folder)} / ${esc(item.category)}</small></td>
       <td>
-        <button class="btn btn-ghost" data-action="view" data-id="${item.id}">عرض / View</button>
-        ${canManage ? `<button class="btn btn-ghost" data-action="edit" data-id="${item.id}">تعديل / Edit</button>` : ""}
+        <button class="btn btn-ghost" data-action="view" data-id="${item.id}">${esc(t("insurance_docs.action.view"))}</button>
+        ${canManage ? `<button class="btn btn-ghost" data-action="edit" data-id="${item.id}">${esc(t("insurance_docs.action.edit"))}</button>` : ""}
         <button class="btn btn-ghost" data-action="pdf" data-id="${item.id}">PDF</button>
-        <button class="btn btn-ghost" data-action="print" data-id="${item.id}">طباعة / Print</button>
-        ${canDelete ? `<button class="btn btn-ghost" data-action="delete" data-id="${item.id}">حذف / Delete</button>` : ""}
+        <button class="btn btn-ghost" data-action="print" data-id="${item.id}">${esc(t("insurance_docs.action.print"))}</button>
+        ${canDelete ? `<button class="btn btn-ghost" data-action="delete" data-id="${item.id}">${esc(t("common.delete"))}</button>` : ""}
       </td>
     </tr>`).join("");
   emptyState.classList.toggle("hidden", filtered.length > 0);
@@ -1197,12 +1235,17 @@ function renderTable() {
       }
     }
     if (action === "pdf") {
+      const pdfReady = await ensurePdfLib();
+      if (!pdfReady) {
+        showToast("error", "PDF library not available");
+        return;
+      }
       void generatePolicyPdf(item);
       void logInsuranceAudit("insurance_doc_pdf_generated", item, "success", "Single policy PDF generated.");
     }
     if (action === "print") window.print();
     if (action === "delete" && canDelete) {
-      if (!window.confirm("حذف هذه الوثيقة؟ / Delete this policy?")) return;
+      if (!window.confirm(t("insurance_docs.confirm_delete"))) return;
       try {
         await deleteInsuranceDoc(item.id);
         showToast("success", "Deleted");
@@ -1284,23 +1327,26 @@ saveBtn.addEventListener("click", () => void handleSave());
 newBtn.addEventListener("click", resetForm);
 searchInput.addEventListener("input", renderTable);
 typeFilter.addEventListener("change", renderTable);
-printListBtn.addEventListener("click", () => { if (!getFilteredDocs().length) return showToast("error", "لا توجد نتائج / No results"); window.print(); });
-exportExcelBtn.addEventListener("click", () => {
+printListBtn.addEventListener("click", () => { if (!getFilteredDocs().length) return showToast("error", t("insurance_docs.no_results")); window.print(); });
+exportExcelBtn.addEventListener("click", async () => {
   const rows = getFilteredDocs().map((item) => ({
     policyNo: item.policyNo, customerName: item.customerName, idNumber: item.idNumber, policyType: byType(item.insuranceType),
     issueDate: item.issueDate, expiryDate: item.expiryDate, uploadedBy: item.uploadedBy, status: item.status,
     folder: item.folder, category: item.category, tags: item.tags.join(", "), notes: item.notes
   }));
-  if (!rows.length) return showToast("error", "لا توجد نتائج / No results");
-  if (!window.XLSX) return showToast("error", "مكتبة Excel غير متاحة / Excel library not available");
+  if (!rows.length) return showToast("error", t("insurance_docs.no_results"));
+  const excelReady = await ensureExcelLib();
+  if (!excelReady) return showToast("error", "Excel library not available");
   const wb = window.XLSX.utils.book_new();
   const ws = window.XLSX.utils.json_to_sheet(rows);
   window.XLSX.utils.book_append_sheet(wb, ws, "InsuranceDocs");
   window.XLSX.writeFile(wb, `insurance-docs-${today()}.xlsx`);
 });
-exportPdfBtn.addEventListener("click", () => {
+exportPdfBtn.addEventListener("click", async () => {
   const filtered = getFilteredDocs();
-  if (!filtered.length) return showToast("error", "لا توجد نتائج / No results");
+  if (!filtered.length) return showToast("error", t("insurance_docs.no_results"));
+  const pdfReady = await ensurePdfLib();
+  if (!pdfReady) return showToast("error", "PDF library not available");
   void generatePoliciesReportPdf(filtered);
   void logInsuranceAudit("insurance_docs_report_pdf_generated", { id: "list" }, "success", `Generated report PDF for ${filtered.length} policy(s).`);
 });

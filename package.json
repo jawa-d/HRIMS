@@ -6,6 +6,8 @@
   "main": "electron/main.cjs",
   "scripts": {
     "start": "node server.js",
+    "lint": "node scripts/lint-check.js",
+    "test": "npm run lint",
     "app:dev": "electron .",
     "app:build:win": "electron-builder --win nsis"
   },
@@ -35,7 +37,8 @@
     ],
     "win": {
       "target": "nsis",
-      "icon": "HRMS Html/assets/logo.jpg"
+      "signAndEditExecutable": false,
+      "icon": "build/hrms-icon.ico"
     },
     "nsis": {
       "oneClick": false,

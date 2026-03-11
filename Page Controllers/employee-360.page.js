@@ -289,24 +289,22 @@ async function resolveEmployeeData(employee) {
     listPayroll({ employeeId: employee.id })
   ]);
 
-  if (attendanceById.length || leavesById.length || payrollById.length) {
-    return {
-      attendance: attendanceById,
-      leaves: leavesById,
-      payroll: payrollById
-    };
+  const needsFallback = {
+    attendance: !attendanceById.length,
+    leaves: !leavesById.length,
+    payroll: !payrollById.length
+  };
+
+  if (!needsFallback.attendance && !needsFallback.leaves && !needsFallback.payroll) {
+    return { attendance: attendanceById, leaves: leavesById, payroll: payrollById };
   }
 
-  const [allAttendance, allLeaves, allPayroll] = await Promise.all([
-    listAttendance(),
-    listLeaves(),
-    listPayroll()
-  ]);
+  const [allAttendance, allLeaves, allPayroll] = await Promise.all([listAttendance(), listLeaves(), listPayroll()]);
 
   return {
-    attendance: allAttendance.filter((item) => isMatchEmployee(item, employee)),
-    leaves: allLeaves.filter((item) => isMatchEmployee(item, employee)),
-    payroll: allPayroll.filter((item) => isMatchEmployee(item, employee))
+    attendance: needsFallback.attendance ? allAttendance.filter((item) => isMatchEmployee(item, employee)) : attendanceById,
+    leaves: needsFallback.leaves ? allLeaves.filter((item) => isMatchEmployee(item, employee)) : leavesById,
+    payroll: needsFallback.payroll ? allPayroll.filter((item) => isMatchEmployee(item, employee)) : payrollById
   };
 }
 
@@ -317,7 +315,7 @@ async function loadEmployeeDetails(employeeId) {
   const data = await resolveEmployeeData(employee);
   const attendance = sortByLatest(data.attendance, ["date", "day", "createdAt"]);
   const leaves = sortByLatest(data.leaves, ["from", "createdAt"]);
-  const payroll = sortByLatest(data.payroll, ["createdAt"]);
+  const payroll = sortByLatest(data.payroll, ["createdAt", "month", "updatedAt"]);
 
   const pendingLeaves = leaves.filter((item) => {
     const status = normalizeStatus(item.status);

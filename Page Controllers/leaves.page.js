@@ -156,7 +156,7 @@ function canDeleteLeave(leave) {
   return role === "employee" && normalizeStatus(leave.status) === "submitted" && matchesEmployee(leave, currentEmployee, user);
 }
 
-function getRemainingBalance(employeeId, leaveDate, extraDays = 0, emp = null, profile = null) {
+function getRemainingBalance(employeeId, leaveDate, extraDays = 0, emp = null, profile = null, excludeLeaveId = "") {
   const balance = getBalanceByEmployeeId(employeeId);
   const annual = Number(balance.annual ?? DEFAULT_ANNUAL);
   const carryover = Number(balance.carryover ?? 0);
@@ -164,6 +164,7 @@ function getRemainingBalance(employeeId, leaveDate, extraDays = 0, emp = null, p
   const targetYear = leaveDate ? new Date(leaveDate).getFullYear() : new Date().getFullYear();
   const used = allLeaves
     .filter((leave) => normalizeStatus(leave.status) === "approved")
+    .filter((leave) => !excludeLeaveId || leave.id !== excludeLeaveId)
     .filter((leave) => !leave.from || new Date(leave.from).getFullYear() === targetYear)
     .filter((leave) => (emp || profile ? matchesEmployee(leave, emp, profile) : leave.employeeId === employeeId))
     .reduce((sum, leave) => sum + calcLeaveDays(leave), 0);
@@ -304,6 +305,7 @@ function renderLeaves() {
 }
 
 function _legacyLeaveFormContent(leave = null) {
+  return buildLeaveFormContent(leave);
   const isEdit = Boolean(leave);
   const employeeName = leave?.employeeName || currentEmployee?.fullName || user.name || user.email || user.uid;
   const employeeCode = leave?.employeeCode || currentEmployee?.empId || user.uid;
@@ -342,7 +344,8 @@ function buildLeaveFormContent(leave = null) {
     leave?.from || null,
     0,
     currentEmployee,
-    user
+    user,
+    isEdit ? leave.id : ""
   );
   return `
     <label>${t("leaves.modal.employee_name")}<input class="input" value="${escapeHtml(employeeName)}" readonly /></label>
@@ -401,7 +404,16 @@ function openLeaveModal(existingLeave = null) {
             payload.status = "submitted";
           }
 
-          const remaining = getRemainingBalance(payload.employeeId, payload.from, payload.days, currentEmployee, user);
+          const existingDays = isEdit ? calcLeaveDays(existingLeave) : 0;
+          const extraDays = isEdit ? Math.max(0, payload.days - existingDays) : payload.days;
+          const remaining = getRemainingBalance(
+            payload.employeeId,
+            payload.from,
+            extraDays,
+            currentEmployee,
+            user,
+            isEdit ? existingLeave.id : ""
+          );
           if (remaining < 0) {
             showToast("error", t("leaves.error.insufficient_balance"));
             return;
