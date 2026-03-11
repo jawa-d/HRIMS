@@ -24,7 +24,7 @@
         <div class="page-header">
           <div>
             <h1 class="page-title" data-i18n="profile.title">Profile</h1>
-            <p class="text-muted">Manage your account, contact details, and work profile.</p>
+            <p class="text-muted" data-i18n="profile.subtitle">Manage your account, contact details, and work profile.</p>
           </div>
         </div>
         <section class="profile-layout">
@@ -33,61 +33,61 @@
             <div class="card-header">
               <h3 class="section-title">
                 <i data-lucide="edit-3"></i>
-                Update Profile
+                <span data-i18n="profile.update_profile">Update Profile</span>
               </h3>
             </div>
             <form id="profile-form" class="profile-form-grid">
               <div class="profile-photo-field profile-field-span">
                 <label>
-                  <span>Profile Photo</span>
+                  <span data-i18n="auto.profile_photo">Profile Photo</span>
                   <input class="input" id="profile-photo-input" type="file" accept="image/*" />
                 </label>
               </div>
               <label>
-                <span>Full Name</span>
+                <span data-i18n="auto.full_name">Full Name</span>
                 <input class="input" id="profile-name" />
               </label>
               <label>
-                <span>Email</span>
+                <span data-i18n="common.email">Email</span>
                 <input class="input" id="profile-email" type="email" readonly />
               </label>
               <label>
-                <span>Phone</span>
+                <span data-i18n="auto.phone">Phone</span>
                 <input class="input" id="profile-phone" />
               </label>
               <label>
-                <span>Job Title</span>
+                <span data-i18n="auto.job_title">Job Title</span>
                 <input class="input" id="profile-title" />
               </label>
               <label>
-                <span>Department ID</span>
+                <span data-i18n="auto.department_id">Department ID</span>
                 <input class="input" id="profile-dept" />
               </label>
               <label>
-                <span>Manager ID</span>
+                <span data-i18n="auto.manager_id">Manager ID</span>
                 <input class="input" id="profile-manager" />
               </label>
               <label>
-                <span>Position ID</span>
+                <span data-i18n="auto.position_id">Position ID</span>
                 <input class="input" id="profile-position" />
               </label>
               <label>
-                <span>Role</span>
+                <span data-i18n="auto.role">Role</span>
                 <input class="input" id="profile-role" readonly />
               </label>
               <label class="profile-field-span">
-                <span>Bio</span>
+                <span data-i18n="auto.bio">Bio</span>
                 <textarea class="textarea" id="profile-bio" rows="4"></textarea>
               </label>
               <div class="profile-field-span">
-                <button class="btn btn-primary" type="submit">Save Changes</button>
+                <button class="btn btn-primary" type="submit" data-i18n="auto.save_changes">Save Changes</button>
               </div>
             </form>
           </div>
           <div class="card profile-security-card">
             <h3 class="section-title">
               <i data-lucide="shield-check"></i>
-              Access Snapshot
+              <span data-i18n="profile.access_snapshot">Access Snapshot</span>
             </h3>
             <div class="stack" id="profile-access-list"></div>
           </div>

@@ -25,15 +25,15 @@
         <div class="page-header">
           <div>
             <h1 class="page-title" data-i18n="leaves.title">Leave Requests</h1>
-            <p class="text-muted">Track, approve, and monitor team leave activity.</p>
+            <p class="text-muted" data-i18n="leaves.subtitle">Track, approve, and monitor team leave activity.</p>
           </div>
           <div class="leaves-actions">
             <div class="leaves-search">
-              <label class="text-muted" for="leave-search">Search</label>
+              <label class="text-muted" for="leave-search" data-i18n="leaves.search_label">Search</label>
               <input class="input" id="leave-search" data-i18n-placeholder="common.search" placeholder="Search" />
             </div>
             <div class="leaves-filter">
-              <label class="text-muted" for="leave-status-filter">Status</label>
+              <label class="text-muted" for="leave-status-filter" data-i18n="leaves.status_label">Status</label>
               <select class="select" id="leave-status-filter">
                 <option value="" data-i18n="common.all">All</option>
                 <option value="submitted" data-i18n="common.status.submitted">Submitted</option>
@@ -52,11 +52,11 @@
         </div>
         <section class="leave-summary grid-4">
           <div class="card summary-card">
-            <div class="text-muted">Total Requests</div>
+            <div class="text-muted" data-i18n="leaves.summary.total_requests">Total Requests</div>
             <div class="summary-value" id="leave-total">0</div>
           </div>
           <div class="card summary-card">
-            <div class="text-muted">Pending</div>
+            <div class="text-muted" data-i18n="leaves.summary.pending">Pending</div>
             <div class="summary-value" id="leave-pending">0</div>
           </div>
           <div class="card summary-card">
@@ -70,15 +70,15 @@
         </section>
         <section class="leave-balance grid-3">
           <div class="card summary-card">
-            <div class="text-muted">Annual Allowance</div>
+            <div class="text-muted" data-i18n="leaves.balance.annual_allowance">Annual Allowance</div>
             <div class="summary-value" id="leave-annual">0</div>
           </div>
           <div class="card summary-card">
-            <div class="text-muted">Used Days</div>
+            <div class="text-muted" data-i18n="leaves.balance.used_days">Used Days</div>
             <div class="summary-value" id="leave-used">0</div>
           </div>
           <div class="card summary-card">
-            <div class="text-muted">Remaining Balance</div>
+            <div class="text-muted" data-i18n="leaves.balance.remaining_balance">Remaining Balance</div>
             <div class="summary-value" id="leave-remaining">0</div>
           </div>
         </section>
@@ -86,26 +86,26 @@
           <div class="card-header">
             <h3 class="section-title">
               <i data-lucide="calendar-check-2"></i>
-              Leave Ledger
+              <span data-i18n="leaves.ledger">Leave Ledger</span>
             </h3>
           </div>
           <div class="table-scroll">
             <table class="table leave-table">
             <thead>
               <tr>
-                <th>Employee</th>
-                <th>Request ID</th>
-                <th>Type</th>
-                <th>Dates</th>
-                <th>Days</th>
-                <th>Status</th>
+                <th data-i18n="leaves.table.employee">Employee</th>
+                <th data-i18n="leaves.table.request_id">Request ID</th>
+                <th data-i18n="leaves.table.type">Type</th>
+                <th data-i18n="leaves.table.dates">Dates</th>
+                <th data-i18n="leaves.table.days">Days</th>
+                <th data-i18n="common.status">Status</th>
                 <th data-i18n="common.actions">Actions</th>
               </tr>
             </thead>
             <tbody id="leaves-body"></tbody>
             </table>
           </div>
-          <div id="leaves-empty" class="empty-state hidden">No leave requests found</div>
+          <div id="leaves-empty" class="empty-state hidden" data-i18n="leaves.empty">No leave requests found</div>
           <div class="table-pagination" id="leaves-pagination"></div>
         </div>
       </main>

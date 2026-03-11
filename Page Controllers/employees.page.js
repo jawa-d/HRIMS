@@ -49,7 +49,7 @@ const tbody = document.getElementById("employees-body");
 const emptyState = document.getElementById("employees-empty");
 const paginationEl = document.getElementById("employees-pagination");
 
-if (!canCreate) addButton.classList.add("hidden");
+if (!canCreate && addButton) addButton.classList.add("hidden");
 if (!canExport && exportButton) exportButton.classList.add("hidden");
 if (!canExport && backupButton) backupButton.classList.add("hidden");
 if (!canCreate && restoreButton) restoreButton.classList.add("hidden");
@@ -60,11 +60,32 @@ let employees = [];
 let departments = [];
 let positions = [];
 
-searchInput.value = prefs.query || "";
-statusFilter.value = prefs.status || "";
+if (searchInput) searchInput.value = prefs.query || "";
+if (statusFilter) statusFilter.value = prefs.status || "";
 
 function savePrefs() {
   saveTablePrefs(PREF_KEY, prefs);
+}
+
+function escapeHtml(value = "") {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function normalizeEmployeeStatus(emp = {}) {
+  if (emp.isArchived) return "archived";
+  const value = String(emp.status || "active").trim().toLowerCase();
+  return value === "inactive" ? "inactive" : "active";
+}
+
+function employeeStatusLabel(status = "active") {
+  const key = `employees.status.${status}`;
+  const translated = t(key);
+  return translated === key ? status : translated;
 }
 
 function filterEmployees() {
@@ -76,7 +97,7 @@ function filterEmployees() {
       (emp.fullName || "").toLowerCase().includes(query) ||
       (emp.email || "").toLowerCase().includes(query) ||
       (emp.empId || "").toLowerCase().includes(query);
-    const normalizedStatus = emp.isArchived ? "archived" : (emp.status || "active");
+    const normalizedStatus = normalizeEmployeeStatus(emp);
     const matchesStatus = !status || normalizedStatus === status;
     return matchesQuery && matchesStatus;
   });
@@ -104,42 +125,52 @@ function renderPagination(meta) {
 }
 
 function renderEmployees() {
+  if (!tbody || !emptyState) return;
   const filtered = filterEmployees();
   const paged = paginate(filtered, prefs.page, prefs.pageSize);
   prefs.page = paged.page;
   savePrefs();
 
   tbody.innerHTML = paged.items
-    .map(
-      (emp, index) => `
-      <tr class="employee-row status-${emp.isArchived ? "archived" : (emp.status || "active")}" style="--row-index:${index};--emp-accent:${employeeAccent(emp)};">
-        <td>${emp.empId || emp.id}</td>
+    .map((emp, index) => {
+      const status = normalizeEmployeeStatus(emp);
+      const empIdText = escapeHtml(emp.empId || emp.id || "-");
+      const employeeName = escapeHtml(emp.fullName || "-");
+      const employeeEmail = escapeHtml(emp.email || "-");
+      const departmentText = escapeHtml(departments.find((dept) => dept.id === emp.departmentId)?.name || emp.departmentId || "-");
+      const employeeId = String(emp.id || "");
+      const encodedId = encodeURIComponent(employeeId);
+      const safeDataId = escapeHtml(employeeId);
+      const detailHref = `employee-details.html?id=${encodedId}`;
+      return `
+      <tr class="employee-row status-${status}" style="--row-index:${index};--emp-accent:${employeeAccent(emp)};">
+        <td>${empIdText}</td>
         <td>
-          <a href="employee-details.html?id=${emp.id}">
+          <a href="${detailHref}">
             <span class="employee-name-wrap">
               <span class="employee-color-dot"></span>
-              <span>${emp.fullName || "-"}</span>
+              <span>${employeeName}</span>
             </span>
           </a>
         </td>
-        <td>${emp.email || "-"}</td>
-        <td>${departments.find((dept) => dept.id === emp.departmentId)?.name || emp.departmentId || "-"}</td>
-        <td><span class="badge employee-status-badge">${emp.isArchived ? "archived" : (emp.status || "active")}</span></td>
+        <td>${employeeEmail}</td>
+        <td>${departmentText}</td>
+        <td><span class="badge employee-status-badge">${escapeHtml(employeeStatusLabel(status))}</span></td>
         <td>
           ${
             canEdit || canDelete
               ? `
-            ${canEdit && !emp.isArchived ? `<button class="btn btn-ghost" data-action="edit" data-id="${emp.id}">${t("common.edit")}</button>` : ""}
-            ${canDelete && !emp.isArchived ? `<button class="btn btn-ghost" data-action="archive" data-id="${emp.id}">Archive</button>` : ""}
-            ${canDelete && emp.isArchived ? `<button class="btn btn-ghost" data-action="restore" data-id="${emp.id}">Restore</button>` : ""}
-            ${canDelete ? `<button class="btn btn-ghost" data-action="delete" data-id="${emp.id}">Delete</button>` : ""}
+            ${canEdit && !emp.isArchived ? `<button class="btn btn-ghost" data-action="edit" data-id="${safeDataId}">${t("common.edit")}</button>` : ""}
+            ${canDelete && !emp.isArchived ? `<button class="btn btn-ghost" data-action="archive" data-id="${safeDataId}">${t("common.archive")}</button>` : ""}
+            ${canDelete && emp.isArchived ? `<button class="btn btn-ghost" data-action="restore" data-id="${safeDataId}">${t("common.restore")}</button>` : ""}
+            ${canDelete ? `<button class="btn btn-ghost" data-action="delete" data-id="${safeDataId}">${t("common.delete")}</button>` : ""}
           `
               : `<span class="text-muted">${t("common.view_only")}</span>`
           }
         </td>
       </tr>
-    `
-    )
+    `;
+    })
     .join("");
 
   emptyState.classList.toggle("hidden", filtered.length > 0);
@@ -149,7 +180,7 @@ function renderEmployees() {
     button.addEventListener("click", () => {
       void handleRowAction(button.dataset.action, button.dataset.id).catch((error) => {
         console.error("Employee action failed:", error);
-        showToast("error", "Employee action failed");
+        showToast("error", t("employees.action_failed"));
       });
     });
   });
@@ -191,47 +222,6 @@ function generateEmployeeId(departmentId, excludeId = "") {
   return `${prefix}-${String(max + 1).padStart(3, "0")}`;
 }
 
-function employeeFormContent(emp = {}) {
-  const departmentOptions = [
-    `<option value="">Select department</option>`,
-    ...departments.map(
-      (dept) => `<option value="${dept.id}" ${emp.departmentId === dept.id ? "selected" : ""}>${dept.name || dept.id}</option>`
-    ),
-    ...(emp.departmentId && !departments.find((dept) => dept.id === emp.departmentId)
-      ? [`<option value="${emp.departmentId}" selected>${emp.departmentId}</option>`]
-      : [])
-  ].join("");
-
-  const positionOptions = [
-    `<option value="">Select position</option>`,
-    ...positions.map(
-      (position) =>
-        `<option value="${position.id}" ${emp.positionId === position.id ? "selected" : ""}>${position.name || position.id}</option>`
-    ),
-    ...(emp.positionId && !positions.find((position) => position.id === emp.positionId)
-      ? [`<option value="${emp.positionId}" selected>${emp.positionId}</option>`]
-      : [])
-  ].join("");
-
-  return `
-    <label>رقم الموظف<input class="input" id="emp-id" value="${emp.empId || ""}" readonly /></label>
-    <label>الاسم الكامل<input class="input" id="emp-name" value="${emp.fullName || ""}" /></label>
-    <label>البريد الإلكتروني<input class="input" id="emp-email" value="${emp.email || ""}" /></label>
-    <label>الهاتف<input class="input" id="emp-phone" value="${emp.phone || ""}" /></label>
-    <label>Department<select class="select" id="emp-dept">${departmentOptions}</select></label>
-    <label>Position<select class="select" id="emp-position">${positionOptions}</select></label>
-    <label>الراتب الأساسي<input class="input" id="emp-salary" type="number" value="${emp.salaryBase || 0}" /></label>
-    <label>المخصصات<input class="input" id="emp-allowances" type="number" value="${emp.allowances || 0}" /></label>
-    <label>تاريخ المباشرة<input class="input" id="emp-join" type="date" value="${emp.joinDate || ""}" /></label>
-    <label>الحالة
-      <select class="select" id="emp-status">
-        <option value="active" ${emp.status === "active" ? "selected" : ""}>${t("common.active")}</option>
-        <option value="inactive" ${emp.status === "inactive" ? "selected" : ""}>${t("common.inactive")}</option>
-      </select>
-    </label>
-  `;
-}
-
 function collectEmployeeForm() {
   return {
     empId: document.getElementById("emp-id").value.trim(),
@@ -249,6 +239,48 @@ function collectEmployeeForm() {
 
 function isValidMoneyValue(value) {
   return Number.isFinite(value) && value >= 0;
+}
+
+function buildEmployeeFormContent(emp = {}) {
+  const safe = (value = "") => escapeHtml(String(value || ""));
+  const departmentOptions = [
+    `<option value="">${t("employees.select_department")}</option>`,
+    ...departments.map(
+      (dept) => `<option value="${safe(dept.id)}" ${emp.departmentId === dept.id ? "selected" : ""}>${safe(dept.name || dept.id || "-")}</option>`
+    ),
+    ...(emp.departmentId && !departments.find((dept) => dept.id === emp.departmentId)
+      ? [`<option value="${safe(emp.departmentId)}" selected>${safe(emp.departmentId)}</option>`]
+      : [])
+  ].join("");
+
+  const positionOptions = [
+    `<option value="">${t("employees.select_position")}</option>`,
+    ...positions.map(
+      (position) =>
+        `<option value="${safe(position.id)}" ${emp.positionId === position.id ? "selected" : ""}>${safe(position.name || position.id || "-")}</option>`
+    ),
+    ...(emp.positionId && !positions.find((position) => position.id === emp.positionId)
+      ? [`<option value="${safe(emp.positionId)}" selected>${safe(emp.positionId)}</option>`]
+      : [])
+  ].join("");
+
+  return `
+    <label>${t("employees.field.employee_id")}<input class="input" id="emp-id" value="${safe(emp.empId)}" readonly /></label>
+    <label>${t("employees.field.full_name")}<input class="input" id="emp-name" value="${safe(emp.fullName)}" /></label>
+    <label>${t("employees.field.email")}<input class="input" id="emp-email" value="${safe(emp.email)}" /></label>
+    <label>${t("employees.field.phone")}<input class="input" id="emp-phone" value="${safe(emp.phone)}" /></label>
+    <label>${t("employees.field.department")}<select class="select" id="emp-dept">${departmentOptions}</select></label>
+    <label>${t("employees.field.position")}<select class="select" id="emp-position">${positionOptions}</select></label>
+    <label>${t("employees.field.salary_base")}<input class="input" id="emp-salary" type="number" value="${Number(emp.salaryBase || 0)}" /></label>
+    <label>${t("employees.field.allowances")}<input class="input" id="emp-allowances" type="number" value="${Number(emp.allowances || 0)}" /></label>
+    <label>${t("employees.field.join_date")}<input class="input" id="emp-join" type="date" value="${safe(emp.joinDate)}" /></label>
+    <label>${t("employees.field.status")}
+      <select class="select" id="emp-status">
+        <option value="active" ${emp.status === "active" ? "selected" : ""}>${t("common.active")}</option>
+        <option value="inactive" ${emp.status === "inactive" ? "selected" : ""}>${t("common.inactive")}</option>
+      </select>
+    </label>
+  `;
 }
 
 function bindEmployeeFormAutoId(emp) {
@@ -279,7 +311,7 @@ function bindEmployeeFormAutoId(emp) {
 function openEmployeeModal(emp) {
   openModal({
     title: emp ? t("common.edit") : t("employees.add"),
-    content: employeeFormContent(emp),
+    content: buildEmployeeFormContent(emp),
     actions: [
       {
         label: t("common.save"),
@@ -288,11 +320,11 @@ function openEmployeeModal(emp) {
           try {
             const payload = collectEmployeeForm();
             if (!payload.departmentId) {
-              showToast("error", "Department is required");
+              showToast("error", t("employees.error.department_required"));
               return;
             }
             if (!isValidMoneyValue(payload.salaryBase) || !isValidMoneyValue(payload.allowances)) {
-              showToast("error", "Salary and allowances must be valid non-negative numbers");
+              showToast("error", t("employees.error.salary_allowances_invalid"));
               return;
             }
             if (!emp) {
@@ -301,12 +333,12 @@ function openEmployeeModal(emp) {
             const duplicate = await hasEmployeeDuplicate(payload, emp?.id || "");
             if (duplicate.exists) {
               const fieldLabelMap = {
-                empId: "Employee ID",
-                email: "Email",
-                phone: "Phone"
+                empId: t("employees.field.employee_id"),
+                email: t("employees.field.email"),
+                phone: t("employees.field.phone")
               };
               const fieldLabel = fieldLabelMap[duplicate.field] || duplicate.field;
-              showToast("error", `Duplicate ${fieldLabel}. This value is already used.`);
+              showToast("error", `${t("employees.error.duplicate_value_prefix")} ${fieldLabel}. ${t("employees.error.duplicate_value_suffix")}`);
               await logSecurityEvent({
                 action: "employee_duplicate_blocked",
                 entity: "employees",
@@ -348,7 +380,7 @@ function openEmployeeModal(emp) {
           } catch (error) {
             console.error("Employee save failed:", error);
             const details = [error?.code, error?.message].filter(Boolean).join(" - ");
-            showToast("error", details ? `Employee save failed: ${details}` : "Employee save failed");
+            showToast("error", details ? `${t("employees.error.save_failed")}: ${details}` : t("employees.error.save_failed"));
             return false;
           }
         }
@@ -377,7 +409,7 @@ async function handleRowAction(action, id) {
       actorRole: role || "",
       message: `Archived employee ${emp.empId || id}`
     });
-    showToast("success", "Employee archived");
+    showToast("success", t("employees.archived"));
     await loadEmployees();
   }
   if (action === "restore" && canDelete) {
@@ -392,11 +424,11 @@ async function handleRowAction(action, id) {
       actorRole: role || "",
       message: `Restored employee ${emp.empId || id}`
     });
-    showToast("success", "Employee restored");
+    showToast("success", t("employees.restored"));
     await loadEmployees();
   }
   if (action === "delete" && canDelete) {
-    const confirmed = window.confirm("Delete this employee permanently?");
+    const confirmed = window.confirm(t("employees.confirm_delete_permanent"));
     if (!confirmed) return;
     await deleteEmployee(id);
     await logSecurityEvent({
@@ -409,7 +441,7 @@ async function handleRowAction(action, id) {
       actorRole: role || "",
       message: `Deleted employee ${emp.empId || id}`
     });
-    showToast("success", "Employee deleted");
+    showToast("success", t("employees.deleted"));
     await loadEmployees();
   }
 }
@@ -420,17 +452,18 @@ function exportCurrentRows() {
     rows,
     filename: "employees-export.csv",
     columns: [
-      { key: "empId", label: "Employee ID" },
-      { key: "fullName", label: "Full Name" },
-      { key: "email", label: "Email" },
-      { key: "departmentId", label: "Department" },
-      { key: "status", label: "Status" }
+      { key: "empId", label: t("employees.field.employee_id") },
+      { key: "fullName", label: t("employees.field.full_name") },
+      { key: "email", label: t("employees.field.email") },
+      { key: "departmentId", label: t("employees.field.department") },
+      { key: "status", label: t("common.status") }
     ]
   });
   if (ok) showToast("success", t("common.export_csv"));
 }
 
 async function loadEmployees() {
+  if (!tbody) return;
   showTableSkeleton(tbody, { rows: 6, cols: 6 });
   employees = await listEmployees({ includeArchived: true });
   renderEmployees();
@@ -462,7 +495,7 @@ async function backupEmployees() {
     actorRole: role || "",
     message: "Exported employees backup."
   });
-  showToast("success", "Employees backup downloaded");
+  showToast("success", t("employees.backup_downloaded"));
 }
 
 function requestRestoreFile() {
@@ -490,31 +523,36 @@ async function handleRestoreFileChange(event) {
       actorRole: role || "",
       message: `Restored ${restoredCount} employees from backup.`
     });
-    showToast("success", `Restored ${restoredCount} employees`);
+    showToast("success", `${t("employees.restore_success_prefix")} ${restoredCount} ${t("employees.restore_success_suffix")}`);
     await loadEmployees();
   } catch (_) {
-    showToast("error", "Invalid backup file");
+    showToast("error", t("employees.invalid_backup_file"));
   }
 }
 
-addButton.addEventListener("click", () => openEmployeeModal());
+if (addButton) addButton.addEventListener("click", () => openEmployeeModal());
 if (exportButton) exportButton.addEventListener("click", exportCurrentRows);
 if (backupButton) backupButton.addEventListener("click", backupEmployees);
 if (restoreButton) restoreButton.addEventListener("click", requestRestoreFile);
 if (restoreFileInput) restoreFileInput.addEventListener("change", handleRestoreFileChange);
-searchInput.addEventListener("input", () => {
-  prefs.query = searchInput.value || "";
-  prefs.page = 1;
-  savePrefs();
-  renderEmployees();
-});
-statusFilter.addEventListener("change", () => {
-  prefs.status = statusFilter.value || "";
-  prefs.page = 1;
-  savePrefs();
-  renderEmployees();
-});
+if (searchInput) {
+  searchInput.addEventListener("input", () => {
+    prefs.query = searchInput.value || "";
+    prefs.page = 1;
+    savePrefs();
+    renderEmployees();
+  });
+}
+if (statusFilter) {
+  statusFilter.addEventListener("change", () => {
+    prefs.status = statusFilter.value || "";
+    prefs.page = 1;
+    savePrefs();
+    renderEmployees();
+  });
+}
 window.addEventListener("global-search", (event) => {
+  if (!searchInput) return;
   searchInput.value = event.detail || "";
   prefs.query = searchInput.value;
   prefs.page = 1;
@@ -529,7 +567,7 @@ trackUxEvent({ event: "page_open", module: "employees" });
     await loadEmployees();
   } catch (error) {
     console.error("Employees page init failed:", error);
-    showToast("error", "Could not load employees data");
+    showToast("error", t("employees.load_failed"));
   }
 })();
 

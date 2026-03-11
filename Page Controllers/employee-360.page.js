@@ -1,5 +1,5 @@
 import { enforceAuth, getUserProfile, getRole } from "../Aman/guard.js";
-import { initI18n } from "../Languages/i18n.js";
+import { initI18n, t } from "../Languages/i18n.js";
 import { renderNavbar } from "../Collaboration interface/ui-navbar.js";
 import { renderSidebar } from "../Collaboration interface/ui-sidebar.js";
 import { showToast } from "../Collaboration interface/ui-toast.js";
@@ -38,6 +38,15 @@ const numberFmt = new Intl.NumberFormat(document.documentElement.lang?.startsWit
 let employees = [];
 let departments = [];
 let positions = [];
+
+function escapeHtml(value = "") {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
 
 function formatDate(value) {
   const date = toDate(value);
@@ -105,11 +114,14 @@ function pickDateMillis(item = {}, dateKeys = []) {
 function statusBadge(value) {
   const text = normalizeStatus(value || "unknown");
   const statusClass = `status-${text}`;
-  return `<span class="badge ${statusClass}">${text.replace(/_/g, " ")}</span>`;
+  const key = `common.status.${text}`;
+  const translated = t(key);
+  const label = translated === key ? text.replace(/_/g, " ") : translated;
+  return `<span class="badge ${statusClass}">${escapeHtml(label)}</span>`;
 }
 
 function emptyRow(colspan) {
-  return `<tr><td colspan="${colspan}" class="employee360-empty">No data</td></tr>`;
+  return `<tr><td colspan="${colspan}" class="employee360-empty">${escapeHtml(t("employee_360.no_data"))}</td></tr>`;
 }
 
 function resolveCurrentEmployee() {
@@ -132,23 +144,23 @@ function renderEmployeeOptions() {
   if (isSelfOnly) {
     const own = resolveSelfEmployee();
     if (!own) {
-      selectEl.innerHTML = `<option value="">No employee record linked</option>`;
+      selectEl.innerHTML = `<option value="">${escapeHtml(t("employee_360.no_employee_linked"))}</option>`;
       selectEl.disabled = true;
       return;
     }
-    selectEl.innerHTML = `<option value="${own.id}">${own.fullName || own.email || own.id}</option>`;
+    selectEl.innerHTML = `<option value="${escapeHtml(own.id)}">${escapeHtml(own.fullName || own.email || own.id)}</option>`;
     selectEl.disabled = true;
     return;
   }
 
   selectEl.innerHTML = employees
-    .map((employee) => `<option value="${employee.id}">${employee.fullName || employee.email || employee.id}</option>`)
+    .map((employee) => `<option value="${escapeHtml(employee.id)}">${escapeHtml(employee.fullName || employee.email || employee.id)}</option>`)
     .join("");
 }
 
 function renderProfile(employee) {
   if (!employee) {
-    profileEl.innerHTML = `<div class="employee360-empty">No profile found.</div>`;
+    profileEl.innerHTML = `<div class="employee360-empty">${escapeHtml(t("employee_360.no_profile_found"))}</div>`;
     applyEmployeeTheme(null);
     return;
   }
@@ -157,18 +169,18 @@ function renderProfile(employee) {
   const position = positions.find((item) => item.id === employee.positionId)?.name || employee.positionId || "-";
 
   const fields = [
-    ["Employee ID", employee.empId || employee.id || "-"],
-    ["Full Name", employee.fullName || "-"],
-    ["Email", employee.email || "-"],
-    ["Phone", employee.phone || "-"],
-    ["Department", department],
-    ["Position", position],
-    ["Status", employee.status || "active"],
-    ["Join Date", formatDate(employee.joinDate)]
+    [t("employees.field.employee_id"), employee.empId || employee.id || "-"],
+    [t("employees.field.full_name"), employee.fullName || "-"],
+    [t("employees.field.email"), employee.email || "-"],
+    [t("employees.field.phone"), employee.phone || "-"],
+    [t("employees.field.department"), department],
+    [t("employees.field.position"), position],
+    [t("employees.field.status"), employee.status || "active"],
+    [t("employees.field.join_date"), formatDate(employee.joinDate)]
   ];
 
   profileEl.innerHTML = fields
-    .map(([label, value], index) => `<article class="employee360-field" style="--field-index:${index}"><span>${label}</span><strong>${value}</strong></article>`)
+    .map(([label, value], index) => `<article class="employee360-field" style="--field-index:${index}"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></article>`)
     .join("");
 }
 
@@ -198,8 +210,8 @@ function renderAttendanceTable(items) {
       <tr class="employee360-row" style="--row-index:${index}">
         <td>${formatDate(item.date || item.day || item.createdAt)}</td>
         <td>${statusBadge(item.status || "unknown")}</td>
-        <td>${item.checkIn || item.checkInAt || "-"}</td>
-        <td>${item.checkOut || item.checkOutAt || "-"}</td>
+        <td>${escapeHtml(item.checkIn || item.checkInAt || "-")}</td>
+        <td>${escapeHtml(item.checkOut || item.checkOutAt || "-")}</td>
       </tr>
     `
     )
@@ -218,7 +230,7 @@ function renderLeavesTable(items) {
       <tr class="employee360-row" style="--row-index:${index}">
         <td>${formatDate(item.from)}</td>
         <td>${formatDate(item.to)}</td>
-        <td>${item.type || "-"}</td>
+        <td>${escapeHtml(item.type || "-")}</td>
         <td>${statusBadge(item.status || "submitted")}</td>
       </tr>
     `
@@ -236,7 +248,7 @@ function renderPayrollTable(items) {
     .map(
       (item, index) => `
       <tr class="employee360-row" style="--row-index:${index}">
-        <td>${item.month || "-"}</td>
+        <td>${escapeHtml(item.month || "-")}</td>
         <td>${statusBadge(item.status || "draft")}</td>
         <td>${numberFmt.format(Number(item.gross || 0))}</td>
         <td>${numberFmt.format(Number(item.net || 0))}</td>
@@ -347,19 +359,23 @@ async function init() {
     }
   } catch (error) {
     console.error("Failed to load employee 360:", error);
-    showToast("error", "Failed to load Employee 360 data");
+    showToast("error", t("employee_360.load_failed"));
   }
 }
 
-selectEl.addEventListener("change", async () => {
-  const employee = resolveCurrentEmployee();
-  renderProfile(employee);
-  await loadEmployeeDetails(employee?.id || "");
-});
+if (selectEl) {
+  selectEl.addEventListener("change", async () => {
+    const employee = resolveCurrentEmployee();
+    renderProfile(employee);
+    await loadEmployeeDetails(employee?.id || "");
+  });
+}
 
-refreshBtn.addEventListener("click", () => {
-  void init();
-});
+if (refreshBtn) {
+  refreshBtn.addEventListener("click", () => {
+    void init();
+  });
+}
 
 if (window.lucide?.createIcons) window.lucide.createIcons();
 void init();

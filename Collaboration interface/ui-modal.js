@@ -33,7 +33,6 @@ function ensureModal() {
     isBound = true;
   }
 }
-
 export function openModal({ title, content, actions = [] }) {
   ensureModal();
   modalRoot.querySelector("#modal-title").textContent = translateText(title || "");
@@ -46,6 +45,9 @@ export function openModal({ title, content, actions = [] }) {
   } else if (content instanceof HTMLElement) {
     body.appendChild(content);
   }
+
+
+
 
   const actionsRoot = modalRoot.querySelector("#modal-actions");
   actionsRoot.innerHTML = "";

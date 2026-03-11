@@ -1,5 +1,5 @@
 import { enforceAuth, getUserProfile, getRole } from "../Aman/guard.js";
-import { initI18n } from "../Languages/i18n.js";
+import { initI18n, t } from "../Languages/i18n.js";
 import { renderNavbar } from "../Collaboration interface/ui-navbar.js";
 import { renderSidebar } from "../Collaboration interface/ui-sidebar.js";
 import { showToast } from "../Collaboration interface/ui-toast.js";
@@ -39,6 +39,15 @@ const decisionEl = document.getElementById("my-last-decision");
 
 let myLeaves = [];
 let currentEmployee = null;
+
+function escapeHtml(value = "") {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
 
 function normalizeStatus(status = "") {
   const value = String(status || "").trim().toLowerCase();
@@ -120,10 +129,12 @@ function renderSummary() {
     .filter((item) => ["approved", "rejected"].includes(normalizeStatus(item.status)))
     .sort(sortByNewest)[0];
   if (!latestDecision) {
-    decisionEl.textContent = "No final decision yet.";
+    decisionEl.textContent = t("my_leaves.no_final_decision");
     return;
   }
-  decisionEl.textContent = `Latest result: ${normalizeStatus(latestDecision.status).toUpperCase()} for request ${
+  const statusKey = `common.status.${normalizeStatus(latestDecision.status)}`;
+  const statusText = t(statusKey) === statusKey ? normalizeStatus(latestDecision.status).toUpperCase() : t(statusKey);
+  decisionEl.textContent = `${t("my_leaves.latest_result_prefix")} ${statusText} ${t("my_leaves.latest_result_for_request")} ${
     latestDecision.requestId || latestDecision.id
   }.`;
 }
@@ -151,17 +162,19 @@ function renderTable() {
       const normalizedStatus = normalizeStatus(item.status || "submitted");
       const canDelete = normalizedStatus === "submitted";
       const days = Number(item.days || calcDays(item.from, item.to) || 1);
+      const statusLabelKey = `common.status.${normalizedStatus}`;
+      const statusLabel = t(statusLabelKey) === statusLabelKey ? normalizedStatus : t(statusLabelKey);
       return `
         <tr>
-          <td>${item.requestId || item.id}</td>
-          <td>${item.type || "-"}</td>
-          <td>${item.from || "-"} <span class="text-muted">to</span> ${item.to || "-"}</td>
+          <td>${escapeHtml(item.requestId || item.id || "-")}</td>
+          <td>${escapeHtml(item.type || "-")}</td>
+          <td>${escapeHtml(item.from || "-")} <span class="text-muted">${escapeHtml(t("my_leaves.to_connector"))}</span> ${escapeHtml(item.to || "-")}</td>
           <td>${days}</td>
-          <td><span class="badge status-${normalizedStatus}">${normalizedStatus}</span></td>
+          <td><span class="badge status-${normalizedStatus}">${escapeHtml(statusLabel)}</span></td>
           <td>${
             canDelete
-              ? `<button class="btn btn-ghost" data-action="delete" data-id="${item.id}">Delete</button>`
-              : "<span class=\"text-muted\">Final</span>"
+              ? `<button class="btn btn-ghost" data-action="delete" data-id="${escapeHtml(item.id)}">${escapeHtml(t("common.delete"))}</button>`
+              : `<span class="text-muted">${escapeHtml(t("my_leaves.final_status"))}</span>`
           }</td>
         </tr>
       `;
@@ -175,11 +188,11 @@ function renderTable() {
       const leaveId = btn.dataset.id;
       try {
         await deleteLeave(leaveId);
-        showToast("success", "Pending request deleted");
+        showToast("success", t("my_leaves.pending_deleted"));
         await loadMyLeaves();
       } catch (error) {
         console.error("Delete leave failed:", error);
-        showToast("error", "Failed to delete request");
+        showToast("error", t("my_leaves.delete_failed"));
       }
     });
   });
@@ -190,15 +203,15 @@ async function submitRequest() {
   const to = toEl.value;
   const days = Number(daysEl.value || calcDays(from, to) || 1);
   if (!from || !to) {
-    showToast("error", "Please select from/to dates");
+    showToast("error", t("my_leaves.error.select_dates"));
     return;
   }
   if (new Date(from) > new Date(to)) {
-    showToast("error", "From date cannot be after To date");
+    showToast("error", t("my_leaves.error.from_after_to"));
     return;
   }
   if (days <= 0) {
-    showToast("error", "Days must be greater than 0");
+    showToast("error", t("my_leaves.error.days_positive"));
     return;
   }
 
@@ -220,12 +233,12 @@ async function submitRequest() {
   try {
     submitBtn.disabled = true;
     await createLeave(payload);
-    showToast("success", "Leave request submitted to department");
+    showToast("success", t("my_leaves.submit_success"));
     resetForm();
     await loadMyLeaves();
   } catch (error) {
     console.error("Submit leave failed:", error);
-    showToast("error", "Failed to submit request");
+    showToast("error", t("my_leaves.submit_failed"));
   } finally {
     submitBtn.disabled = false;
   }
@@ -255,14 +268,15 @@ async function loadMyLeaves() {
     myLeaves = [];
     renderSummary();
     renderTable();
-    showToast("error", "Could not load leave requests");
+    showToast("error", t("my_leaves.load_failed"));
   }
 }
 
-submitBtn.addEventListener("click", submitRequest);
-searchEl.addEventListener("input", renderTable);
-statusFilterEl.addEventListener("change", renderTable);
+if (submitBtn) submitBtn.addEventListener("click", submitRequest);
+if (searchEl) searchEl.addEventListener("input", renderTable);
+if (statusFilterEl) statusFilterEl.addEventListener("change", renderTable);
 window.addEventListener("global-search", (event) => {
+  if (!searchEl) return;
   searchEl.value = event.detail || "";
   renderTable();
 });

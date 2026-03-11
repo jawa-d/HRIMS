@@ -491,3 +491,99 @@
     justify-content: center;
   }
 }
+
+/* Static, simple, and clearer layout */
+.insurance-page {
+  gap: var(--space-4);
+  background: transparent;
+}
+
+.insurance-page::before,
+.insurance-extra-wrap::after,
+.insurance-summary .summary-card::before,
+.insurance-summary .summary-card::after {
+  display: none !important;
+}
+
+.insurance-form-card,
+.insurance-list-card,
+.insurance-summary .summary-card,
+.insurance-list-head,
+.insurance-extra-wrap,
+.insurance-table tbody tr,
+.summary-value {
+  animation: none !important;
+  transition: none !important;
+  transform: none !important;
+}
+
+.insurance-form-card,
+.insurance-list-card {
+  background: var(--surface-strong) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: none !important;
+  border-radius: 12px;
+}
+
+.insurance-extra-wrap {
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+}
+
+.insurance-summary {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.insurance-summary .summary-card {
+  background: var(--surface-strong) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: none !important;
+  border-radius: 12px;
+}
+
+.insurance-summary .summary-card:hover,
+.insurance-table tbody tr:hover {
+  background: var(--surface-strong) !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.insurance-list-head {
+  grid-template-columns: 1fr 260px;
+  padding: 8px;
+  border: 1px solid var(--border) !important;
+  border-radius: 10px;
+  background: var(--surface) !important;
+}
+
+.insurance-search-wrap,
+.insurance-filter-wrap {
+  gap: 4px;
+}
+
+.insurance-grid,
+.insurance-grid-3,
+.insurance-grid-4,
+.insurance-grid-5 {
+  gap: 10px;
+}
+
+.insurance-inline-actions {
+  margin-top: 4px;
+}
+
+.insurance-chip {
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+  color: var(--text) !important;
+  font-weight: 600;
+}
+
+.insurance-table tbody tr {
+  border-left: none;
+}
+
+.summary-value.is-updated {
+  animation: none !important;
+}

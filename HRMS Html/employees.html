@@ -25,7 +25,7 @@
         <div class="page-header">
           <div>
             <h1 class="page-title" data-i18n="employees.title">Employees</h1>
-            <p class="text-muted">Manage employee directory and profiles</p>
+            <p class="text-muted" data-i18n="employees.subtitle">Manage employee directory and profiles</p>
           </div>
           <button class="btn btn-primary" id="add-employee-btn" data-i18n="employees.add">Add Employee</button>
         </div>
@@ -35,34 +35,34 @@
             <option value="" data-i18n="common.all">All</option>
             <option value="active" data-i18n="common.active">Active</option>
             <option value="inactive" data-i18n="common.inactive">Inactive</option>
-            <option value="archived">Archived</option>
+            <option value="archived" data-i18n="employees.status.archived">Archived</option>
           </select>
           <button class="btn btn-ghost" id="employees-export-btn" data-i18n="common.export_csv">Export CSV</button>
-          <button class="btn btn-outline" id="employees-backup-btn">Backup</button>
-          <button class="btn btn-outline" id="employees-restore-btn">Restore</button>
+          <button class="btn btn-outline" id="employees-backup-btn" data-i18n="employees.backup">Backup</button>
+          <button class="btn btn-outline" id="employees-restore-btn" data-i18n="employees.restore">Restore</button>
           <input type="file" id="employees-restore-file" accept="application/json" class="hidden" />
         </div>
         <div class="card">
           <div class="card-header">
             <h3 class="section-title">
               <i data-lucide="users"></i>
-              Employee Directory
+              <span data-i18n="employees.directory">Employee Directory</span>
             </h3>
           </div>
           <table class="table">
             <thead>
               <tr>
-                <th>ID</th>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Department</th>
-                <th>Status</th>
+                <th data-i18n="employees.table.id">ID</th>
+                <th data-i18n="common.name">Name</th>
+                <th data-i18n="common.email">Email</th>
+                <th data-i18n="common.department">Department</th>
+                <th data-i18n="common.status">Status</th>
                 <th data-i18n="common.actions">Actions</th>
               </tr>
             </thead>
             <tbody id="employees-body"></tbody>
           </table>
-          <div id="employees-empty" class="empty-state hidden">No employees found</div>
+          <div id="employees-empty" class="empty-state hidden" data-i18n="employees.empty">No employees found</div>
           <div class="table-pagination" id="employees-pagination"></div>
         </div>
       </main>

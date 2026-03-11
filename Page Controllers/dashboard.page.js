@@ -286,7 +286,7 @@ async function loadDashboard() {
     document.body.classList.remove("performance-mode");
   }
 
-  if (welcomeName) welcomeName.textContent = user?.name || "Team";
+  if (welcomeName) welcomeName.textContent = user?.name || t("dashboard.fallback.team");
   bindDashboardQuickLinks();
   if (welcomeDate) {
     const today = new Date();
@@ -419,7 +419,7 @@ async function loadDashboard() {
       const raw = (emp.departmentId || "").trim();
       const byId = departmentNames.get(raw);
       const byName = departmentByName.get(raw);
-      const label = byId || byName || raw || "Unassigned";
+      const label = byId || byName || raw || t("dashboard.department.unassigned");
       acc[label] = (acc[label] || 0) + 1;
       return acc;
     }, {});
@@ -528,7 +528,7 @@ async function loadDashboard() {
           type: "line",
           data: {
             labels: insuranceMonthTokens,
-            datasets: [{ label: "Insurance Issued", data: insuranceTrendValues, borderColor: chartAccent, backgroundColor: chartSoft, fill: true }]
+            datasets: [{ label: t("dashboard.chart.insurance_issued_label"), data: insuranceTrendValues, borderColor: chartAccent, backgroundColor: chartSoft, fill: true }]
           },
           options: chartDefaults
         });

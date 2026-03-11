@@ -49,7 +49,7 @@ const annualEl = document.getElementById("leave-annual");
 const usedEl = document.getElementById("leave-used");
 const remainingEl = document.getElementById("leave-remaining");
 
-if (!canCreate) addButton.classList.add("hidden");
+if (!canCreate && addButton) addButton.classList.add("hidden");
 if (!canExport && exportButton) exportButton.classList.add("hidden");
 
 let leaves = [];
@@ -61,11 +61,20 @@ let currentEmployee = null;
 const DEFAULT_ANNUAL = 24;
 const PREF_KEY = "leaves_table";
 const prefs = getTablePrefs(PREF_KEY, { query: "", status: "", page: 1, pageSize: 10 });
-searchInput.value = prefs.query || "";
-statusFilter.value = prefs.status || "";
+if (searchInput) searchInput.value = prefs.query || "";
+if (statusFilter) statusFilter.value = prefs.status || "";
 
 function savePrefs() {
   saveTablePrefs(PREF_KEY, prefs);
+}
+
+function escapeHtml(value = "") {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
 }
 
 function normalizeStatus(status = "") {
@@ -183,20 +192,21 @@ function updateBalanceSummary() {
 
 function workflowButtons(leave) {
   const status = normalizeStatus(leave.status);
+  const safeId = escapeHtml(leave.id || "");
   const actions = [];
-  if (canEditLeave(leave)) actions.push(`<button class="btn btn-ghost" data-action="edit" data-id="${leave.id}">${t("common.edit")}</button>`);
-  if (canDeleteLeave(leave)) actions.push(`<button class="btn btn-ghost" data-action="delete" data-id="${leave.id}">${t("common.delete")}</button>`);
+  if (canEditLeave(leave)) actions.push(`<button class="btn btn-ghost" data-action="edit" data-id="${safeId}">${t("common.edit")}</button>`);
+  if (canDeleteLeave(leave)) actions.push(`<button class="btn btn-ghost" data-action="delete" data-id="${safeId}">${t("common.delete")}</button>`);
   if (canReviewManager && status === "submitted") {
-    actions.push(`<button class="btn btn-ghost" data-action="manager_review" data-id="${leave.id}">${t("common.status.manager_review")}</button>`);
+    actions.push(`<button class="btn btn-ghost" data-action="manager_review" data-id="${safeId}">${t("common.status.manager_review")}</button>`);
   }
   if (canReviewManager && status === "manager_review") {
-    actions.push(`<button class="btn btn-ghost" data-action="send_hr" data-id="${leave.id}">${t("common.status.hr_review")}</button>`);
+    actions.push(`<button class="btn btn-ghost" data-action="send_hr" data-id="${safeId}">${t("common.status.hr_review")}</button>`);
   }
   if (canApprove && canReviewHr && status === "hr_review") {
-    actions.push(`<button class="btn btn-ghost" data-action="approve" data-id="${leave.id}">${t("common.status.approved")}</button>`);
+    actions.push(`<button class="btn btn-ghost" data-action="approve" data-id="${safeId}">${t("common.status.approved")}</button>`);
   }
   if (canReject && ["manager_review", "hr_review", "submitted"].includes(status)) {
-    actions.push(`<button class="btn btn-ghost" data-action="reject" data-id="${leave.id}">${t("common.status.rejected")}</button>`);
+    actions.push(`<button class="btn btn-ghost" data-action="reject" data-id="${safeId}">${t("common.status.rejected")}</button>`);
   }
   return actions.length ? actions.join("") : `<span class="text-muted">${t("common.view_only")}</span>`;
 }
@@ -226,9 +236,9 @@ function renderPagination(meta) {
     return;
   }
   paginationEl.innerHTML = `
-    <button class="btn btn-ghost" data-page-action="prev" ${meta.page <= 1 ? "disabled" : ""}>Prev</button>
-    <span class="page-label">Page ${meta.page} / ${meta.pages}</span>
-    <button class="btn btn-ghost" data-page-action="next" ${meta.page >= meta.pages ? "disabled" : ""}>Next</button>
+    <button class="btn btn-ghost" data-page-action="prev" ${meta.page <= 1 ? "disabled" : ""}>${t("common.prev")}</button>
+    <span class="page-label">${t("common.page")} ${meta.page} / ${meta.pages}</span>
+    <button class="btn btn-ghost" data-page-action="next" ${meta.page >= meta.pages ? "disabled" : ""}>${t("common.next")}</button>
   `;
   paginationEl.querySelectorAll("button[data-page-action]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -241,6 +251,7 @@ function renderPagination(meta) {
 }
 
 function renderLeaves() {
+  if (!tbody || !emptyState) return;
   const filtered = filterLeaves();
   const paged = paginate(filtered, prefs.page, prefs.pageSize);
   prefs.page = paged.page;
@@ -252,21 +263,21 @@ function renderLeaves() {
       <tr class="leave-row leave-status-${normalizeStatus(leave.status)}" style="--leave-accent:${leaveAccent(leave)};--row-index:${index};">
         <td>
           <div class="employee-cell">
-            <div class="employee-name"><span class="employee-dot"></span><span>${leave.employeeName || leave.employeeId}</span></div>
-            <div class="employee-meta">ID: ${leave.employeeCode || leave.employeeId}</div>
+            <div class="employee-name"><span class="employee-dot"></span><span>${escapeHtml(leave.employeeName || leave.employeeId || "-")}</span></div>
+            <div class="employee-meta">${escapeHtml(t("leaves.employee_id_prefix"))}: ${escapeHtml(leave.employeeCode || leave.employeeId || "-")}</div>
           </div>
         </td>
-        <td>${leave.requestId || "-"}</td>
-        <td><span class="chip">${leave.type || "General"}</span></td>
+        <td>${escapeHtml(leave.requestId || "-")}</td>
+        <td><span class="chip">${escapeHtml(leave.type || t("leaves.type.general"))}</span></td>
         <td>
           <div class="date-range">
-            <span>${leave.from || "-"}</span>
-            <span class="text-muted">to</span>
-            <span>${leave.to || "-"}</span>
+            <span>${escapeHtml(leave.from || "-")}</span>
+            <span class="text-muted">${escapeHtml(t("my_leaves.to_connector"))}</span>
+            <span>${escapeHtml(leave.to || "-")}</span>
           </div>
         </td>
-        <td>${leave.days || 1}</td>
-        <td><span class="badge status-${normalizeStatus(leave.status)}">${t(`common.status.${normalizeStatus(leave.status)}`)}</span></td>
+        <td>${escapeHtml(String(leave.days || 1))}</td>
+        <td><span class="badge status-${normalizeStatus(leave.status)}">${escapeHtml(t(`common.status.${normalizeStatus(leave.status)}`))}</span></td>
         <td>${workflowButtons(leave)}</td>
       </tr>
     `
@@ -286,13 +297,13 @@ function renderLeaves() {
         await handleLeaveAction(button.dataset.action, button.dataset.id);
       } catch (error) {
         console.error("Leave action failed:", error);
-        showToast("error", "Leave action failed");
+        showToast("error", t("leaves.error.action_failed"));
       }
     });
   });
 }
 
-function leaveFormContent(leave = null) {
+function _legacyLeaveFormContent(leave = null) {
   const isEdit = Boolean(leave);
   const employeeName = leave?.employeeName || currentEmployee?.fullName || user.name || user.email || user.uid;
   const employeeCode = leave?.employeeCode || currentEmployee?.empId || user.uid;
@@ -322,6 +333,36 @@ function leaveFormContent(leave = null) {
   `;
 }
 
+function buildLeaveFormContent(leave = null) {
+  const isEdit = Boolean(leave);
+  const employeeName = leave?.employeeName || currentEmployee?.fullName || user.name || user.email || user.uid;
+  const employeeCode = leave?.employeeCode || currentEmployee?.empId || user.uid;
+  const remaining = getRemainingBalance(
+    leave?.employeeId || currentEmployee?.id || user.uid,
+    leave?.from || null,
+    0,
+    currentEmployee,
+    user
+  );
+  return `
+    <label>${t("leaves.modal.employee_name")}<input class="input" value="${escapeHtml(employeeName)}" readonly /></label>
+    <label>${t("leaves.modal.employee_code")}<input class="input" value="${escapeHtml(employeeCode)}" readonly /></label>
+    <label>${t("leaves.modal.remaining_balance")}<input class="input" value="${escapeHtml(String(remaining))}" readonly /></label>
+    <label>${t("my_leaves.field.type")}
+      <select class="select" id="leave-type">
+        <option value="Annual" ${isEdit && leave?.type === "Annual" ? "selected" : ""}>${t("my_leaves.type.annual")}</option>
+        <option value="Sick" ${isEdit && leave?.type === "Sick" ? "selected" : ""}>${t("my_leaves.type.sick")}</option>
+        <option value="Emergency" ${isEdit && leave?.type === "Emergency" ? "selected" : ""}>${t("my_leaves.type.emergency")}</option>
+        <option value="Unpaid" ${isEdit && leave?.type === "Unpaid" ? "selected" : ""}>${t("my_leaves.type.unpaid")}</option>
+      </select>
+    </label>
+    <label>${t("my_leaves.field.from")}<input class="input" id="leave-from" type="date" value="${escapeHtml(leave?.from || "")}" /></label>
+    <label>${t("my_leaves.field.to")}<input class="input" id="leave-to" type="date" value="${escapeHtml(leave?.to || "")}" /></label>
+    <label>${t("my_leaves.field.days")}<input class="input" id="leave-days" type="number" value="${escapeHtml(String(leave?.days || 1))}" /></label>
+    <label>${t("my_leaves.field.reason")}<textarea class="textarea" id="leave-reason">${escapeHtml(leave?.reason || "")}</textarea></label>
+  `;
+}
+
 function collectLeaveForm() {
   const employeeId = currentEmployee?.id || user.uid;
   const employeeCode = currentEmployee?.empId || user.uid;
@@ -343,7 +384,7 @@ function openLeaveModal(existingLeave = null) {
   const isEdit = Boolean(existingLeave);
   openModal({
     title: isEdit ? t("common.edit") : t("common.request_leave"),
-    content: leaveFormContent(existingLeave),
+    content: buildLeaveFormContent(existingLeave),
     actions: [
       {
         label: isEdit ? t("common.save") : t("common.submit"),
@@ -362,7 +403,7 @@ function openLeaveModal(existingLeave = null) {
 
           const remaining = getRemainingBalance(payload.employeeId, payload.from, payload.days, currentEmployee, user);
           if (remaining < 0) {
-            showToast("error", "رصيد الإجازات غير كافٍ");
+            showToast("error", t("leaves.error.insufficient_balance"));
             return;
           }
           if (isEdit) {
@@ -468,7 +509,7 @@ async function handleLeaveAction(action, id) {
       leave.employeeEmail ? { email: leave.employeeEmail, uid: leave.employeeId } : null
     );
     if (remaining < 0) {
-      showToast("error", "رصيد الإجازات غير كافٍ");
+      showToast("error", t("leaves.error.insufficient_balance"));
       return;
     }
     await applyWorkflowAction(leave, "approved", "Leave request approved");
@@ -489,13 +530,13 @@ function exportCurrentRows() {
     rows,
     filename: "leaves-export.csv",
     columns: [
-      { key: "requestId", label: "Request ID" },
-      { key: "employeeName", label: "Employee Name" },
-      { key: "type", label: "Type" },
-      { key: "from", label: "From" },
-      { key: "to", label: "To" },
-      { key: "days", label: "Days" },
-      { key: "status", label: "Status" }
+      { key: "requestId", label: t("leaves.table.request_id") },
+      { key: "employeeName", label: t("leaves.table.employee") },
+      { key: "type", label: t("leaves.table.type") },
+      { key: "from", label: t("my_leaves.field.from") },
+      { key: "to", label: t("my_leaves.field.to") },
+      { key: "days", label: t("leaves.table.days") },
+      { key: "status", label: t("common.status") }
     ]
   });
   if (ok) showToast("success", t("common.export_csv"));
@@ -503,6 +544,7 @@ function exportCurrentRows() {
 
 async function loadLeaves() {
   try {
+    if (!tbody) return;
     showTableSkeleton(tbody, { rows: 6, cols: 7 });
     const [leavesData, employeesData, balancesData] = await Promise.all([
       listLeaves({ limitCount: 400 }),
@@ -521,11 +563,11 @@ async function loadLeaves() {
     allLeaves = [];
     leaves = [];
     renderLeaves();
-    showToast("error", "Could not load leave requests");
+    showToast("error", t("leaves.error.load_failed"));
   }
 }
 
-addButton.addEventListener("click", openLeaveModal);
+if (addButton) addButton.addEventListener("click", openLeaveModal);
 if (exportButton) exportButton.addEventListener("click", exportCurrentRows);
 if (searchInput) {
   searchInput.addEventListener("input", () => {
