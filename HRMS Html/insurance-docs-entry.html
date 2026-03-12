@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en" dir="ltr" data-theme="light">
 <head>
   <meta charset="UTF-8" />
@@ -59,9 +59,9 @@
             <label>رقم الوثيقة
               <input class="input" id="insurance-policy-no" />
             </label>
-            <label>اسم المؤمن / الشركة
+            <label>اسم المشترك
               <select class="select" id="insurance-insured-party">
-                <option value="">اختر شركة/عميل</option>
+                <option value="">اختر مشترك</option>
               </select>
             </label>
             <label>مبلغ التأمين
@@ -76,23 +76,29 @@
             <label>فترة التأمين إلى
               <input class="input" id="insurance-end-date" type="date" />
             </label>
-            <label>قسط التأمين
+            <label>مبلغ الاشتراك
               <input class="input" id="insurance-premium" type="number" min="0" step="0.01" />
             </label>
             <label>نسبة الخطر (%)
               <input class="input" id="insurance-risk-rate" type="number" min="0" step="0.01" />
             </label>
-            <label>العمولة
+            <label>عمولة المندوبين
               <input class="input" id="insurance-commission" type="number" min="0" step="0.01" />
             </label>
           </div>
 
-          <div class="insurance-grid insurance-grid-3">
+          <div class="insurance-grid insurance-grid-5">
+            <label>اجر الوكاله
+              <input class="input" id="insurance-agency-fee" type="number" min="0" step="0.01" />
+            </label>
+            <label>مبلغ صندوق المشتركين
+              <input class="input" id="insurance-subscriber-fund" type="number" min="0" step="0.01" />
+            </label>
+            <label>المبلغ النهائي لصندوق المستحق المشتركين
+              <input class="input" id="insurance-final-subscriber-fund" type="number" min="0" step="0.01" />
+            </label>
             <label>رسم الطابع
               <input class="input" id="insurance-stamp-fee" type="number" min="0" step="0.01" />
-            </label>
-            <label>تحميل الوثيقة (اختياري)
-              <input class="input" id="insurance-file" type="file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx,.txt" />
             </label>
             <label>ملاحظات عامة
               <input class="input" id="insurance-notes" />
@@ -101,7 +107,7 @@
           <div class="insurance-inline-actions">
             <a class="btn btn-outline" href="insurance-parties.html">
               <i data-lucide="building-2"></i>
-              تعريف شركة/عميل جديد
+              اضافه مشترك
             </a>
           </div>
 
@@ -121,7 +127,7 @@
             <div class="summary-value" id="insurance-total-amount">0</div>
           </div>
           <div class="card summary-card">
-            <div class="text-muted">إجمالي القسط</div>
+            <div class="text-muted">إجمالي مبلغ الاشتراك</div>
             <div class="summary-value" id="insurance-total-premium">0</div>
           </div>
           <div class="card summary-card">
@@ -129,20 +135,20 @@
             <div class="summary-value" id="insurance-filtered-count">0</div>
           </div>
           <div class="card summary-card">
-            <div class="text-muted">إجمالي العمولات</div>
-            <div class="summary-value" id="insurance-total-commission">0</div>
+            <div class="text-muted">مجموع اجر الوكاله</div>
+            <div class="summary-value" id="insurance-total-agency-fee">0</div>
           </div>
           <div class="card summary-card">
             <div class="text-muted">إجمالي رسم الطابع</div>
             <div class="summary-value" id="insurance-total-stamp">0</div>
           </div>
           <div class="card summary-card">
-            <div class="text-muted">متوسط نسبة الخطر</div>
-            <div class="summary-value" id="insurance-avg-risk">0%</div>
+            <div class="text-muted">إجمالي مبلغ صندوق المشتركين</div>
+            <div class="summary-value" id="insurance-total-subscriber-fund">0</div>
           </div>
           <div class="card summary-card">
-            <div class="text-muted">وثائق تنتهي خلال 30 يوم</div>
-            <div class="summary-value" id="insurance-expiring-soon">0</div>
+            <div class="text-muted">المبلغ النهائي لصندوق المستحق المشتركين</div>
+            <div class="summary-value" id="insurance-total-final-subscriber-fund">0</div>
           </div>
         </section>
 
@@ -166,9 +172,9 @@
                 <tr>
                   <th>نوع التأمين</th>
                   <th>رقم الوثيقة</th>
-                  <th>المؤمن/الشركة</th>
+                  <th>المشترك</th>
                   <th>مبلغ التأمين</th>
-                  <th>القسط</th>
+                  <th>مبلغ الاشتراك</th>
                   <th>الفترة</th>
                   <th>الإجراءات</th>
                 </tr>
@@ -189,5 +195,3 @@
   <script type="module" src="../Page%20Controllers/insurance-docs.page.js"></script>
 </body>
 </html>
-
-

@@ -41,6 +41,9 @@ const endDateInput = document.getElementById("insurance-end-date");
 const premiumInput = document.getElementById("insurance-premium");
 const riskRateInput = document.getElementById("insurance-risk-rate");
 const commissionInput = document.getElementById("insurance-commission");
+const agencyFeeInput = document.getElementById("insurance-agency-fee");
+const subscriberFundInput = document.getElementById("insurance-subscriber-fund");
+const finalSubscriberFundInput = document.getElementById("insurance-final-subscriber-fund");
 const stampFeeInput = document.getElementById("insurance-stamp-fee");
 const fileInput = document.getElementById("insurance-file");
 const notesInput = document.getElementById("insurance-notes");
@@ -57,10 +60,13 @@ const totalCountEl = document.getElementById("insurance-total-count");
 const totalAmountEl = document.getElementById("insurance-total-amount");
 const totalPremiumEl = document.getElementById("insurance-total-premium");
 const filteredCountEl = document.getElementById("insurance-filtered-count");
-const totalCommissionEl = document.getElementById("insurance-total-commission");
+const totalAgencyFeeEl = document.getElementById("insurance-total-agency-fee") || document.getElementById("insurance-total-commission");
 const totalStampEl = document.getElementById("insurance-total-stamp");
+const totalSubscriberFundEl = document.getElementById("insurance-total-subscriber-fund");
+const totalFinalSubscriberFundEl = document.getElementById("insurance-total-final-subscriber-fund");
 const avgRiskEl = document.getElementById("insurance-avg-risk");
 const expiringSoonEl = document.getElementById("insurance-expiring-soon");
+const hasFundSummaryCards = Boolean(totalSubscriberFundEl && totalFinalSubscriberFundEl);
 const formSection = document.getElementById("insurance-form-section");
 const summarySection = document.getElementById("insurance-summary-section");
 const listSection = document.getElementById("insurance-list-section");
@@ -541,17 +547,19 @@ function addEnhancements() {
   `;
   listHead.after(filters);
 
-  const fileLabel = fileInput.closest("label");
-  const uploadBox = document.createElement("div");
-  uploadBox.className = "insurance-upload-extras";
-  uploadBox.innerHTML = `
-    <div class="insurance-dropzone" id="insurance-dropzone" tabindex="0">اسحب الملفات هنا أو اضغط للاختيار / Drag & drop files here or click</div>
-    <div class="insurance-file-lists">
-      <div><small class="text-muted">ملفات جديدة / New files</small><ul id="insurance-staged-files" class="insurance-file-list"></ul></div>
-      <div><small class="text-muted">ملفات محفوظة / Saved files</small><ul id="insurance-existing-files" class="insurance-file-list"></ul></div>
-    </div>`;
-  fileLabel.after(uploadBox);
-  fileInput.multiple = true;
+  if (fileInput) {
+    const fileLabel = fileInput.closest("label");
+    const uploadBox = document.createElement("div");
+    uploadBox.className = "insurance-upload-extras";
+    uploadBox.innerHTML = `
+      <div class="insurance-dropzone" id="insurance-dropzone" tabindex="0">اسحب الملفات هنا أو اضغط للاختيار / Drag & drop files here or click</div>
+      <div class="insurance-file-lists">
+        <div><small class="text-muted">ملفات جديدة / New files</small><ul id="insurance-staged-files" class="insurance-file-list"></ul></div>
+        <div><small class="text-muted">ملفات محفوظة / Saved files</small><ul id="insurance-existing-files" class="insurance-file-list"></ul></div>
+      </div>`;
+    if (fileLabel) fileLabel.after(uploadBox);
+    fileInput.multiple = true;
+  }
 
   pro.customerNameInput = document.getElementById("insurance-customer-name");
   pro.idNumberInput = document.getElementById("insurance-id-number");
@@ -584,14 +592,16 @@ function addEnhancements() {
       current.add(key);
       stagedFiles.push(file);
     });
-    fileInput.value = "";
+    if (fileInput) fileInput.value = "";
     renderStagedFiles();
   };
-  fileInput.addEventListener("change", () => addFiles(fileInput.files));
-  pro.dropzone.addEventListener("click", () => fileInput.click());
-  pro.dropzone.addEventListener("dragover", (e) => { e.preventDefault(); pro.dropzone.classList.add("is-drag"); });
-  pro.dropzone.addEventListener("dragleave", (e) => { e.preventDefault(); pro.dropzone.classList.remove("is-drag"); });
-  pro.dropzone.addEventListener("drop", (e) => { e.preventDefault(); pro.dropzone.classList.remove("is-drag"); addFiles(e.dataTransfer?.files); });
+  if (fileInput && pro.dropzone) {
+    fileInput.addEventListener("change", () => addFiles(fileInput.files));
+    pro.dropzone.addEventListener("click", () => fileInput.click());
+    pro.dropzone.addEventListener("dragover", (e) => { e.preventDefault(); pro.dropzone.classList.add("is-drag"); });
+    pro.dropzone.addEventListener("dragleave", (e) => { e.preventDefault(); pro.dropzone.classList.remove("is-drag"); });
+    pro.dropzone.addEventListener("drop", (e) => { e.preventDefault(); pro.dropzone.classList.remove("is-drag"); addFiles(e.dataTransfer?.files); });
+  }
 
   insuredPartySelect.addEventListener("change", () => {
     if (txt(pro.customerNameInput.value)) return;
@@ -665,6 +675,9 @@ async function collectPayload() {
     premium: Math.max(0, Number(premiumInput.value) || 0),
     riskRate: Math.max(0, Number(riskRateInput.value) || 0),
     commission: Math.max(0, Number(commissionInput.value) || 0),
+    agencyFee: Math.max(0, Number(agencyFeeInput?.value) || 0),
+    subscriberFundAmount: Math.max(0, Number(subscriberFundInput?.value) || 0),
+    finalSubscriberFundAmount: Math.max(0, Number(finalSubscriberFundInput?.value) || 0),
     stampFee: Math.max(0, Number(stampFeeInput.value) || 0),
     notes: txt(notesInput.value),
     extraDetails,
@@ -689,9 +702,12 @@ function resetForm() {
   premiumInput.value = "";
   riskRateInput.value = "";
   commissionInput.value = "";
+  if (agencyFeeInput) agencyFeeInput.value = "";
+  if (subscriberFundInput) subscriberFundInput.value = "";
+  if (finalSubscriberFundInput) finalSubscriberFundInput.value = "";
   stampFeeInput.value = "";
   notesInput.value = "";
-  fileInput.value = "";
+  if (fileInput) fileInput.value = "";
   pro.customerNameInput.value = "";
   pro.idNumberInput.value = "";
   pro.issueDateInput.value = today();
@@ -718,9 +734,12 @@ function fillFormFromDoc(item) {
   premiumInput.value = String(item.premium ?? "");
   riskRateInput.value = String(item.riskRate ?? "");
   commissionInput.value = String(item.commission ?? "");
+  if (agencyFeeInput) agencyFeeInput.value = String(item.agencyFee ?? "");
+  if (subscriberFundInput) subscriberFundInput.value = String(item.subscriberFundAmount ?? "");
+  if (finalSubscriberFundInput) finalSubscriberFundInput.value = String(item.finalSubscriberFundAmount ?? "");
   stampFeeInput.value = String(item.stampFee ?? "");
   notesInput.value = item.notes || "";
-  fileInput.value = "";
+  if (fileInput) fileInput.value = "";
   pro.customerNameInput.value = item.customerName || "";
   pro.idNumberInput.value = item.idNumber || "";
   pro.issueDateInput.value = item.issueDate || "";
@@ -738,7 +757,7 @@ function fillFormFromDoc(item) {
 
 function rowSearchText(item) {
   const extras = Object.entries(item.extraDetails || {}).map(([k, v]) => `${k} ${v}`).join(" ");
-  return [item.policyNo, item.customerName, item.idNumber, item.insuranceType, item.issueDate, item.expiryDate, item.uploadedBy, item.status, item.folder, item.category, (item.tags || []).join(" "), item.notes, extras].map((v) => txt(v).toLowerCase()).join(" ");
+  return [item.policyNo, item.customerName, item.idNumber, item.insuranceType, item.issueDate, item.expiryDate, item.uploadedBy, item.status, item.folder, item.category, (item.tags || []).join(" "), item.notes, item.agencyFee, item.subscriberFundAmount, item.finalSubscriberFundAmount, item.commission, extras].map((v) => txt(v).toLowerCase()).join(" ");
 }
 
 function getFilteredDocs() {
@@ -768,10 +787,13 @@ function reportMetrics(items) {
   const amountTotal = items.reduce((s, i) => s + (Number(i.insuredAmount) || 0), 0);
   const premiumTotal = items.reduce((s, i) => s + (Number(i.premium) || 0), 0);
   const commissionTotal = items.reduce((s, i) => s + (Number(i.commission) || 0), 0);
+  const agencyFeeTotal = items.reduce((s, i) => s + (Number(i.agencyFee) || 0), 0);
+  const subscriberFundTotal = items.reduce((s, i) => s + (Number(i.subscriberFundAmount) || 0), 0);
+  const finalSubscriberFundTotal = items.reduce((s, i) => s + (Number(i.finalSubscriberFundAmount) || 0), 0);
   const stampTotal = items.reduce((s, i) => s + (Number(i.stampFee) || 0), 0);
   const riskAvg = count ? items.reduce((s, i) => s + (Number(i.riskRate) || 0), 0) / count : 0;
   const expiringSoon = items.filter((i) => i.expiryDate && i.expiryDate >= today() && i.expiryDate <= new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10)).length;
-  return { count, amountTotal, premiumTotal, commissionTotal, stampTotal, riskAvg, expiringSoon };
+  return { count, amountTotal, premiumTotal, commissionTotal, agencyFeeTotal, subscriberFundTotal, finalSubscriberFundTotal, stampTotal, riskAvg, expiringSoon };
 }
 
 function toAuditMeta(item = {}) {
@@ -1044,8 +1066,11 @@ async function generatePolicyPdf(item) {
     ["التصنيف / Category", safePdfText(doc, txt(item.category) || "-")],
     ["الوسوم / Tags", safePdfText(doc, (item.tags || []).join(", ") || "-")],
     ["مبلغ التأمين / Insured Amount", money(item.insuredAmount)],
-    ["القسط / Premium", money(item.premium)],
-    ["العمولة / Commission", money(item.commission)],
+    ["مبلغ الاشتراك / Subscription Amount", money(item.premium)],
+    ["عمولة المندوبين / Representatives Commission", money(item.commission)],
+    ["اجر الوكالة / Agency Fee", money(item.agencyFee)],
+    ["مبلغ صندوق المشتركين / Subscriber Fund Amount", money(item.subscriberFundAmount)],
+    ["المبلغ النهائي لصندوق المستحق المشتركين / Final Subscriber Fund Amount", money(item.finalSubscriberFundAmount)],
     ["رسم الطابع / Stamp Fee", money(item.stampFee)],
     ["ملاحظات / Notes", safePdfText(doc, txt(item.notes) || "-")]
   ];
@@ -1191,10 +1216,15 @@ function renderSummary(filtered) {
   updateSummaryValue(totalAmountEl, money(totals.amountTotal));
   updateSummaryValue(totalPremiumEl, money(totals.premiumTotal));
   updateSummaryValue(filteredCountEl, String(filtered.length));
-  updateSummaryValue(totalCommissionEl, money(totals.commissionTotal));
+  updateSummaryValue(totalAgencyFeeEl, money(totals.agencyFeeTotal));
   updateSummaryValue(totalStampEl, money(totals.stampTotal));
-  updateSummaryValue(avgRiskEl, `${numFmt.format(filtered.length ? f.riskAvg : totals.riskAvg)}%`);
-  updateSummaryValue(expiringSoonEl, String(filtered.length ? f.expiringSoon : totals.expiringSoon));
+  if (hasFundSummaryCards) {
+    updateSummaryValue(totalSubscriberFundEl, money(totals.subscriberFundTotal));
+    updateSummaryValue(totalFinalSubscriberFundEl, money(totals.finalSubscriberFundTotal));
+  } else {
+    updateSummaryValue(avgRiskEl, `${numFmt.format(filtered.length ? f.riskAvg : totals.riskAvg)}%`);
+    updateSummaryValue(expiringSoonEl, String(filtered.length ? f.expiringSoon : totals.expiringSoon));
+  }
 }
 
 function renderTable() {
@@ -1332,7 +1362,9 @@ exportExcelBtn.addEventListener("click", async () => {
   const rows = getFilteredDocs().map((item) => ({
     policyNo: item.policyNo, customerName: item.customerName, idNumber: item.idNumber, policyType: byType(item.insuranceType),
     issueDate: item.issueDate, expiryDate: item.expiryDate, uploadedBy: item.uploadedBy, status: item.status,
-    folder: item.folder, category: item.category, tags: item.tags.join(", "), notes: item.notes
+    insuredAmount: item.insuredAmount, subscriptionAmount: item.premium, representativesCommission: item.commission,
+    agencyFee: item.agencyFee, subscriberFundAmount: item.subscriberFundAmount, finalSubscriberFundAmount: item.finalSubscriberFundAmount,
+    stampFee: item.stampFee, folder: item.folder, category: item.category, tags: item.tags.join(", "), notes: item.notes
   }));
   if (!rows.length) return showToast("error", t("insurance_docs.no_results"));
   const excelReady = await ensureExcelLib();
