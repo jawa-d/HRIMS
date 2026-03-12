@@ -138,6 +138,29 @@ const updateSummaryValue = (el, nextValue) => {
 const txt = (v) => String(v || "").trim();
 const money = (v) => numFmt.format(Math.max(0, Number(v) || 0));
 const today = () => new Date().toISOString().slice(0, 10);
+const toIsoDate = (value) => {
+  const raw = txt(value);
+  if (!raw) return "";
+  const normalized = raw.replaceAll(".", "/").replaceAll("-", "/");
+  const match = normalized.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})$/);
+  if (!match) return "";
+  const y = Number(match[1]);
+  const m = Number(match[2]);
+  const d = Number(match[3]);
+  if (!Number.isInteger(y) || !Number.isInteger(m) || !Number.isInteger(d)) return "";
+  if (m < 1 || m > 12 || d < 1 || d > 31) return "";
+  const iso = `${String(y).padStart(4, "0")}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  const date = new Date(`${iso}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return "";
+  if (date.getFullYear() !== y || date.getMonth() + 1 !== m || date.getDate() !== d) return "";
+  return iso;
+};
+const toDisplayDate = (value) => {
+  const iso = toIsoDate(value);
+  if (!iso) return txt(value);
+  const [y, m, d] = iso.split("-");
+  return `${y}/${Number(m)}/${Number(d)}`;
+};
 const esc = (v) => txt(v).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll("\"", "&quot;");
 const byType = (k) => INSURANCE_TYPES.find((t) => t[0] === k)?.[1] || k || "-";
 const COMPANY_NAME_AR = "شركة وادي الرافدين";
@@ -380,8 +403,8 @@ function normalizeAttachments(item) {
 }
 
 function normalizeDoc(item) {
-  const issueDate = txt(item.issueDate || item.startDate);
-  const expiryDate = txt(item.expiryDate || item.endDate);
+  const issueDate = toIsoDate(item.issueDate || item.startDate);
+  const expiryDate = toIsoDate(item.expiryDate || item.endDate);
   const status = txt(item.status) || (expiryDate && expiryDate < today() ? "expired" : "active");
   return {
     ...item,
@@ -526,8 +549,8 @@ function addEnhancements() {
   fields.innerHTML = `
     <label>اسم الزبون / Customer Name<input class="input" id="insurance-customer-name" /></label>
     <label>رقم الهوية / ID Number<input class="input" id="insurance-id-number" /></label>
-    <label>تاريخ الإصدار / Issue Date<input class="input" id="insurance-issue-date" type="date" /></label>
-    <label>تاريخ الانتهاء / Expiry Date<input class="input" id="insurance-expiry-date" type="date" /></label>
+    <label>تاريخ الإصدار / Issue Date<input class="input" id="insurance-issue-date" type="text" placeholder="YYYY/M/D" inputmode="numeric" /></label>
+    <label>تاريخ الانتهاء / Expiry Date<input class="input" id="insurance-expiry-date" type="text" placeholder="YYYY/M/D" inputmode="numeric" /></label>
     <label>من رفع الوثيقة / Uploaded By<input class="input" id="insurance-uploaded-by" readonly /></label>
     <label>الحالة / Status<select class="select" id="insurance-status"><option value="active">فعال / Active</option><option value="expired">منتهي / Expired</option></select></label>
     <label>المجلد / Folder<input class="input" id="insurance-folder" placeholder="مثال / e.g. 2026/Q1" /></label>
@@ -583,6 +606,27 @@ function addEnhancements() {
   pro.uploadedByInput.value = txt(user?.name || user?.email || user?.uid || "system");
   [pro.filterCustomerInput, pro.filterPolicyInput, pro.filterDateFromInput, pro.filterDateToInput, pro.filterFolderInput, pro.filterCategoryInput]
     .forEach((el) => el.addEventListener("input", renderTable));
+
+  const syncPeriodToMeta = () => {
+    if (pro.issueDateInput) pro.issueDateInput.value = txt(startDateInput?.value);
+    if (pro.expiryDateInput) pro.expiryDateInput.value = txt(endDateInput?.value);
+  };
+  const syncMetaToPeriod = () => {
+    if (startDateInput) startDateInput.value = txt(pro.issueDateInput?.value);
+    if (endDateInput) endDateInput.value = txt(pro.expiryDateInput?.value);
+  };
+  const normalizeDateField = (input) => {
+    if (!input) return;
+    const iso = toIsoDate(input.value);
+    if (iso) input.value = toDisplayDate(iso);
+  };
+  startDateInput?.addEventListener("input", syncPeriodToMeta);
+  endDateInput?.addEventListener("input", syncPeriodToMeta);
+  pro.issueDateInput?.addEventListener("input", syncMetaToPeriod);
+  pro.expiryDateInput?.addEventListener("input", syncMetaToPeriod);
+  [startDateInput, endDateInput, pro.issueDateInput, pro.expiryDateInput].forEach((input) => {
+    input?.addEventListener("blur", () => normalizeDateField(input));
+  });
 
   const addFiles = (list) => {
     const current = new Set(stagedFiles.map((f) => `${f.name}:${f.size}:${f.lastModified}`));
@@ -645,9 +689,12 @@ async function uploadFileViaServer(file) {
 async function collectPayload() {
   const policyNo = txt(policyNoInput.value);
   const customerName = txt(pro.customerNameInput?.value);
-  const issueDate = txt(pro.issueDateInput?.value || startDateInput.value);
-  const expiryDate = txt(pro.expiryDateInput?.value || endDateInput.value);
+  const issueDateRaw = txt(startDateInput.value || pro.issueDateInput?.value);
+  const expiryDateRaw = txt(endDateInput.value || pro.expiryDateInput?.value);
+  const issueDate = toIsoDate(issueDateRaw);
+  const expiryDate = toIsoDate(expiryDateRaw);
   if (!policyNo || !customerName) throw new Error("policy-customer-required");
+  if ((issueDateRaw && !issueDate) || (expiryDateRaw && !expiryDate)) throw new Error("invalid-date-format");
   if (issueDate && expiryDate && expiryDate < issueDate) throw new Error("invalid-date-range");
 
   const { extraDetails, missingLabel } = readExtraFieldsStrict();
@@ -693,12 +740,13 @@ async function collectPayload() {
 function resetForm() {
   editingId = "";
   stagedFiles = [];
+  const todayDisplay = toDisplayDate(today());
   typeSelect.value = "motor";
   policyNoInput.value = "";
   insuredPartySelect.value = "";
   amountInput.value = "";
-  startDateInput.value = today();
-  endDateInput.value = today();
+  startDateInput.value = todayDisplay;
+  endDateInput.value = todayDisplay;
   premiumInput.value = "";
   riskRateInput.value = "";
   commissionInput.value = "";
@@ -710,8 +758,8 @@ function resetForm() {
   if (fileInput) fileInput.value = "";
   pro.customerNameInput.value = "";
   pro.idNumberInput.value = "";
-  pro.issueDateInput.value = today();
-  pro.expiryDateInput.value = today();
+  pro.issueDateInput.value = todayDisplay;
+  pro.expiryDateInput.value = todayDisplay;
   pro.uploadedByInput.value = txt(user?.name || user?.email || user?.uid || "system");
   pro.statusSelect.value = "active";
   pro.folderInput.value = "";
@@ -729,8 +777,8 @@ function fillFormFromDoc(item) {
   policyNoInput.value = item.policyNo || "";
   insuredPartySelect.value = txt(item.insuredPartyId);
   amountInput.value = String(item.insuredAmount ?? "");
-  startDateInput.value = item.issueDate || "";
-  endDateInput.value = item.expiryDate || "";
+  startDateInput.value = toDisplayDate(item.issueDate || "");
+  endDateInput.value = toDisplayDate(item.expiryDate || "");
   premiumInput.value = String(item.premium ?? "");
   riskRateInput.value = String(item.riskRate ?? "");
   commissionInput.value = String(item.commission ?? "");
@@ -742,8 +790,8 @@ function fillFormFromDoc(item) {
   if (fileInput) fileInput.value = "";
   pro.customerNameInput.value = item.customerName || "";
   pro.idNumberInput.value = item.idNumber || "";
-  pro.issueDateInput.value = item.issueDate || "";
-  pro.expiryDateInput.value = item.expiryDate || "";
+  pro.issueDateInput.value = toDisplayDate(item.issueDate || "");
+  pro.expiryDateInput.value = toDisplayDate(item.expiryDate || "");
   pro.uploadedByInput.value = item.uploadedBy || txt(user?.name || user?.email || user?.uid || "system");
   pro.statusSelect.value = item.status || "active";
   pro.folderInput.value = item.folder || "";
@@ -1058,8 +1106,8 @@ async function generatePolicyPdf(item) {
     ["اسم الزبون / Customer Name", safePdfText(doc, txt(item.customerName) || "-")],
     ["رقم الهوية / ID Number", safePdfText(doc, txt(item.idNumber) || "-")],
     ["نوع التأمين / Policy Type", safePdfText(doc, byType(item.insuranceType))],
-    ["تاريخ الإصدار / Issue Date", safePdfText(doc, txt(item.issueDate) || "-")],
-    ["تاريخ الانتهاء / Expiry Date", safePdfText(doc, txt(item.expiryDate) || "-")],
+    ["تاريخ الإصدار / Issue Date", safePdfText(doc, toDisplayDate(item.issueDate) || "-")],
+    ["تاريخ الانتهاء / Expiry Date", safePdfText(doc, toDisplayDate(item.expiryDate) || "-")],
     ["من رفع الوثيقة / Uploaded By", safePdfText(doc, txt(item.uploadedBy) || "-")],
     ["الحالة / Status", safePdfText(doc, txt(item.status) || "-")],
     ["المجلد / Folder", safePdfText(doc, txt(item.folder) || "-")],
@@ -1121,8 +1169,8 @@ async function generatePoliciesReportPdf(items) {
     safePdfCellText(doc, txt(item.customerName) || "-", arabicFontReady),
     safePdfCellText(doc, txt(item.idNumber) || "-", arabicFontReady),
     safePdfCellText(doc, arabicFontReady ? byType(item.insuranceType) : toPdfEnglishLabel(byType(item.insuranceType)), arabicFontReady),
-    safePdfCellText(doc, txt(item.issueDate) || "-", arabicFontReady),
-    safePdfCellText(doc, txt(item.expiryDate) || "-", arabicFontReady),
+    safePdfCellText(doc, toDisplayDate(item.issueDate) || "-", arabicFontReady),
+    safePdfCellText(doc, toDisplayDate(item.expiryDate) || "-", arabicFontReady),
     safePdfCellText(doc, txt(item.status) || "-", arabicFontReady),
     money(item.insuredAmount),
     money(item.premium)
@@ -1236,7 +1284,7 @@ function renderTable() {
       <td>${esc(item.customerName)}<br><small>${esc(item.uploadedBy)}</small></td>
       <td>${money(item.insuredAmount)}</td>
       <td>${money(item.premium)}</td>
-      <td>${esc(item.issueDate)} to ${esc(item.expiryDate)}<br><small>${esc(item.folder)} / ${esc(item.category)}</small></td>
+      <td>${esc(toDisplayDate(item.issueDate))} to ${esc(toDisplayDate(item.expiryDate))}<br><small>${esc(item.folder)} / ${esc(item.category)}</small></td>
       <td>
         <button class="btn btn-ghost" data-action="view" data-id="${item.id}">${esc(t("insurance_docs.action.view"))}</button>
         ${canManage ? `<button class="btn btn-ghost" data-action="edit" data-id="${item.id}">${esc(t("insurance_docs.action.edit"))}</button>` : ""}
@@ -1336,6 +1384,7 @@ async function handleSave() {
   } catch (error) {
     const message = txt(error?.message);
     if (message === "policy-customer-required") showToast("error", "Policy number and customer name are required");
+    else if (message === "invalid-date-format") showToast("error", "Date format must be YYYY/M/D");
     else if (message === "invalid-date-range") showToast("error", "Expiry date must be after issue date");
     else if (message.startsWith("missing-extra:")) showToast("error", `Missing field: ${message.replace("missing-extra:", "")}`);
     else { console.error(error); showToast("error", message || "Save failed"); }
