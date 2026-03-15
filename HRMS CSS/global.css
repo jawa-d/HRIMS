@@ -45,6 +45,28 @@ textarea {
   color: inherit;
 }
 
+button,
+input[type="button"],
+input[type="submit"],
+input[type="reset"] {
+  border: 1px solid color-mix(in srgb, var(--primary) 40%, var(--border));
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--primary) 20%, transparent) inset,
+    0 8px 18px rgba(var(--btn-glow-rgb), 0.2),
+    0 0 14px rgba(var(--btn-glow-soft-rgb), 0.22);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
+}
+
+button:hover,
+input[type="button"]:hover,
+input[type="submit"]:hover,
+input[type="reset"]:hover {
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--primary) 30%, transparent) inset,
+    0 12px 24px rgba(var(--btn-glow-rgb), 0.3),
+    0 0 20px rgba(var(--btn-glow-soft-rgb), 0.3);
+}
+
 #app {
   min-height: 100vh;
 }

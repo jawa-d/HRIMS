@@ -47,22 +47,26 @@ html[data-theme="light"] {
   --bg-glow-1: rgba(31, 163, 155, 0.17);
   --bg-glow-2: rgba(56, 185, 175, 0.16);
   --bg-glow-3: rgba(242, 169, 59, 0.08);
+  --btn-glow-rgb: 31, 163, 155;
+  --btn-glow-soft-rgb: 56, 185, 175;
 }
 
 html[data-theme="dark"] {
   color-scheme: dark;
   --bg: var(--black);
-  --text: #f2f6fb;
-  --text-muted: rgba(242, 246, 251, 0.74);
-  --surface: rgba(7, 26, 44, 0.9);
-  --surface-strong: rgba(9, 32, 54, 0.97);
-  --border: rgba(56, 185, 175, 0.28);
-  --primary: var(--brand-400);
-  --accent: var(--gold-500);
-  --primary-soft: rgba(31, 163, 155, 0.26);
-  --accent-soft: rgba(242, 169, 59, 0.22);
+  --text: #ebf7ff;
+  --text-muted: rgba(216, 234, 248, 0.78);
+  --surface: rgba(5, 18, 34, 0.92);
+  --surface-strong: rgba(7, 23, 44, 0.98);
+  --border: rgba(84, 215, 225, 0.34);
+  --primary: #3fcfc1;
+  --accent: #5ce4d4;
+  --primary-soft: rgba(63, 207, 193, 0.24);
+  --accent-soft: rgba(92, 228, 212, 0.2);
   --glass: rgba(7, 26, 44, 0.75);
-  --bg-glow-1: rgba(31, 163, 155, 0.2);
-  --bg-glow-2: rgba(56, 185, 175, 0.2);
-  --bg-glow-3: rgba(201, 133, 42, 0.15);
+  --bg-glow-1: rgba(42, 181, 170, 0.26);
+  --bg-glow-2: rgba(83, 214, 228, 0.2);
+  --bg-glow-3: rgba(16, 78, 106, 0.2);
+  --btn-glow-rgb: 75, 230, 217;
+  --btn-glow-soft-rgb: 53, 196, 230;
 }

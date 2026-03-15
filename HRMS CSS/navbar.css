@@ -203,10 +203,19 @@ body[data-page="profile"] .navbar {
   cursor: pointer;
   transition: transform var(--transition-fast);
   position: relative;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--primary) 20%, transparent) inset,
+    0 8px 16px rgba(var(--btn-glow-rgb), 0.18),
+    0 0 14px rgba(var(--btn-glow-soft-rgb), 0.22);
 }
 
 .navbar-icon-btn:hover {
   transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--primary) 64%, var(--border));
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--primary) 30%, transparent) inset,
+    0 12px 22px rgba(var(--btn-glow-rgb), 0.28),
+    0 0 20px rgba(var(--btn-glow-soft-rgb), 0.3);
 }
 
 .navbar-icon-btn.is-active {

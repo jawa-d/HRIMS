@@ -102,6 +102,10 @@
   color: var(--text);
   cursor: pointer;
   place-items: center;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--primary) 20%, transparent) inset,
+    0 8px 16px rgba(var(--btn-glow-rgb), 0.16),
+    0 0 14px rgba(var(--btn-glow-soft-rgb), 0.2);
 }
 
 .sidebar-nav {
@@ -240,6 +244,10 @@
   display: grid;
   place-items: center;
   cursor: pointer;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--primary) 20%, transparent) inset,
+    0 7px 14px rgba(var(--btn-glow-rgb), 0.14),
+    0 0 12px rgba(var(--btn-glow-soft-rgb), 0.16);
 }
 
 .sidebar-footer {
