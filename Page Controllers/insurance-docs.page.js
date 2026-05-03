@@ -163,8 +163,8 @@ const toDisplayDate = (value) => {
 };
 const esc = (v) => txt(v).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll("\"", "&quot;");
 const byType = (k) => INSURANCE_TYPES.find((t) => t[0] === k)?.[1] || k || "-";
-const COMPANY_NAME_AR = "شركة وادي الرافدين";
-const COMPANY_NAME_EN = APP_NAME || "Wadi Al-Rafidain";
+const COMPANY_NAME_AR = "تكافل العراق للتامين";
+const COMPANY_NAME_EN = APP_NAME || "تكافل العراق للتامين";
 const COMPANY_LOGO_PATH = "assets/logo.jpg";
 let companyLogoDataUrlPromise = null;
 let pdfArabicFontBase64Promise = null;

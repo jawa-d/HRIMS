@@ -36,6 +36,23 @@ function writeLocalAnnouncements(items) {
   localStorage.setItem(LOCAL_ANNOUNCEMENTS_KEY, JSON.stringify(items));
 }
 
+function mergeById(primary = [], secondary = []) {
+  const map = new Map();
+  [...secondary, ...primary].forEach((item) => {
+    if (!item || !item.id) return;
+    map.set(item.id, item);
+  });
+  return Array.from(map.values()).sort(byCreatedAtDesc);
+}
+
+function upsertLocalAnnouncement(item) {
+  if (!item || !item.id) return;
+  const current = readLocalAnnouncements();
+  const next = current.filter((entry) => entry.id !== item.id);
+  next.unshift(item);
+  writeLocalAnnouncements(next.sort(byCreatedAtDesc));
+}
+
 function localId() {
   return `local_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -71,12 +88,14 @@ export async function listAnnouncements(filter = {}) {
 
   try {
     const snap = await getDocs(query(announcementsRef, ...constraints));
-    return snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+    const remote = snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+    return mergeById(remote, readLocalAnnouncements());
   } catch (_) {
     try {
       const q = status ? query(announcementsRef, where("status", "==", status), limit(limitCount)) : query(announcementsRef, limit(limitCount));
       const snap = await getDocs(q);
-      return snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() })).sort(byCreatedAtDesc);
+      const remote = snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() })).sort(byCreatedAtDesc);
+      return mergeById(remote, readLocalAnnouncements());
     } catch (_) {
       const local = readLocalAnnouncements();
       return status ? local.filter((item) => String(item.status || "").toLowerCase() === status) : local;
@@ -96,7 +115,8 @@ export function watchAnnouncements(onChange, onError, filter = {}) {
   return onSnapshot(
     q,
     (snap) => {
-      onChange(snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() })));
+      const remote = snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+      onChange(mergeById(remote, readLocalAnnouncements()));
     },
     onError
   );
@@ -120,6 +140,7 @@ export async function createAnnouncement(payload) {
   };
   try {
     const ref = await addDoc(announcementsRef, data);
+    upsertLocalAnnouncement({ ...data, id: ref.id });
     return ref.id;
   } catch (_) {
     const id = localId();
@@ -129,29 +150,34 @@ export async function createAnnouncement(payload) {
       createdAt: nowTs(),
       updatedAt: nowTs()
     };
-    writeLocalAnnouncements([localData, ...readLocalAnnouncements()].sort(byCreatedAtDesc));
+    upsertLocalAnnouncement(localData);
     return id;
   }
 }
 
 export async function updateAnnouncement(id, payload) {
+  const normalized = normalizeAnnouncementPayload(payload);
   try {
     await updateDoc(doc(db, "announcements", id), {
-      ...normalizeAnnouncementPayload(payload),
+      ...normalized,
       updatedAt: ts()
     });
+    upsertLocalAnnouncement({
+      ...payload,
+      ...normalized,
+      id,
+      updatedAt: nowTs()
+    });
   } catch (_) {
-    const current = readLocalAnnouncements();
-    const next = current.map((item) =>
-      item.id === id
-        ? {
-          ...item,
-          ...normalizeAnnouncementPayload(payload),
-          updatedAt: nowTs()
-        }
-        : item
-    );
-    writeLocalAnnouncements(next.sort(byCreatedAtDesc));
+    const current = readLocalAnnouncements().find((item) => item.id === id) || {};
+    upsertLocalAnnouncement({
+      ...current,
+      ...payload,
+      ...normalized,
+      id,
+      updatedAt: nowTs(),
+      createdAt: current.createdAt || payload.createdAt || nowTs()
+    });
   }
 }
 
@@ -159,7 +185,8 @@ export async function deleteAnnouncement(id) {
   try {
     await deleteDoc(doc(db, "announcements", id));
   } catch (_) {
-    const current = readLocalAnnouncements();
-    writeLocalAnnouncements(current.filter((item) => item.id !== id));
+    // Fall through to local cleanup.
   }
+  const current = readLocalAnnouncements();
+  writeLocalAnnouncements(current.filter((item) => item.id !== id));
 }

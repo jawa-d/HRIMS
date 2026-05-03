@@ -47,10 +47,6 @@ export function openModal({ title, content, actions = [] }) {
   } else if (content instanceof HTMLElement) {
     body.appendChild(content);
   }
-
-
-
-
   const actionsRoot = modalRoot.querySelector("#modal-actions");
   actionsRoot.innerHTML = "";
   actions.forEach((action) => {

@@ -164,7 +164,7 @@ export const ACTION_PERMISSIONS = {
 export const DEFAULT_LANGUAGE = "ar";
 export const DEFAULT_THEME = "light";
 
-export const APP_NAME = "Wadi Al-Rafidain";
+export const APP_NAME = "تكافل العراق للتامين";
 
 export const DIRECT_SYSTEM_ADMIN = {
   uid: "direct-super-admin",

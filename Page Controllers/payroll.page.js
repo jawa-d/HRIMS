@@ -818,7 +818,7 @@ function exportToPdf() {
             <div class="brand">
               <img src="${logoUrl}" alt="Company Logo" onerror="this.style.display='none'" />
               <div>
-                <p class="company-name">شركة وادي الرافدين</p>
+                <p class="company-name">تكافل العراق للتامين</p>
                 <p class="doc-title">Payroll Statement - ${monthLabelFromKey(currentMonth)}</p>
               </div>
             </div>

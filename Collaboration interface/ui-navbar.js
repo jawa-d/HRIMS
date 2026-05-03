@@ -27,7 +27,7 @@ export function renderNavbar({ user, role }) {
           <i data-lucide="menu"></i>
         </button>
         <div class="navbar-brand">
-          <img src="../HRMS%20Html/assets/logo.jpg" alt="${APP_NAME} logo" class="navbar-logo" />
+          <img src="../HRMS%20Html/Logo%20Iraq%20Takaful%20Option.jpg(2).jpeg" alt="${APP_NAME} logo" class="navbar-logo" />
           <span data-i18n="app.name">${APP_NAME}</span>
         </div>
         <div class="navbar-search" id="navbar-search-wrap">

@@ -142,7 +142,7 @@ function bindInput(input) {
 }
 
 function initPageDefaults() {
-  companyNameEl.textContent = user?.companyName || "شركة وادي الرافدين";
+  companyNameEl.textContent = user?.companyName || "تكافل العراق للتامين";
   managerNameInput.value = String(user?.name || "المدير المفوض").trim();
   letterNoInput.value = generateLetterNo();
   letterDateInput.value = todayKey();

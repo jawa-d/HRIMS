@@ -2,7 +2,7 @@ import { enforceAuth, getUserProfile, getRole } from "../Aman/guard.js";
 import { initI18n } from "../Languages/i18n.js";
 import { renderNavbar } from "../Collaboration interface/ui-navbar.js";
 import { renderSidebar } from "../Collaboration interface/ui-sidebar.js";
-import { openModal } from "../Collaboration interface/ui-modal.js";
+import { openModal, closeModal } from "../Collaboration interface/ui-modal.js";
 import { showToast } from "../Collaboration interface/ui-toast.js";
 import { canDo } from "../Services/permissions.service.js";
 import { trackUxEvent } from "../Services/telemetry.service.js";
@@ -232,40 +232,44 @@ function openAnnouncementModal(item = null) {
       {
         label: "Save",
         className: "btn btn-primary",
+        keepOpen: true,
         onClick: async () => {
           try {
             const payload = collectAnnouncementForm(item || {});
             if (!payload.title) {
               showToast("error", "Title is required");
-              return;
+              return false;
             }
             if (!payload.body) {
               showToast("error", "Message is required");
-              return;
+              return false;
             }
             if (isEdit) {
               await updateAnnouncement(item.id, payload);
               if (payload.status === "published") {
-                await notifyAnnouncementPublished(payload);
+                await runSafely(() => notifyAnnouncementPublished(payload), null);
               }
               if (payload.sendWhatsAppNow) {
-                await openWhatsAppForAnnouncement(payload);
+                await runSafely(() => openWhatsAppForAnnouncement(payload), null);
               }
               showToast("success", "Announcement updated");
             } else {
               await createAnnouncement(payload);
               if (payload.status === "published") {
-                await notifyAnnouncementPublished(payload);
+                await runSafely(() => notifyAnnouncementPublished(payload), null);
               }
               if (payload.sendWhatsAppNow) {
-                await openWhatsAppForAnnouncement(payload);
+                await runSafely(() => openWhatsAppForAnnouncement(payload), null);
               }
               showToast("success", "Announcement posted");
             }
             await loadAnnouncementsData();
+            closeModal();
+            return true;
           } catch (error) {
             console.error("Save announcement failed:", error);
             showToast("error", "Failed to save announcement");
+            return false;
           }
         }
       },

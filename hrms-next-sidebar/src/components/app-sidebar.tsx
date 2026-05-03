@@ -38,7 +38,7 @@ export function AppSidebar() {
       <SidebarHeader className="border-b border-sidebar-border">
         <div className="px-2 py-1">
           <p className="text-sm font-semibold">HRMS</p>
-          <p className="text-xs text-sidebar-foreground/70">Wadi Al-Rafidain</p>
+          <p className="text-xs text-sidebar-foreground/70">تكافل العراق للتامين</p>
         </div>
       </SidebarHeader>
 
@@ -79,4 +79,3 @@ export function AppSidebar() {
     </Sidebar>
   );
 }
-
