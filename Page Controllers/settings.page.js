@@ -33,14 +33,22 @@ const canManageUsers = ["super_admin", "hr_admin", "manager"].includes(role);
 const isManager = role === "manager";
 const themeBtn = document.getElementById("settings-theme-toggle");
 const langBtn = document.getElementById("settings-lang-toggle");
-const rolesTable = document.getElementById("roles-table");
+const roleSelect = document.getElementById("settings-role-select");
+const roleGrid = document.getElementById("settings-role-grid");
+const roleSummary = document.getElementById("settings-role-summary");
+const roleSelectAllBtn = document.getElementById("settings-role-select-all-btn");
+const roleClearAllBtn = document.getElementById("settings-role-clear-all-btn");
 const usersTable = document.getElementById("users-table");
 const userSearch = document.getElementById("settings-user-search");
 const addUserBtn = document.getElementById("settings-add-user-btn");
+const usersCountEl = document.getElementById("settings-users-count");
+const activeCountEl = document.getElementById("settings-active-count");
+const roleCountEl = document.getElementById("settings-role-count");
 
 let roleVisibility = parseStorage(STORAGE_KEYS.roleVisibility, {});
 let userPermissions = parseStorage(STORAGE_KEYS.userPermissions, {});
 let users = [];
+let selectedRoleTemplate = ROLES[0] || "employee";
 
 if (!canManageUsers) {
   addUserBtn.classList.add("hidden");
@@ -222,28 +230,61 @@ function userAllowedPages(item) {
   return defaultPagesForRole(item.role);
 }
 
-function renderRoleTable() {
-  rolesTable.innerHTML = `
-    <thead>
-      <tr>
-        <th>Role</th>
-        ${MENU_ITEMS.map((item) => `<th>${item.key}</th>`).join("")}
-      </tr>
-    </thead>
-    <tbody>
-      ${ROLES.map(
-        (roleKey, index) => `
-        <tr class="settings-role-row" style="--settings-accent:${settingsAccent(`role-${roleKey}`)};--row-index:${index};">
-          <td><span class="badge settings-role-badge">${escapeHtml(roleKey)}</span></td>
-          ${MENU_ITEMS.map((item) => {
-            const checked = defaultPagesForRole(roleKey).includes(item.key);
-            return `<td><input type="checkbox" data-role="${escapeHtml(roleKey)}" data-key="${escapeHtml(item.key)}" ${checked ? "checked" : ""} ${!canManageUsers || isManager ? "disabled" : ""} /></td>`;
-          }).join("")}
-        </tr>
-      `
-      ).join("")}
-    </tbody>
-  `;
+function updateRoleTemplate(roleKey, pages) {
+  roleVisibility[roleKey] = Array.from(new Set((pages || []).filter(Boolean)));
+  persistRbacLocal();
+  syncRbacRemoteSafe();
+  renderUsersTable();
+  renderSidebar("settings");
+  void safeLogSecurityEvent({
+    action: "role_template_updated",
+    severity: "warning",
+    status: "success",
+    actorUid: user?.uid || "",
+    actorEmail: user?.email || "",
+    actorRole: role || "",
+    entity: "roles",
+    entityId: roleKey,
+    message: `Role template changed for ${roleKey}.`
+  });
+}
+
+function renderRoleTemplateBuilder() {
+  if (roleCountEl) roleCountEl.textContent = String(ROLES.length);
+  if (!roleSelect || !roleGrid) return;
+
+  if (!ROLES.includes(selectedRoleTemplate)) {
+    selectedRoleTemplate = ROLES[0] || "employee";
+  }
+
+  roleSelect.innerHTML = ROLES.map(
+    (roleKey) => `<option value="${escapeHtml(roleKey)}" ${selectedRoleTemplate === roleKey ? "selected" : ""}>${escapeHtml(roleKey)}</option>`
+  ).join("");
+  roleSelect.disabled = !canManageUsers || isManager;
+
+  const selected = new Set(defaultPagesForRole(selectedRoleTemplate));
+  roleGrid.innerHTML = MENU_ITEMS.map((item) => `
+    <label class="settings-role-item">
+      <input type="checkbox" data-template-key="${escapeHtml(item.key)}" ${selected.has(item.key) ? "checked" : ""} ${!canManageUsers || isManager ? "disabled" : ""} />
+      <span>${escapeHtml(item.key)}</span>
+    </label>
+  `).join("");
+
+  if (roleSummary) {
+    roleSummary.textContent = `${selected.size} pages enabled for ${selectedRoleTemplate}.`;
+  }
+
+  roleGrid.querySelectorAll("input[data-template-key]").forEach((input) => {
+    input.addEventListener("change", () => {
+      if (!canManageUsers || isManager) return;
+      const checked = Array.from(roleGrid.querySelectorAll("input[data-template-key]:checked"))
+        .map((item) => item.dataset.templateKey)
+        .filter(Boolean);
+      updateRoleTemplate(selectedRoleTemplate, checked);
+      renderRoleTemplateBuilder();
+      showToast("info", "Role template updated");
+    });
+  });
 }
 
 function renderUsersTable() {
@@ -311,6 +352,12 @@ function renderUsersTable() {
   usersTable.querySelectorAll("button[data-action]").forEach((button) => {
     button.addEventListener("click", () => handleUserAction(button.dataset.action, button.dataset.id));
   });
+
+  if (usersCountEl) usersCountEl.textContent = String(users.length);
+  if (activeCountEl) {
+    const active = users.filter((item) => String(item.status || "active").toLowerCase() === "active").length;
+    activeCountEl.textContent = String(active);
+  }
 }
 
 function openUserModal(existing = null) {
@@ -438,6 +485,7 @@ function openUserPagesModal(item) {
           syncRbacRemoteSafe();
           renderUsersTable();
           renderSidebar("settings");
+          renderRoleTemplateBuilder();
           showToast("success", "Email page permissions updated");
         }
       },
@@ -524,34 +572,28 @@ async function loadRbacConfig() {
   }
 }
 
-if (rolesTable) {
-  rolesTable.addEventListener("change", (event) => {
-    if (!canManageUsers || isManager) return;
-    if (!event.target.matches("input[type=checkbox]")) return;
-    const roleKey = event.target.dataset.role;
-    const key = event.target.dataset.key;
-    if (!roleKey || !key) return;
+if (roleSelect) {
+  roleSelect.addEventListener("change", () => {
+    selectedRoleTemplate = roleSelect.value;
+    renderRoleTemplateBuilder();
+  });
+}
 
-    const current = new Set(defaultPagesForRole(roleKey));
-    if (event.target.checked) current.add(key);
-    else current.delete(key);
-    roleVisibility[roleKey] = Array.from(current);
-    persistRbacLocal();
-    syncRbacRemoteSafe();
-    renderUsersTable();
-    renderSidebar("settings");
-    void safeLogSecurityEvent({
-      action: "role_template_updated",
-      severity: "warning",
-      status: "success",
-      actorUid: user?.uid || "",
-      actorEmail: user?.email || "",
-      actorRole: role || "",
-      entity: "roles",
-      entityId: roleKey,
-      message: `Role template changed for ${roleKey}.`
-    });
-    showToast("info", "Role template updated");
+if (roleSelectAllBtn) {
+  roleSelectAllBtn.addEventListener("click", () => {
+    if (!canManageUsers || isManager) return;
+    updateRoleTemplate(selectedRoleTemplate, MENU_ITEMS.map((item) => item.key));
+    renderRoleTemplateBuilder();
+    showToast("success", "All pages granted to selected role");
+  });
+}
+
+if (roleClearAllBtn) {
+  roleClearAllBtn.addEventListener("click", () => {
+    if (!canManageUsers || isManager) return;
+    updateRoleTemplate(selectedRoleTemplate, []);
+    renderRoleTemplateBuilder();
+    showToast("success", "All pages removed from selected role");
   });
 }
 
@@ -583,12 +625,12 @@ if (addUserBtn) {
 (async () => {
   try {
     await loadRbacConfig();
-    renderRoleTable();
+    renderRoleTemplateBuilder();
     await loadUsers();
   } catch (error) {
     console.error("Settings page bootstrap failed:", error);
     showToast("error", "Settings page failed to load completely.");
-    if (rolesTable) renderRoleTable();
+    renderRoleTemplateBuilder();
     if (usersTable) renderUsersTable();
   }
 })();

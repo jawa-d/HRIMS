@@ -24,6 +24,18 @@
       --login-shadow: 0 24px 42px rgba(20, 38, 62, 0.12);
     }
 
+    body.login-creative {
+      --login-bg: #fff8ef;
+      --login-panel: #ffffff;
+      --login-border: #f3d8b7;
+      --login-ink: #3f2b1d;
+      --login-muted: #7a5d45;
+      --login-primary: #a3511f;
+      --login-primary-strong: #7f3a13;
+      --login-accent: #efb366;
+      --login-shadow: 0 24px 42px rgba(125, 66, 28, 0.18);
+    }
+
     * {
       box-sizing: border-box;
     }
@@ -36,6 +48,13 @@
       background:
         radial-gradient(circle at 14% 18%, rgba(30, 47, 140, 0.08), transparent 32%),
         radial-gradient(circle at 84% 78%, rgba(39, 174, 164, 0.08), transparent 30%),
+        var(--login-bg);
+    }
+
+    body[data-page="login"].login-creative {
+      background:
+        radial-gradient(circle at 10% 20%, rgba(245, 158, 11, 0.18), transparent 35%),
+        radial-gradient(circle at 85% 75%, rgba(217, 119, 6, 0.16), transparent 35%),
         var(--login-bg);
     }
 
@@ -95,6 +114,11 @@
       color: #21317d;
     }
 
+    body.login-creative .style-switch a.active {
+      background: #ffe3c7;
+      color: #8a3f17;
+    }
+
     .login-card {
       background: var(--login-panel);
       border: 1px solid var(--login-border);
@@ -103,6 +127,23 @@
       box-shadow: 0 14px 24px rgba(15, 23, 42, 0.08);
       display: grid;
       gap: 16px;
+      animation: loginCardIn 680ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+    }
+
+    .brand-stack {
+      display: grid;
+      justify-items: center;
+      gap: 10px;
+    }
+
+    .brand-logo {
+      width: 92px;
+      height: 92px;
+      border-radius: 18px;
+      object-fit: cover;
+      border: 1px solid #d6ddea;
+      box-shadow: 0 10px 22px rgba(29, 53, 83, 0.18);
+      animation: logoFloat 3.4s ease-in-out infinite;
     }
 
     .portal-title {
@@ -157,6 +198,12 @@
       box-shadow: 0 10px 18px rgba(30, 47, 140, 0.28);
     }
 
+    .login-demo-btn {
+      height: 44px;
+      border-radius: 999px;
+      font-weight: 700;
+    }
+
     .auth-form small {
       color: var(--login-muted);
       font-size: 0.82rem;
@@ -181,10 +228,78 @@
       min-height: 520px;
     }
 
-    .visual-illustration {
-      width: min(100%, 700px);
-      height: auto;
-      display: block;
+    .visual-stage {
+      width: min(100%, 720px);
+      min-height: 430px;
+      border: 1px solid #d9e1f0;
+      border-radius: 18px;
+      background:
+        radial-gradient(circle at 70% 18%, rgba(71, 104, 214, 0.11), transparent 34%),
+        radial-gradient(circle at 22% 80%, rgba(39, 174, 164, 0.1), transparent 36%),
+        #f5f8ff;
+      display: grid;
+      place-items: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .visual-stage::before,
+    .visual-stage::after {
+      content: "";
+      position: absolute;
+      border-radius: 999px;
+      opacity: 0.35;
+      filter: blur(2px);
+    }
+
+    .visual-stage::before {
+      width: 220px;
+      height: 220px;
+      background: #9bb6ff;
+      top: -90px;
+      right: -30px;
+    }
+
+    .visual-stage::after {
+      width: 180px;
+      height: 180px;
+      background: #9be0d5;
+      bottom: -80px;
+      left: -40px;
+    }
+
+    .visual-brand {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      justify-items: center;
+      gap: 12px;
+      text-align: center;
+      animation: loginCardIn 760ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+    }
+
+    .visual-brand img {
+      width: 160px;
+      height: 160px;
+      border-radius: 30px;
+      object-fit: cover;
+      border: 1px solid #d5dff0;
+      box-shadow: 0 16px 28px rgba(29, 53, 83, 0.2);
+      animation: logoFloat 3.8s ease-in-out infinite;
+    }
+
+    .visual-brand h3 {
+      margin: 0;
+      font-size: 1.1rem;
+      color: #1d3553;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .visual-brand p {
+      margin: 0;
+      font-size: 0.9rem;
+      color: #4f5f79;
     }
 
     .login-footer {
@@ -193,6 +308,27 @@
       text-align: center;
       font-size: 0.78rem;
       padding: 12px 16px;
+    }
+
+    @keyframes loginCardIn {
+      from {
+        opacity: 0;
+        transform: translateY(14px) scale(0.98);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    @keyframes logoFloat {
+      0%,
+      100% {
+        transform: translateY(0);
+      }
+      50% {
+        transform: translateY(-4px);
+      }
     }
 
     @media (max-width: 1024px) {
@@ -228,63 +364,37 @@
     <main class="login-main">
       <section class="login-shell">
         <section class="login-auth-wrap" aria-label="Authentication">
-        <div class="style-switch">
-          <a href="login.html?variant=executive" class="active">Executive</a>
-          <a href="login.html?variant=creative">Creative</a>
-        </div>
+          <div class="style-switch">
+            <a href="login.html?variant=executive" class="active">Executive</a>
+            <a href="login.html?variant=creative">Creative</a>
+          </div>
           <div class="login-card">
-            <h1 class="portal-title">تكافل العراق للتامين نظام الداخلي</h1>
-            <p class="portal-subtitle" data-i18n="login.title">Login</p>
+            <div class="brand-stack">
+              <img class="brand-logo" src="../HRMS%20Html/assets/logo.jpg" alt="Company Logo" />
+              <h1 class="portal-title">Takaful Iraq HRMS</h1>
+            </div>
+            <p class="portal-subtitle" data-i18n="login.title">Secure Login</p>
             <form id="login-form" class="auth-form">
-              <input
-                class="input"
-                type="email"
-                id="login-email"
-                required
-                autofocus
-                placeholder="Email"
-              />
+              <input class="input" type="email" id="login-email" required autofocus placeholder="Email" />
+              <input class="input" type="password" id="login-password" placeholder="Password" />
               <button class="btn btn-primary" type="submit" data-i18n="login.submit">Sign In</button>
-              <small data-i18n="login.helper">Use your company account</small>
+              <small data-i18n="login.helper">Login key: use your email as username and the same email as password.</small>
             </form>
           </div>
-          <p class="auth-data-note" data-i18n="login.data_notice">Data is protected by the IT Department - تكافل العراق للتامين.</p>
+          <p class="auth-data-note" data-i18n="login.data_notice">Data is protected by the IT Department - Takaful Iraq Insurance.</p>
         </section>
-
         <aside class="login-visual" aria-hidden="true">
-          <svg class="visual-illustration" viewBox="0 0 760 560" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="58" y="98" width="620" height="390" rx="18" fill="#EDF3FE" stroke="#D8E2F2"/>
-            <rect x="184" y="178" width="402" height="236" rx="12" fill="#FFFFFF" stroke="#C9D7EC"/>
-            <rect x="214" y="208" width="164" height="14" rx="7" fill="#D9E7FF"/>
-            <rect x="214" y="236" width="238" height="14" rx="7" fill="#ECF2FF"/>
-            <rect x="214" y="264" width="128" height="14" rx="7" fill="#ECF2FF"/>
-            <rect x="214" y="296" width="336" height="8" rx="4" fill="#D5DDF0"/>
-            <rect x="214" y="318" width="336" height="8" rx="4" fill="#E5EBF7"/>
-            <rect x="214" y="340" width="336" height="8" rx="4" fill="#E5EBF7"/>
-            <rect x="214" y="362" width="336" height="8" rx="4" fill="#E5EBF7"/>
-            <rect x="88" y="412" width="560" height="42" rx="10" fill="#7C9EF8" opacity="0.25"/>
-            <rect x="468" y="122" width="88" height="56" rx="10" fill="#E2EDFF"/>
-            <rect x="476" y="136" width="20" height="28" rx="4" fill="#80A4FF"/>
-            <rect x="504" y="132" width="44" height="8" rx="4" fill="#9DB7FF"/>
-            <rect x="504" y="146" width="34" height="8" rx="4" fill="#C4D6FF"/>
-            <circle cx="410" cy="252" r="84" fill="#EFF4FF"/>
-            <path d="M388 280C388 261.222 403.222 246 422 246H452V356H422C403.222 356 388 340.778 388 322V280Z" fill="#2E5EE8"/>
-            <rect x="438" y="246" width="64" height="110" rx="18" fill="#163D9F"/>
-            <circle cx="452" cy="226" r="22" fill="#2F3C58"/>
-            <path d="M340 360H538L520 426H356L340 360Z" fill="#1F2F4B"/>
-            <rect x="312" y="426" width="260" height="16" rx="8" fill="#D6DFEE"/>
-            <rect x="292" y="146" width="114" height="64" rx="10" fill="#E2EDFF"/>
-            <path d="M314 190L340 168L362 184L392 152" stroke="#4B78F2" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
-            <circle cx="314" cy="190" r="6" fill="#4B78F2"/>
-            <circle cx="340" cy="168" r="6" fill="#4B78F2"/>
-            <circle cx="362" cy="184" r="6" fill="#4B78F2"/>
-            <circle cx="392" cy="152" r="6" fill="#4B78F2"/>
-          </svg>
+          <div class="visual-stage">
+            <div class="visual-brand">
+              <img src="../HRMS%20Html/assets/logo.jpg" alt="Company Logo" />
+              <h3>Takaful Iraq Insurance</h3>
+              <p>Human Resources Management System</p>
+            </div>
+          </div>
         </aside>
       </section>
     </main>
-
-    <footer class="login-footer">&copy; 2024-2026 تكافل العراق للتامين HRMS Team. All rights reserved.</footer>
+    <footer class="login-footer">&copy; 2024-2026 Takaful Iraq HRMS Team. All rights reserved.</footer>
   </div>
   <script src="https://unpkg.com/lucide@latest"></script>
   <script type="module" src="../Page%20Controllers/login.page.js"></script>

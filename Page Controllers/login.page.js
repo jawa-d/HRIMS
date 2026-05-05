@@ -1,5 +1,5 @@
 import { initI18n } from "../Languages/i18n.js";
-import { loginWithEmailOnly, getStoredProfile } from "../Aman/auth.js";
+import { login, loginWithEmailOnly, getStoredProfile } from "../Aman/auth.js";
 import { showToast } from "../Collaboration interface/ui-toast.js";
 import { isAuthenticated, canAccess, getDefaultPage } from "../Aman/guard.js";
 import { MENU_ITEMS } from "../app.config.js";
@@ -11,8 +11,11 @@ initNetworkBackground();
 
 const form = document.getElementById("login-form");
 const emailInput = document.getElementById("login-email");
+const passwordInput = document.getElementById("login-password");
+const demoBtn = document.getElementById("login-demo-btn");
 const submitBtn = form?.querySelector('button[type="submit"]');
 const submitDefaultText = submitBtn?.textContent || "Sign In";
+const DIRECT_LOGIN_EMAILS = new Set(["demo@company.com", "domo@company.com"]);
 
 const params = new URLSearchParams(window.location.search);
 const nextPage = (params.get("next") || "").trim();
@@ -54,6 +57,8 @@ if (form) {
       showToast("error", "Please enter email.");
       return;
     }
+    const normalizedEmail = email.toLowerCase();
+    const password = (passwordInput?.value || "").trim();
 
     if (submitBtn) {
       submitBtn.disabled = true;
@@ -61,7 +66,15 @@ if (form) {
     }
 
     try {
-      await loginWithEmailOnly(email);
+      if (DIRECT_LOGIN_EMAILS.has(normalizedEmail)) {
+        await loginWithEmailOnly(normalizedEmail);
+      } else {
+        if (!password) {
+          showToast("error", "Please enter password.");
+          return;
+        }
+        await login(normalizedEmail, password);
+      }
       window.location.replace(getPostLoginTarget());
     } catch (error) {
       await logSecurityEvent({
@@ -79,6 +92,30 @@ if (form) {
         submitBtn.disabled = false;
         submitBtn.textContent = submitDefaultText;
       }
+    }
+  });
+}
+
+if (demoBtn) {
+  demoBtn.addEventListener("click", async () => {
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Signing in...";
+    }
+    if (demoBtn) demoBtn.disabled = true;
+    if (emailInput) emailInput.value = DEMO_EMAIL;
+    if (passwordInput) passwordInput.value = "";
+    try {
+      await loginWithEmailOnly(DEMO_EMAIL);
+      window.location.replace(getPostLoginTarget());
+    } catch (error) {
+      showToast("error", mapLoginError(error));
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = submitDefaultText;
+      }
+      if (demoBtn) demoBtn.disabled = false;
     }
   });
 }

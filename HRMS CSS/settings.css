@@ -1,9 +1,51 @@
+.settings-overview {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.settings-overview-card {
+  border: 1px solid color-mix(in srgb, var(--primary) 24%, var(--border));
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(circle at 88% -18%, color-mix(in srgb, var(--primary) 18%, transparent), transparent 46%),
+    linear-gradient(145deg, color-mix(in srgb, var(--surface-strong) 82%, var(--primary-soft)), var(--surface-strong));
+  padding: var(--space-3);
+  box-shadow: var(--shadow-sm);
+}
+
+.settings-overview-label {
+  margin: 0 0 6px;
+  color: var(--ink-500);
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.settings-overview-card h2 {
+  margin: 0;
+  font-size: clamp(1.4rem, 2.5vw, 2rem);
+  color: var(--ink-900);
+}
+
+.settings-overview-card small {
+  display: block;
+  margin-top: 4px;
+  color: var(--ink-600);
+}
+
 .settings-grid {
   display: grid;
   gap: var(--space-4);
   grid-template-columns: 1fr;
   width: 100%;
   min-width: 0;
+}
+
+.settings-block-subtitle {
+  margin: 6px 0 0;
 }
 
 .settings-pref-card {
@@ -71,6 +113,49 @@
 .settings-roles-card .table td,
 .settings-roles-card .table th {
   white-space: nowrap;
+}
+
+.settings-role-builder {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.settings-role-builder-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.settings-role-label {
+  font-weight: 700;
+  color: var(--ink-700);
+}
+
+.settings-role-builder-toolbar .select {
+  min-width: 220px;
+}
+
+.settings-role-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--space-2);
+}
+
+.settings-role-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  border: 1px solid color-mix(in srgb, var(--primary) 16%, var(--border));
+  border-radius: 12px;
+  padding: 8px 10px;
+  background: color-mix(in srgb, var(--surface) 84%, var(--primary-soft));
+}
+
+.settings-role-item span {
+  font-weight: 600;
+  color: var(--ink-900);
 }
 
 .settings-role-badge {
@@ -199,6 +284,10 @@
 }
 
 @media (max-width: 860px) {
+  .settings-overview {
+    grid-template-columns: 1fr;
+  }
+
   .settings-toolbar {
     width: 100%;
     margin-inline-start: 0;
@@ -216,6 +305,14 @@
   .settings-users-card .table,
   .settings-roles-card .table {
     min-width: 620px;
+  }
+
+  .settings-role-builder-toolbar .btn {
+    flex: 1 1 calc(50% - var(--space-2));
+  }
+
+  .settings-role-builder-toolbar .select {
+    min-width: 100%;
   }
 }
 

@@ -263,3 +263,58 @@ html[data-theme="dark"] {
     align-items: flex-start;
   }
 }
+
+@media print {
+  body {
+    background: #fff !important;
+  }
+
+  #sidebar-root,
+  #navbar-root,
+  .sidebar,
+  .navbar,
+  .page-header .org-actions,
+  .org-toggle,
+  .toast-container,
+  .toast,
+  .modal-backdrop {
+    display: none !important;
+  }
+
+  .main-content,
+  .page,
+  .card,
+  .org-department,
+  .org-card {
+    box-shadow: none !important;
+  }
+
+  .app-shell,
+  .main-content,
+  .page {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .app-shell {
+    grid-template-columns: 1fr !important;
+  }
+
+  .card {
+    border: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+  }
+
+  .org-tree {
+    gap: 12px;
+  }
+
+  .org-department {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+}

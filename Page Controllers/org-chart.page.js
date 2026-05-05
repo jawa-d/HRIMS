@@ -25,6 +25,7 @@ const treeRoot = document.getElementById("org-tree");
 const emptyState = document.getElementById("org-empty");
 const searchInput = document.getElementById("org-search");
 const collapseBtn = document.getElementById("org-collapse-btn");
+const printBtn = document.getElementById("org-print-btn");
 const ORG_CHART_CACHE_KEY = "hrms_orgchart_cache_v1";
 
 let employees = [];
@@ -384,6 +385,13 @@ if (searchInput) {
 }
 if (collapseBtn) {
   collapseBtn.addEventListener("click", collapseAll);
+}
+
+if (printBtn) {
+  printBtn.addEventListener("click", () => {
+    treeRoot.querySelectorAll(".org-node.collapsed").forEach((node) => node.classList.remove("collapsed"));
+    window.print();
+  });
 }
 window.addEventListener("global-search", (event) => {
   if (searchInput) searchInput.value = event.detail || "";

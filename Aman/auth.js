@@ -1,5 +1,4 @@
 import {
-  signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
@@ -20,6 +19,7 @@ import { getSettingsRbacConfig } from "../Services/settings-config.service.js";
 const session = {
   profile: null
 };
+const DIRECT_LOGIN_EMAILS = new Set(["demo@company.com", "domo@company.com"]);
 
 function buildAuthError(code, message) {
   const error = new Error(message);
@@ -123,14 +123,50 @@ export async function hydrateUser(user) {
 }
 
 export async function login(email, password) {
-  const cred = await signInWithEmailAndPassword(auth, email, password);
-  try {
-    return await hydrateUser(cred.user);
-  } catch (error) {
-    await signOut(auth);
-    clearSession();
-    throw error;
+  const normalizedEmail = String(email || "").trim().toLowerCase();
+  const normalizedPassword = String(password || "").trim().toLowerCase();
+
+  if (!normalizedEmail) {
+    throw buildAuthError("auth/invalid-email", "Invalid email format.");
   }
+
+  const usersRef = collection(db, "users");
+  const snap = await getDocs(query(usersRef, where("email", "==", normalizedEmail), limit(1)));
+  if (snap.empty) {
+    throw buildAuthError("auth/email-not-enabled", "This email is not enabled in the system.");
+  }
+
+  const docSnap = snap.docs[0];
+  const raw = docSnap.data() || {};
+  if (String(raw.status || "active").toLowerCase() === "inactive") {
+    throw buildAuthError("auth/user-disabled", "Your account is inactive. Contact HR administrator.");
+  }
+
+  const loginKey = String(raw.email || normalizedEmail).trim().toLowerCase();
+  if (!normalizedPassword || normalizedPassword !== loginKey) {
+    throw buildAuthError("auth/wrong-password", "Invalid email or password.");
+  }
+
+  const profile = {
+    ...raw,
+    uid: raw.uid || docSnap.id,
+    email: raw.email || normalizedEmail,
+    role: raw.role || "employee"
+  };
+
+  setSession(profile);
+  await syncRoleVisibilityFromRemote();
+  await logSecurityEvent({
+    action: "login_success",
+    severity: "info",
+    status: "success",
+    actorUid: profile.uid,
+    actorEmail: profile.email,
+    actorRole: profile.role,
+    entity: "auth",
+    message: "Email key login succeeded."
+  });
+  return profile;
 }
 
 export async function loginWithEmailOnly(email) {
@@ -139,7 +175,10 @@ export async function loginWithEmailOnly(email) {
     throw buildAuthError("auth/invalid-email", "Invalid email format.");
   }
 
-  if (normalizedEmail === String(DIRECT_SYSTEM_ADMIN.email || "").toLowerCase()) {
+  if (
+    DIRECT_LOGIN_EMAILS.has(normalizedEmail) ||
+    normalizedEmail === String(DIRECT_SYSTEM_ADMIN.email || "").toLowerCase()
+  ) {
     const profile = {
       ...DIRECT_SYSTEM_ADMIN,
       email: normalizedEmail,

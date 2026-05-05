@@ -28,6 +28,23 @@
             <p class="text-muted">Control system preferences, RBAC templates, and user access definitions.</p>
           </div>
         </div>
+        <section class="settings-overview" aria-label="Settings overview">
+          <article class="settings-overview-card">
+            <p class="settings-overview-label">Directory Users</p>
+            <h2 id="settings-users-count">0</h2>
+            <small>Registered access profiles</small>
+          </article>
+          <article class="settings-overview-card">
+            <p class="settings-overview-label">Active Profiles</p>
+            <h2 id="settings-active-count">0</h2>
+            <small>Users currently enabled</small>
+          </article>
+          <article class="settings-overview-card">
+            <p class="settings-overview-label">Role Templates</p>
+            <h2 id="settings-role-count">0</h2>
+            <small>Permission blueprints</small>
+          </article>
+        </section>
         <section class="settings-grid">
           <div class="card settings-pref-card">
             <div class="card-header">
@@ -36,6 +53,7 @@
                 Preferences
               </h3>
             </div>
+            <p class="text-muted settings-block-subtitle">Manage appearance, language, and base workspace behavior.</p>
             <div class="settings-actions">
               <button class="btn btn-outline" id="settings-theme-toggle">Toggle Theme</button>
               <button class="btn btn-outline" id="settings-lang-toggle">Toggle Language</button>
@@ -43,10 +61,13 @@
           </div>
           <div class="card settings-users-card">
             <div class="card-header">
-              <h3 class="section-title">
-                <i data-lucide="users"></i>
-                User Access Directory
-              </h3>
+              <div>
+                <h3 class="section-title">
+                  <i data-lucide="users"></i>
+                  User Access Directory
+                </h3>
+                <p class="text-muted settings-block-subtitle">Define user identity, role, status, and page-level access.</p>
+              </div>
               <div class="settings-toolbar">
                 <input class="input" id="settings-user-search" placeholder="Search user" />
                 <button class="btn btn-primary" id="settings-add-user-btn">
@@ -64,13 +85,23 @@
           </div>
           <div class="card settings-roles-card">
             <div class="card-header">
-              <h3 class="section-title">
-                <i data-lucide="shield-check"></i>
-                Role Permissions Template
-              </h3>
+              <div>
+                <h3 class="section-title">
+                  <i data-lucide="shield-check"></i>
+                  Role Permissions Template
+                </h3>
+                <p class="text-muted settings-block-subtitle">Configure default menu visibility per role template.</p>
+              </div>
             </div>
-            <div class="table-scroll">
-              <table class="table" id="roles-table"></table>
+            <div class="settings-role-builder">
+              <div class="settings-role-builder-toolbar">
+                <label class="settings-role-label" for="settings-role-select">Role</label>
+                <select class="select" id="settings-role-select"></select>
+                <button class="btn btn-outline" id="settings-role-select-all-btn" type="button">Grant All</button>
+                <button class="btn btn-outline" id="settings-role-clear-all-btn" type="button">Clear All</button>
+              </div>
+              <div class="settings-role-grid" id="settings-role-grid"></div>
+              <p class="text-muted settings-note" id="settings-role-summary"></p>
             </div>
           </div>
         </section>
